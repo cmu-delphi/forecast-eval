@@ -10,8 +10,16 @@ create_score_cards = function(geo_type, output_file_name = NULL){
   if (is.null(output_file_name)){
     output_file_name = paste0("score_cards_", geo_type, ".rds")
   }
-  err_measures = list(wis = weighted_interval_score, ae = absolute_error,
-                      cov_80 = interval_coverage(coverage = 0.8)) 
+  # central coverage functions named cov_10, cov_20, etc.
+  central_intervals = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)
+  cov_names = paste0("cov_", central_intervals * 100)
+  coverage_functions = sapply(central_intervals, 
+                              function(coverage) interval_coverage(coverage))
+  names(coverage_functions) = cov_names
+  
+  err_measures = c(wis = weighted_interval_score, 
+                   ae = absolute_error,
+                  coverage_functions) 
   preds_to_eval = predictions_cards %>% 
     filter(target_end_date < today())
   

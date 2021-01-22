@@ -37,3 +37,10 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Build output
+dist/
+
+# Data files
+.csv
+.rds

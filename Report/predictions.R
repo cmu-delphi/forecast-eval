@@ -92,6 +92,7 @@ create_prediction_cards = function(){
   
   predictions_cards_list = vector("list", length = length(forecasters))
   deaths_sig = "deaths_incidence_num"
+  cases_sig = "confirmed_incidence_num"
   for (i in 1:length(forecasters)) {
     cat(forecasters[i], "...\n")
     if (length(new_dates[[i]] > 0)){
@@ -99,7 +100,7 @@ create_prediction_cards = function(){
         get_covidhub_predictions(forecasters[i], 
                                  rev(new_dates[[i]])) %>% 
           filter(ahead < 5) %>% 
-          filter(nchar(geo_value) == 2 & signal == deaths_sig)
+          filter(nchar(geo_value) == 2 & signal %in% c(deaths_sig, cases_sig))
       },
       error = function(e) cat(e$message))
     }

@@ -6,33 +6,7 @@ library(dplyr)
 create_prediction_cards = function(){
   start_date = today() - 12 * 7 # last 12 weeks
   
-  forecasters = c("CMU-TimeSeries",
-                  "CovidAnalytics-DELPHI",
-                  "CU-select",
-                  #   "Google_Harvard-CPF", Excluded for now. Doesn't have quantiles for all forecasts
-                  "GT-DeepCOVID", 
-                  "IEM_MED-CovidProject",
-                  "IowaStateLW-STEM",
-                  "IHME-CurveFit", 
-                  "JHUAPL-Bucky",
-                  "JHU_IDD-CovidSP",
-                  "JHU_UNC_GAS-StatMechPool",
-                  "Karlen-pypm",
-                  "LANL-GrowthRate", 
-                  "LNQ-ens1",
-                  "MOBS-GLEAM_COVID",
-                  "OliverWyman-Navigator", 
-                  "OneQuietNight-ML",
-                  "PandemicCentral-USCounty",
-                  "UCLA-SuEIR",
-                  "UMass-MechBayes",
-                  "UT-Mobility",
-                  "UVA-Ensemble",
-                  "Yu_Group-CLEP",
-                  "YYG-ParamSearch", 
-                  "COVIDhub-ensemble", 
-                  "COVIDhub-baseline")
-  
+  forecasters = get_covidhub_forecaster_names()
   
   # Get all forecast dates for these forecasters from COVID Hub
   forecast_dates = vector("list", length = length(forecasters))

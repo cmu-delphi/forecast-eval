@@ -59,23 +59,14 @@ create_prediction_cards = function(){
       distinct(forecast_date, forecaster)
   }
   
-  # Now figure out "comparable" forecast dates: making a forecast on a Sunday or a 
-  # Monday of the same epiweek should be comparable.
-  
-  forecast_dates_cmu = forecast_dates[[which(forecasters == "CMU-TimeSeries")]]
-  
   # new_dates, as opposed to dates for which we already have data for a forecaster
   new_dates = list()
   for (i in 1:length(forecasters)) {
     given_dates = forecast_dates[[i]]
-    # If the dates match exactly, or the given date falls on a Sunday and the
-    # CMU date falls on a Monday of the same epiweek, then call it comparable...
-    comparable_forecast_dates = given_dates[(given_dates %in% forecast_dates_cmu | 
-                                               ((given_dates + 1) %in% forecast_dates_cmu) &
-                                               wday(given_dates) == 1)]
+    # dates must be on a Sunday or Monday
+    comparable_forecast_dates = given_dates[wday(given_dates) %in% c(1,2)]
     
-    # ...but if there is an exact match on dates, ignore predictions made on the
-    # previous day
+    # ...but only include Monday if both dates included
     comparable_forecast_dates = comparable_forecast_dates[!((comparable_forecast_dates + 1) %in% comparable_forecast_dates)]
     if(exists("seen_dates")){
       if(forecasters[[i]] %in% seen_dates$forecaster){

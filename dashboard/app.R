@@ -93,6 +93,9 @@ server <- function(input, output, session) {
       }
       
       intervals <- c(10,20,30,40,50,60,70,80,90,95,98)
+      if (target_variable == "cases") {
+        intervals <- c(50,80,95)
+      }
       df <- data.frame(Date=as.Date(character()),
                        File=character(), 
                        User=character(), 
@@ -104,19 +107,26 @@ server <- function(input, output, session) {
         forecasterDf <- scoreDf %>% filter(forecaster == forecasters[i])
         for (j in 1:length(intervals)) {
           covScore <- switch(toString(intervals[j]),
-                 "10" = forecasterDf$cov_10,
-                 "20" = forecasterDf$cov_20,
-                 "30" = forecasterDf$cov_30,
-                 "40" = forecasterDf$cov_40,
-                 "50" = forecasterDf$cov_50,
-                 "60" = forecasterDf$cov_60,
-                 "70" = forecasterDf$cov_70,
-                 "80" = forecasterDf$cov_80,
-                 "90" = forecasterDf$cov_90,
-                 "95" = forecasterDf$cov_95,
-                 "98" = forecasterDf$cov_98)
+                   "10" = forecasterDf$cov_10,
+                   "20" = forecasterDf$cov_20,
+                   "30" = forecasterDf$cov_30,
+                   "40" = forecasterDf$cov_40,
+                   "50" = forecasterDf$cov_50,
+                   "60" = forecasterDf$cov_60,
+                   "70" = forecasterDf$cov_70,
+                   "80" = forecasterDf$cov_80,
+                   "90" = forecasterDf$cov_90,
+                   "95" = forecasterDf$cov_95,
+                   "98" = forecasterDf$cov_98)
+          if (target_variable == "cases") {
+            covScore <- switch(toString(intervals[j]),
+                    "50" = forecasterDf$cov_50,
+                    "80" = forecasterDf$cov_80,
+                    "95" = forecasterDf$cov_95)
+          }
           forecasterDf <- forecasterDf %>% filter(!is.na(covScore))
           locations <- unique(forecasterDf$geo_value)
+          output$printText <- renderText(covScore)
           covScore <- covScore[!is.na(covScore)]
           covScore <- sum(covScore)/length(locations) * 100
           coverageDf[nrow(coverageDf) + 1,] = c(forecasters[i], intervals[j], covScore)

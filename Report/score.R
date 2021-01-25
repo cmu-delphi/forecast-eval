@@ -2,13 +2,34 @@ library("evalcast")
 library("dplyr")
 library("lubridate")
 
-create_score_cards = function(geo_type, output_file_name = NULL){
+create_score_cards = function(geo_type, signal_name = NULL, output_file_name = NULL){
   start_date = today() - 12 * 7 # last 12 weeks
   if (!exists("predictions_cards")){
     predictions_cards = readRDS("predictions_cards.rds")
   }
+  signals = (predictions_cards %>% distinct(signal))$signal
+  if (is.null(signal_name)){
+    assert_that(length(signals) == 1,
+                msg = "If no signal is specified, prediction_cards may only have 1 signal")
+    signal_name = signals
+  } else {
+    assert_that(signal_name %in% signals,
+                msg = "signal is not in prediction_cards")
+    predictions_cards = predictions_cards %>% filter(signal == signal_name)
+  }
   if (is.null(output_file_name)){
-    output_file_name = paste0("score_cards_", geo_type, ".rds")
+    cases_sig = "confirmed_incidence_num"
+    deaths_sig = "deaths_incidence_num"
+    assert_that(signal_name %in% c(cases_sig, deaths_sig),
+                msg = paste("If no output file is provided, signal must be in:",
+                            cases_sig,
+                            deaths_sig))
+    if (signal_name == cases_sig){
+      sig_suffix = "cases"
+    } else {
+      sig_suffix = "deaths"
+    }
+    output_file_name = paste0("score_cards_", geo_type, "_", sig_suffix, ".rds")
   }
   # central coverage functions named cov_10, cov_20, etc.
   central_intervals = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)

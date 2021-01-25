@@ -6,33 +6,7 @@ library(dplyr)
 create_prediction_cards = function(){
   start_date = today() - 12 * 7 # last 12 weeks
   
-  forecasters = c("CMU-TimeSeries",
-                  "CovidAnalytics-DELPHI",
-                  "CU-select",
-                  #   "Google_Harvard-CPF", Excluded for now. Doesn't have quantiles for all forecasts
-                  "GT-DeepCOVID", 
-                  "IEM_MED-CovidProject",
-                  "IowaStateLW-STEM",
-                  "IHME-CurveFit", 
-                  "JHUAPL-Bucky",
-                  "JHU_IDD-CovidSP",
-                  "JHU_UNC_GAS-StatMechPool",
-                  "Karlen-pypm",
-                  "LANL-GrowthRate", 
-                  "LNQ-ens1",
-                  "MOBS-GLEAM_COVID",
-                  "OliverWyman-Navigator", 
-                  "OneQuietNight-ML",
-                  "PandemicCentral-USCounty",
-                  "UCLA-SuEIR",
-                  "UMass-MechBayes",
-                  "UT-Mobility",
-                  "UVA-Ensemble",
-                  "Yu_Group-CLEP",
-                  "YYG-ParamSearch", 
-                  "COVIDhub-ensemble", 
-                  "COVIDhub-baseline")
-  
+  forecasters = get_covidhub_forecaster_names()
   
   # Get all forecast dates for these forecasters from COVID Hub
   forecast_dates = vector("list", length = length(forecasters))
@@ -59,23 +33,14 @@ create_prediction_cards = function(){
       distinct(forecast_date, forecaster)
   }
   
-  # Now figure out "comparable" forecast dates: making a forecast on a Sunday or a 
-  # Monday of the same epiweek should be comparable.
-  
-  forecast_dates_cmu = forecast_dates[[which(forecasters == "CMU-TimeSeries")]]
-  
   # new_dates, as opposed to dates for which we already have data for a forecaster
   new_dates = list()
   for (i in 1:length(forecasters)) {
     given_dates = forecast_dates[[i]]
-    # If the dates match exactly, or the given date falls on a Sunday and the
-    # CMU date falls on a Monday of the same epiweek, then call it comparable...
-    comparable_forecast_dates = given_dates[(given_dates %in% forecast_dates_cmu | 
-                                               ((given_dates + 1) %in% forecast_dates_cmu) &
-                                               wday(given_dates) == 1)]
+    # dates must be on a Sunday or Monday
+    comparable_forecast_dates = given_dates[wday(given_dates) %in% c(1,2)]
     
-    # ...but if there is an exact match on dates, ignore predictions made on the
-    # previous day
+    # ...but only include Monday if both dates included
     comparable_forecast_dates = comparable_forecast_dates[!((comparable_forecast_dates + 1) %in% comparable_forecast_dates)]
     if(exists("seen_dates")){
       if(forecasters[[i]] %in% seen_dates$forecaster){
@@ -92,6 +57,7 @@ create_prediction_cards = function(){
   
   predictions_cards_list = vector("list", length = length(forecasters))
   deaths_sig = "deaths_incidence_num"
+  cases_sig = "confirmed_incidence_num"
   for (i in 1:length(forecasters)) {
     cat(forecasters[i], "...\n")
     if (length(new_dates[[i]] > 0)){
@@ -99,7 +65,7 @@ create_prediction_cards = function(){
         get_covidhub_predictions(forecasters[i], 
                                  rev(new_dates[[i]])) %>% 
           filter(ahead < 5) %>% 
-          filter(nchar(geo_value) == 2 & signal == deaths_sig)
+          filter(nchar(geo_value) == 2 & signal %in% c(deaths_sig, cases_sig))
       },
       error = function(e) cat(e$message))
     }

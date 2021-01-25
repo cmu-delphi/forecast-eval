@@ -7,16 +7,18 @@ library(RColorBrewer)
 library(stringr)
 
 df <- readRDS("Report/score_cards_state.rds")
-df
 modelChoices = unique(df$forecaster)
-locationChoices = unique(df$geo_value) # TODO make this capitalized
+locationChoices = unique(df$geo_value) # TODO maybe make this capitalized
 dateChoices = rev(unique(df$target_end_date))
 
 ui <- fluidPage(
     titlePanel("Forecast Eval"),
     sidebarLayout(
       sidebarPanel(
-        radioButtons("scoreType", "Score type",
+        radioButtons("targetVariable", "Target Variable",
+                     choices = list("Incident Cases" = "cases", 
+                                    "Incident Deaths" = "deaths")),
+        radioButtons("scoreType", "Score Type",
                    choices = list("Weighted Interval Score" = "wis", 
                                   "Mean Average Error" = "ae",
                                   "Coverage" = "coverage")),
@@ -59,9 +61,8 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   
-  summaryPlot = function(scoreDf, score_type = "wis", forecasters = "All",
-                          horizon = 1, loc = "US", date = NULL, ylab = score_type,
-                          ylim = NULL) {
+  summaryPlot = function(scoreDf, target_variable = "cases", score_type = "wis", forecasters = "All",
+                          horizon = 1, loc = "US", date = NULL) {
     scoreDf <- scoreDf %>% filter(ahead == horizon) %>%
                            filter(forecaster %in% forecasters)
     if (score_type == "coverage") {      
@@ -111,24 +112,27 @@ server <- function(input, output) {
         geom_point(aes(color = Forecaster)) +
         scale_y_continuous(limits=c(0, 100)) +
         scale_x_continuous(limits=c(0, 100)) +
-        geom_abline(intercept = 0, slope = 1)
+        geom_abline(intercept = 0, slope = 1) +
+        ylab("Coverage")
     }
     else {
       scoreDf <- scoreDf %>% filter(geo_value == loc)
       axes = aes(x = target_end_date, y = wis)
+      ylab = "Weighted Interval Score"
       if (score_type == "ae") {
+        ylab = "Mean Average Error"
         axes = aes(x = target_end_date, y = ae)
       }
       
       ggplot(scoreDf, axes) +
         geom_line(aes(color = forecaster, linetype = forecaster)) +
         geom_point(aes(color = forecaster)) +
-        labs(x = "Date", y = ylab)
+        labs(x = "Date", y = ylab, color = "Forecaster", linetype = "Forecaster")
     }
     # output$renderTable <- renderDataTable(scoreDf)
   }
   output$summaryPlot <- renderPlot({
-    summaryPlot(df, input$scoreType, input$forecasters, input$ahead,
+    summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, input$ahead,
                 input$location, input$date)
   })
 }

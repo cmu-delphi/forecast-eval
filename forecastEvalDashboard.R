@@ -6,8 +6,11 @@ library(ggplot2)
 library(RColorBrewer)
 library(stringr)
 
-df <- readRDS("Report/score_cards_state.rds")
-modelChoices = unique(df$forecaster)
+dfCases <- readRDS("Report/score_cards_state_cases.rds")
+dfDeaths <- readRDS("Report/score_cards_state_deaths.rds")
+df <- rbind(dfCases, dfDeaths)
+modelChoices = sort(unique(df$forecaster))
+aheadChoices = unique(df$ahead)
 locationChoices = unique(df$geo_value) # TODO maybe make this capitalized
 dateChoices = rev(unique(df$target_end_date))
 
@@ -30,8 +33,8 @@ ui <- fluidPage(
           selected = "COVIDhub-ensemble"
         ),
         radioButtons("ahead", "Ahead",
-                     choices = list("1 week" = 1, "2 weeks" = 2, 
-                                    "3 weeks" = 3, "4 weeks" = 4)),
+                     choices = list("1 week" = aheadChoices[1], "2 weeks" = aheadChoices[2], 
+                                    "3 weeks" = aheadChoices[3], "4 weeks" = aheadChoices[4])),
         conditionalPanel(condition = "input.scoreType != 'coverage'",
           selectInput(
             "location",
@@ -59,12 +62,27 @@ ui <- fluidPage(
 )
 
 
-server <- function(input, output) {
+server <- function(input, output, session) {
   
   summaryPlot = function(scoreDf, target_variable = "cases", score_type = "wis", forecasters = "All",
                           horizon = 1, loc = "US", date = NULL) {
-    scoreDf <- scoreDf %>% filter(ahead == horizon) %>%
+    
+    signalFilter = "confirmed_incidence_num"
+    if (target_variable == "deaths") {
+      signalFilter = "deaths_incidence_num"
+    }
+    scoreDf <- scoreDf %>% filter(signal == signalFilter) %>%
+                           filter(ahead == horizon) %>%
                            filter(forecaster %in% forecasters)
+    
+    output$renderTable <- renderDataTable(scoreDf)
+    # TODO better way of doing this
+    if (nrow(scoreDf) == 0) {
+      output$printText <- renderText("No data for these options.")
+      return()
+    } else {
+      output$printText <- renderText("")
+    }
     if (score_type == "coverage") {      
       scoreDf <- scoreDf %>% filter(target_end_date == date)
       if (nrow(scoreDf) == 0) {
@@ -106,6 +124,8 @@ server <- function(input, output) {
       }
       coverageDf$Score <- as.numeric(as.character(coverageDf$Score))
       coverageDf$Interval <- as.numeric(as.character(coverageDf$Interval))
+      output$renderTable <- renderDataTable(coverageDf)
+      
       
       ggplot(coverageDf, aes(x = Interval, y = Score)) +
         geom_line(aes(color = Forecaster, linetype = Forecaster)) +
@@ -129,12 +149,39 @@ server <- function(input, output) {
         geom_point(aes(color = forecaster)) +
         labs(x = "Date", y = ylab, color = "Forecaster", linetype = "Forecaster")
     }
-    # output$renderTable <- renderDataTable(scoreDf)
   }
+  # output$renderTable <- renderDataTable(scoreDf)
   output$summaryPlot <- renderPlot({
     summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, input$ahead,
                 input$location, input$date)
   })
+  
+  
+  
+  # observe({
+    # forecasterChoices = unique(dfCases$forecaster)
+    # df = dfCases
+    # if (input$targetVariable == 'deaths') {
+    #   forecasterChoices = unique(dfDeaths$forecaster)
+    #   df = dfDeaths
+    # }
+    # dfAhead = df %>% filter(forecaster %in% input$forecasters)
+    # aheadChoices = unique(dfAhead$ahead)
+    # dfLocation = dfAhead %>% filter(ahead %in% input$ahead)
+    # locationChoices = unique(dfLocation$geo_value)
+    # 
+    # output$renderTable <- renderDataTable(dfLocation)
+    # 
+    # updateSelectInput(session, "forecasters",
+    #                   choices = forecasterChoices,
+    #                   selected = "COVIDhub-ensemble",)
+    # updateRadioButtons(session, "ahead",
+    #                   choices = aheadChoices)
+    # updateSelectInput(session, "location",
+    #                   choices = locationChoices,
+    #                   selected = "ak",)
+  # })
+  
 }
 
 shinyApp(ui = ui, server = server)

@@ -4,7 +4,8 @@
   "description": "Epiforecast Evaluation Tools",
   "scripts": {
     "build-docker": "docker build -t forecast-eval-build docker_build",
-    "build": "mkdir dist && docker run -v ${PWD}:/var/forecast-eval -w /var/forecast-eval forecast-eval-build Rscript csv2rds.R score_case_edit.csv dist/score_case_edit.rds"
+    "build": "mkdir dist && docker run -v ${PWD}:/var/forecast-eval -w /var/forecast-eval forecast-eval-build Rscript csv2rds.R score_case_edit.csv dist/score_case_edit.rds",
+    "start-dashboard": "docker run --rm -p 3838:3838 -v $PWD/dashboard:/srv/shiny-server rocker/shiny-verse"
   },
   "repository": {
     "type": "git",

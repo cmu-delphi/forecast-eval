@@ -55,8 +55,22 @@ ui <- fluidPage(
       ),
       mainPanel(
         plotOutput(outputId = "summaryPlot"),
-        dataTableOutput('renderTable'),
-        textOutput("printText")
+        # dataTableOutput('renderTable'),
+        textOutput("warningText"),
+        h3(tags$div(HTML("<br/>Explanation of scoring methods"))),
+        tags$div(HTML("<b>WIS</b>: The weighted interval score takes into account all the quantile predictions submitted... <br/><br/>")),
+        tags$div(HTML("<b>MAE</b>: <br/><br/>")),
+        tags$div(HTML("<b>Coverage</b>: The coverage plot shows how well a forecaster's confidence intervals performed on a given week, across all locations.
+                      The x-axis is the confidence interval, and the y-xis is the percentage of locations where the ground-truth target variable value fell into that confidence interval.
+                      A perfect forecaster on this measure would follow the bold black line.
+                      <br/>
+                      For example, a forecaster wants the ground-truth value to be within the 50% confidence interval 50% of the time (eg, in 50% of locations).
+                      If the y-value at the 50% confidence interval is above the black line, it means that the ground-truth values fell within the forecaster's 50% CI more than 50% of the time, aka the forecaster's 50% CI was under-confident, or too wide that week.
+                      If the y-values are below the black line, it means that the forecaster's CIs were overconfident that week, or too narrow.
+                      <br/>"))
+        
+        
+                 
       ),
     ),
 )
@@ -66,7 +80,6 @@ server <- function(input, output, session) {
   
   summaryPlot = function(scoreDf, target_variable = "cases", score_type = "wis", forecasters = "All",
                           horizon = 1, loc = "US", date = NULL) {
-    
     signalFilter = "confirmed_incidence_num"
     if (target_variable == "deaths") {
       signalFilter = "deaths_incidence_num"
@@ -78,21 +91,21 @@ server <- function(input, output, session) {
     output$renderTable <- renderDataTable(scoreDf)
     # TODO better way of doing this
     if (nrow(scoreDf) == 0) {
-      output$printText <- renderText("No data for these options.")
+      output$warningText <- renderText("No data for these options.")
       return()
     } else {
-      output$printText <- renderText("")
+      output$warningText <- renderText("")
     }
     if (score_type == "coverage") {      
       scoreDf <- scoreDf %>% filter(target_end_date == date)
       if (nrow(scoreDf) == 0) {
-        output$printText <- renderText("No data for these options.")
+        output$warningText <- renderText("No data for these options.")
         return()
       } else {
-        output$printText <- renderText("")
+        output$warningText <- renderText("")
       }
       
-      # Case forecasts only cover 7 quantiles, thus only 3 coverage bands
+      # Case forecasts only cover 7 quantiles, thus only 3 coverage intervals
       intervals <- c(10,20,30,40,50,60,70,80,90,95,98)
       if (target_variable == "cases") {
         intervals <- c(50,80,95)
@@ -127,7 +140,6 @@ server <- function(input, output, session) {
           }
           forecasterDf <- forecasterDf %>% filter(!is.na(covScore))
           locations <- unique(forecasterDf$geo_value)
-          output$printText <- renderText(covScore)
           covScore <- covScore[!is.na(covScore)]
           covScore <- sum(covScore)/length(locations) * 100
           coverageDf[nrow(coverageDf) + 1,] = c(forecasters[i], intervals[j], covScore)
@@ -161,13 +173,13 @@ server <- function(input, output, session) {
         labs(x = "Date", y = ylab, color = "Forecaster", linetype = "Forecaster")
     }
   }
+  
+  
   # output$renderTable <- renderDataTable(scoreDf)
   output$summaryPlot <- renderPlot({
     summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, input$ahead,
                 input$location, input$date)
   })
-  
-  
   
   # observe({
     # forecasterChoices = unique(dfCases$forecaster)

@@ -92,6 +92,7 @@ server <- function(input, output, session) {
         output$printText <- renderText("")
       }
       
+      # Case forecasts only cover 7 quantiles, thus only 3 coverage bands
       intervals <- c(10,20,30,40,50,60,70,80,90,95,98)
       if (target_variable == "cases") {
         intervals <- c(50,80,95)

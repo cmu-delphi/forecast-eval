@@ -3,7 +3,6 @@ library("dplyr")
 library("lubridate")
 
 create_score_cards = function(geo_type, signal_name = NULL, output_file_name = NULL){
-  start_date = today() - 12 * 7 # last 12 weeks
   if (!exists("predictions_cards")){
     predictions_cards = readRDS("predictions_cards.rds")
   }
@@ -80,7 +79,7 @@ create_score_cards = function(geo_type, signal_name = NULL, output_file_name = N
   } else {
     score_cards = score_cards_new
   }
-  score_cards = score_cards %>% filter(forecast_date >= start_date)
+ # score_cards = score_cards %>% filter(forecast_date >= start_date)
   
   saveRDS(score_cards, 
        file = output_file_name, 

@@ -47,3 +47,5 @@ dist/
 # Data files
 .csv
 .rds
+dashboard/**.csv
+dashboard/**.rds

@@ -23,14 +23,14 @@ ui <- fluidPage(
                                     "Incident Deaths" = "deaths")),
         radioButtons("scoreType", "Score Type",
                    choices = list("Weighted Interval Score" = "wis", 
-                                  "Mean Average Error" = "ae",
+                                  "Absolute Error" = "ae",
                                   "Coverage" = "coverage")),
         selectInput(
           "forecasters",
           "Forecasters",
           choices = modelChoices,
           multiple = TRUE,
-          selected = "COVIDhub-ensemble"
+          selected = c("COVIDhub-ensemble", "COVIDhub-baseline")
         ),
         radioButtons("ahead", "Ahead",
                      choices = list("1 week" = aheadChoices[1], 
@@ -63,12 +63,12 @@ ui <- fluidPage(
       ),
       mainPanel(
         plotOutput(outputId = "summaryPlot"),
-        dataTableOutput('renderTable'),
+        # dataTableOutput('renderTable'),
         textOutput("warningText"),
         h3(tags$div(HTML("<br/>Explanation of scoring methods"))),
         actionLink("showExplanationWIS", "WIS"),
         tags$span(HTML("/")),
-        actionLink("showExplanationMAE", "MAE"),
+        actionLink("showExplanationMAE", "AE"),
         tags$span(HTML("/")),
         actionLink("showExplanationCoverage", "Coverage"),
         textOutput("scoreExplanation"),
@@ -140,7 +140,7 @@ server <- function(input, output, session) {
                     "80" = forecasterDf$cov_80,
                     "95" = forecasterDf$cov_95)
           }
-          forecasterDf <- forecasterDf %>% filter(!is.na(covScore))
+          # forecasterDf <- forecasterDf %>% filter(!is.na(covScore))
           covScore <- covScore[!is.na(covScore)]
           if (coverageAggregateBy == "date") {
             dates <- unique(forecasterDf$target_end_date)
@@ -172,7 +172,7 @@ server <- function(input, output, session) {
       axes = aes(x = target_end_date, y = wis)
       ylab = "Weighted Interval Score"
       if (scoreType == "ae") {
-        ylab = "Mean Average Error"
+        ylab = "Absolute Error"
         axes = aes(x = target_end_date, y = ae)
       }
       
@@ -196,7 +196,7 @@ server <- function(input, output, session) {
   })
   observeEvent(input$showExplanationMAE, {
     output$scoreExplanation <- renderText({
-      "Mean average error is calculated by..."
+      "Absolute error is calculated by..."
     })
   })
   observeEvent(input$showExplanationCoverage, {

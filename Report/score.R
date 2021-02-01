@@ -1,6 +1,7 @@
 library("evalcast")
 library("dplyr")
 library("lubridate")
+library("assertthat")
 
 create_score_cards = function(geo_type, signal_name = NULL, output_file_name = NULL){
   if (!exists("predictions_cards")){

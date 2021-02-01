@@ -1,3 +1,6 @@
-# install.packages(c(), repo="http://cran.rstudio.com/")
+# Tidyverse is installed in the base image
+# Other packages should be installed here
 
-devtools::install_github("cmu-delphi/covidcast",ref = "main",subdir = "R-packages/evalcast")
+install.packages("assertthat")
+
+devtools::install_github("cmu-delphi/covidcast",ref = "evalcast-killcards",subdir = "R-packages/evalcast")

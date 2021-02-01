@@ -14,6 +14,12 @@ To build:
 > make build
 ```
 
+To start `bash` shell in the docker container, which would let you start a R session:
+
+```bash
+> make start_repl
+```
+
 ## Starting a local shiny server
 
 To start a docker image of the shiny server locally:

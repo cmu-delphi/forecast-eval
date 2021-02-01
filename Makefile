@@ -13,7 +13,7 @@ clean:
 	rm dashboard/*.rds
 
 score_forecast: r_build dist
-	docker run -v ${PWD}/Report:/var/forecast-eval -w /var/forecast-eval forecast-eval-build Rscript create_reports.R
+	docker run --rm -v ${PWD}/Report:/var/forecast-eval -w /var/forecast-eval forecast-eval-build Rscript create_reports.R
 
 start_dashboard:
 	cp Report/*.rds dashboard

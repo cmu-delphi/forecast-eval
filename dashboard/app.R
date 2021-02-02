@@ -24,7 +24,7 @@ ui <- fluidPage(
                                     "Incident Deaths" = "deaths")),
         radioButtons("scoreType", "Scoring Metric",
                    choices = list("Weighted Interval Score" = "wis", 
-                                  "Mean Average Error" = "ae",
+                                  "Absolute Error" = "ae",
                                   "Coverage" = "coverage")),
         selectInput(
           "forecasters",
@@ -183,12 +183,18 @@ server <- function(input, output, session) {
       p = ggplot(scoreDf, aes(x = Date, y = Score, color = Forecaster)) +
         geom_line() +
         geom_point() +
-        labs(x = "", y = ylab) +
+        labs(x = "", y = ylab, title=ylab) +
         scale_x_date(date_labels = "%b %Y") 
 
     }
     return(ggplotly(p + theme_bw()) %>% config(displayModeBar = F) 
-           %>% layout(hovermode = 'x unified') %>%  layout(yaxis=list(fixedrange=TRUE))) 
+           %>% layout(hovermode = 'x unified') %>%  layout(yaxis=list(fixedrange=TRUE))) %>%
+      layout(title = list(text = paste0('US State Population and Life Expectancy',
+                                        '<br>',
+                                        '<sup>',
+                                        'Life expectancy 1969-1971; Population estimate as of July 1, 1975',
+                                        '</sup>')))
+    
   }
   
 
@@ -208,7 +214,7 @@ server <- function(input, output, session) {
   })
   observeEvent(input$showExplanationMAE, {
     output$scoreExplanation <- renderText({
-      "Mean average error is calculated by..."
+      "Absolute error is calculated by..."
     })
   })
   observeEvent(input$showExplanationCoverage, {

@@ -4,6 +4,7 @@ library(dplyr)
 library(lubridate)
 library(ggplot2)
 library(plotly)
+library(shinyjs)
 
 dfCases <- readRDS("../Report/score_cards_state_cases.rds")
 dfDeaths <- readRDS("../Report/score_cards_state_deaths.rds")
@@ -12,16 +13,28 @@ modelChoices = sort(unique(df$forecaster))
 # modelChoicesDeaths = sort(unique(dfDeaths$forecaster))
 aheadChoices = unique(df$ahead)
 locationChoices = unique(toupper(df$geo_value))
-
 dateChoices = rev(sort(as.Date(unique(df$target_end_date))))
 
+wisExplanation = "The <b>weighted interval score</b> takes into account all the quantile predictions submitted..."
+aeExplanation = "AE"
+coverageExplanation = "The <b>coverage plot</b> shows how well a forecaster's confidence intervals performed on a given week, across all locations.
+                      The x-axis is the confidence interval, and the y-xis is the percentage of time that the ground-truth target variable value fell into that confidence interval.
+                      A perfect forecaster on this measure would follow the bold black line.
+                      <br>
+                      For example, a forecaster wants the ground-truth value to be within the 50% confidence interval in 50% of locations for the given week (or 50% of weeks for the given location).
+                      If the y-value at the 50% confidence interval is above the black line, it means that the ground-truth values fell within the forecaster's 50% CI more than 50% of the time, aka the forecaster's 50% CI was under-confident, or too wide that week.
+                      Conversly, if the y-values are below the black line, it means that the forecaster's CIs were overconfident that week, or too narrow.
+                      Note: Since forecasters only submit 7 quantiles for case predicitons, there are only 3 confidence intervals for cases."
+
+
 ui <- fluidPage(
+    useShinyjs(),
     titlePanel("Forecast Eval"),
     sidebarLayout(
       sidebarPanel(
         radioButtons("targetVariable", "Target Variable",
-                     choices = list("Incident Cases" = "cases", 
-                                    "Incident Deaths" = "deaths")),
+                     choices = list("Incident Cases" = "Cases", 
+                                    "Incident Deaths" = "Deaths")),
         radioButtons("scoreType", "Scoring Metric",
                    choices = list("Weighted Interval Score" = "wis", 
                                   "Absolute Error" = "ae",
@@ -60,19 +73,27 @@ ui <- fluidPage(
             choices = dateChoices,
             multiple = FALSE,
           )
-        ),
-      ),
+        ), width=3),
+      
       mainPanel(
+        width=9,
         plotlyOutput(outputId = "summaryPlot"),
-        dataTableOutput('renderTable'),
+        # dataTableOutput('renderTable'),
         textOutput("warningText"),
+        tags$div(HTML("<br>")),
         h3(tags$div(HTML("<br/>Explanation of scoring methods"))),
         actionLink("showExplanationWIS", "WIS"),
         tags$span(HTML("/")),
-        actionLink("showExplanationMAE", "MAE"),
+        actionLink("showExplanationAE", "AE"),
         tags$span(HTML("/")),
         actionLink("showExplanationCoverage", "Coverage"),
-        textOutput("scoreExplanation"),
+        # textOutput("scoreExplanation"),
+        hidden(div(id='explainWIS',
+                   tags$div(style = "width: 90%", HTML(wisExplanation)))),
+        hidden(div(id='explainAE',
+                   tags$div(style = "width: 90%", HTML(aeExplanation)))),
+        hidden(div(id='explainCoverage',
+                   tags$div(style = "width: 90%", HTML(coverageExplanation)))),
       ),
     ),
 )
@@ -80,11 +101,11 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  summaryPlot = function(scoreDf, targetVariable = "cases", scoreType = "wis", 
+  summaryPlot = function(scoreDf, targetVariable = "Cases", scoreType = "wis", 
                          forecasters = "All", horizon = 1, loc = "us", 
                          coverageAggregateBy = "date", date = NULL) {
     signalFilter = "confirmed_incidence_num"
-    if (targetVariable == "deaths") {
+    if (targetVariable == "Deaths") {
       signalFilter = "deaths_incidence_num"
     }
     scoreDf <- scoreDf %>% filter(signal == signalFilter) %>%
@@ -115,7 +136,7 @@ server <- function(input, output, session) {
       
       # Case forecasts only cover 7 quantiles, thus only 3 coverage intervals
       intervals <- c(10,20,30,40,50,60,70,80,90,95,98)
-      if (targetVariable == "cases") {
+      if (targetVariable == "Cases") {
         intervals <- c(50,80,95)
       }
       coverageDf <- data.frame(Forecaster=character(), Interval=double(), Score=double(), stringsAsFactors=FALSE)
@@ -135,7 +156,7 @@ server <- function(input, output, session) {
                    "90" = forecasterDf$cov_90,
                    "95" = forecasterDf$cov_95,
                    "98" = forecasterDf$cov_98)
-          if (targetVariable == "cases") {
+          if (targetVariable == "Cases") {
             covScore <- switch(toString(intervals[j]),
                     "50" = forecasterDf$cov_50,
                     "80" = forecasterDf$cov_80,
@@ -158,6 +179,8 @@ server <- function(input, output, session) {
       coverageDf$Interval <- as.numeric(as.character(coverageDf$Interval))
       output$renderTable <- renderDataTable(scoreDf)
       
+      title = "Coverage"
+      pad = -410
       p = ggplot(coverageDf, aes(x = Interval, y = Score, color = Forecaster)) +
         geom_line() +
         geom_point() +
@@ -170,30 +193,32 @@ server <- function(input, output, session) {
       scoreDf <- scoreDf %>% filter(geo_value == tolower(loc)) %>% rename(Forecaster = forecaster, Date = target_end_date)
       if (scoreType == "wis") {
         scoreDf <- scoreDf %>% rename(Score = wis)
-        ylab = "Weighted Interval Score"
+        title = "Weighted Interval Score"
       }
       if (scoreType == "ae") {
         scoreDf <- scoreDf %>% rename(Score = ae)
-        ylab = "Absolute Error"
+        title = "Absolute Error"
       }
       keep <- c("Forecaster", "Date", "Score")
       scoreDf <- scoreDf[keep]
       output$renderTable <- renderDataTable(scoreDf)
       
+      pad = 0
       p = ggplot(scoreDf, aes(x = Date, y = Score, color = Forecaster)) +
         geom_line() +
         geom_point() +
-        labs(x = "", y = ylab, title=ylab) +
+        labs(x = "", y = title, title=title) +
         scale_x_date(date_labels = "%b %Y") 
 
     }
-    return(ggplotly(p + theme_bw()) %>% config(displayModeBar = F) 
-           %>% layout(hovermode = 'x unified') %>%  layout(yaxis=list(fixedrange=TRUE))) %>%
-      layout(title = list(text = paste0('US State Population and Life Expectancy',
-                                        '<br>',
-                                        '<sup>',
-                                        'Life expectancy 1969-1971; Population estimate as of July 1, 1975',
-                                        '</sup>')))
+    return(ggplotly(p + theme_bw()) 
+           %>% layout(title = list(text = paste0(title,'<br>', '<sup>',
+                                                 'Target Variable: ', input$targetVariable,
+                                                 ', Location: ', input$location,
+                                                 ', Forecast Horizon: ', input$ahead,
+                                                 '</sup>'), xanchor = "left", yanchor = "top", pad = list(l=pad)),
+                      margin = list(t=50), height=470, hovermode = 'x unified', barmode ="stack",  yaxis=list(fixedrange=TRUE)) %>% config(displayModeBar = F))
+     
     
   }
   
@@ -208,31 +233,25 @@ server <- function(input, output, session) {
   # EVENT OBSERVATION
   ###################
   observeEvent(input$showExplanationWIS, {
-    output$scoreExplanation <- renderText({
-      "The weighted interval score takes into account all the quantile predictions submitted..."
-    })
+    toggle('explainWIS')
+    hide('explainAE')
+    hide('explainCoverage')
   })
-  observeEvent(input$showExplanationMAE, {
-    output$scoreExplanation <- renderText({
-      "Absolute error is calculated by..."
-    })
+  observeEvent(input$showExplanationAE, {
+      toggle('explainAE')
+      hide('explainWIS')
+      hide('explainCoverage')
   })
   observeEvent(input$showExplanationCoverage, {
-    output$scoreExplanation <- renderText({
-      "The coverage plot shows how well a forecaster's confidence intervals performed on a given week, across all locations.
-      The x-axis is the confidence interval, and the y-xis is the percentage of time that the ground-truth target variable value fell into that confidence interval.
-      A perfect forecaster on this measure would follow the bold black line.
-      For example, a forecaster wants the ground-truth value to be within the 50% confidence interval in 50% of locations for the given week (or 50% of weeks for the given location).
-      If the y-value at the 50% confidence interval is above the black line, it means that the ground-truth values fell within the forecaster's 50% CI more than 50% of the time, aka the forecaster's 50% CI was under-confident, or too wide that week.
-      Conversly, if the y-values are below the black line, it means that the forecaster's CIs were overconfident that week, or too narrow.
-      Note: Since forecasters only submit 7 quantiles for case predicitons, there are only 3 confidence intervals for cases."
-    })
+    toggle('explainCoverage')
+    hide('explainWIS')
+    hide('explainAE')
   })
   
   # When the target variable changes, update available forecasters to choose from
   observeEvent(input$targetVariable, {
     forecasterChoices = unique(dfCases$forecaster)
-    if (input$targetVariable == 'deaths') {
+    if (input$targetVariable == 'Deaths') {
       forecasterChoices = unique(dfDeaths$forecaster)
     }
     updateSelectInput(session, "forecasters",
@@ -248,6 +267,7 @@ server <- function(input, output, session) {
                        choices = aheadChoices)
   })
 }
+
 
 shinyApp(ui = ui, server = server)
 

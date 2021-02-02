@@ -3,15 +3,16 @@ library(tidyr)
 library(dplyr)
 library(lubridate)
 library(ggplot2)
-library(RColorBrewer)
-library(stringr)
+library(plotly)
 
 dfCases <- readRDS("../Report/score_cards_state_cases.rds")
 dfDeaths <- readRDS("../Report/score_cards_state_deaths.rds")
 df <- rbind(dfCases, dfDeaths)
 modelChoices = sort(unique(df$forecaster))
+# modelChoicesDeaths = sort(unique(dfDeaths$forecaster))
 aheadChoices = unique(df$ahead)
-locationChoices = unique(df$geo_value) # TODO maybe make this capitalized
+locationChoices = unique(toupper(df$geo_value))
+
 dateChoices = rev(sort(as.Date(unique(df$target_end_date))))
 
 ui <- fluidPage(
@@ -21,18 +22,18 @@ ui <- fluidPage(
         radioButtons("targetVariable", "Target Variable",
                      choices = list("Incident Cases" = "cases", 
                                     "Incident Deaths" = "deaths")),
-        radioButtons("scoreType", "Score Type",
+        radioButtons("scoreType", "Scoring Metric",
                    choices = list("Weighted Interval Score" = "wis", 
                                   "Mean Average Error" = "ae",
                                   "Coverage" = "coverage")),
         selectInput(
           "forecasters",
-          "Forecasters",
+          "Forecasters (type a name to select)",
           choices = modelChoices,
           multiple = TRUE,
-          selected = "COVIDhub-ensemble"
+          selected = c("COVIDhub-ensemble", "COVIDhub-baseline")
         ),
-        radioButtons("ahead", "Ahead",
+        radioButtons("ahead", "Forecast Horizon",
                      choices = list("1 week" = aheadChoices[1], 
                                     "2 weeks" = aheadChoices[2], 
                                     "3 weeks" = aheadChoices[3], 
@@ -49,7 +50,7 @@ ui <- fluidPage(
             "Location",
             choices = locationChoices,
             multiple = FALSE,
-            selected = "US"
+            selected = "CA"
           )
         ),
         conditionalPanel(condition = "input.scoreType == 'coverage' && input.coverageAggregate == 'location'",
@@ -62,7 +63,7 @@ ui <- fluidPage(
         ),
       ),
       mainPanel(
-        plotOutput(outputId = "summaryPlot"),
+        plotlyOutput(outputId = "summaryPlot"),
         dataTableOutput('renderTable'),
         textOutput("warningText"),
         h3(tags$div(HTML("<br/>Explanation of scoring methods"))),
@@ -80,7 +81,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   summaryPlot = function(scoreDf, targetVariable = "cases", scoreType = "wis", 
-                         forecasters = "All", horizon = 1, loc = "US", 
+                         forecasters = "All", horizon = 1, loc = "us", 
                          coverageAggregateBy = "date", date = NULL) {
     signalFilter = "confirmed_incidence_num"
     if (targetVariable == "deaths") {
@@ -100,7 +101,7 @@ server <- function(input, output, session) {
     if (scoreType == "coverage") {
       # If aggregating over all dates, filter based on the location chosen
       if (coverageAggregateBy == "date") {
-        scoreDf <- scoreDf %>% filter(geo_value == loc)
+        scoreDf <- scoreDf %>% filter(geo_value == tolower(loc))
       }
       if (coverageAggregateBy == "location") {
         scoreDf <- scoreDf %>% filter(target_end_date == date)
@@ -155,40 +156,51 @@ server <- function(input, output, session) {
       }
       coverageDf$Score <- as.numeric(as.character(coverageDf$Score))
       coverageDf$Interval <- as.numeric(as.character(coverageDf$Interval))
-      
       output$renderTable <- renderDataTable(scoreDf)
       
-      
-      ggplot(coverageDf, aes(x = Interval, y = Score)) +
-        geom_line(aes(color = Forecaster, linetype = Forecaster)) +
-        geom_point(aes(color = Forecaster)) +
+      p = ggplot(coverageDf, aes(x = Interval, y = Score, color = Forecaster)) +
+        geom_line() +
+        geom_point() +
         scale_y_continuous(limits=c(0, 100)) +
         scale_x_continuous(limits=c(0, 100)) +
         geom_abline(intercept = 0, slope = 1) +
-        ylab("Coverage Percentage")
+        labs(x = "Coverage Percentage", y = "Coverage Interval")
     }
     else {
-      scoreDf <- scoreDf %>% filter(geo_value == loc)
-      axes = aes(x = target_end_date, y = wis)
-      ylab = "Weighted Interval Score"
-      if (scoreType == "ae") {
-        ylab = "Mean Average Error"
-        axes = aes(x = target_end_date, y = ae)
+      scoreDf <- scoreDf %>% filter(geo_value == tolower(loc)) %>% rename(Forecaster = forecaster, Date = target_end_date)
+      if (scoreType == "wis") {
+        scoreDf <- scoreDf %>% rename(Score = wis)
+        ylab = "Weighted Interval Score"
       }
+      if (scoreType == "ae") {
+        scoreDf <- scoreDf %>% rename(Score = ae)
+        ylab = "Absolute Error"
+      }
+      keep <- c("Forecaster", "Date", "Score")
+      scoreDf <- scoreDf[keep]
+      output$renderTable <- renderDataTable(scoreDf)
       
-      ggplot(scoreDf, axes) +
-        geom_line(aes(color = forecaster, linetype = forecaster)) +
-        geom_point(aes(color = forecaster)) +
-        labs(x = "Date", y = ylab, color = "Forecaster", linetype = "Forecaster") +
-        scale_x_date(date_breaks = "months" , date_labels = "%b %Y")
+      p = ggplot(scoreDf, aes(x = Date, y = Score, color = Forecaster)) +
+        geom_line() +
+        geom_point() +
+        labs(x = "", y = ylab) +
+        scale_x_date(date_labels = "%b %Y") 
+
     }
+    return(ggplotly(p + theme_bw()) %>% config(displayModeBar = F) 
+           %>% layout(hovermode = 'x unified') %>%  layout(yaxis=list(fixedrange=TRUE))) 
   }
   
-  output$summaryPlot <- renderPlot({
+
+  output$summaryPlot <- renderPlotly({
     summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
                 input$ahead, input$location, input$coverageAggregate, input$date)
   })
   
+  
+  ###################
+  # EVENT OBSERVATION
+  ###################
   observeEvent(input$showExplanationWIS, {
     output$scoreExplanation <- renderText({
       "The weighted interval score takes into account all the quantile predictions submitted..."
@@ -211,30 +223,24 @@ server <- function(input, output, session) {
     })
   })
   
-  # observe({
-    # forecasterChoices = unique(dfCases$forecaster)
-    # df = dfCases
-    # if (input$targetVariable == 'deaths') {
-    #   forecasterChoices = unique(dfDeaths$forecaster)
-    #   df = dfDeaths
-    # }
-    # dfAhead = df %>% filter(forecaster %in% input$forecasters)
-    # aheadChoices = unique(dfAhead$ahead)
-    # dfLocation = dfAhead %>% filter(ahead %in% input$ahead)
-    # locationChoices = unique(dfLocation$geo_value)
-    # 
-    # output$renderTable <- renderDataTable(dfLocation)
-    # 
-    # updateSelectInput(session, "forecasters",
-    #                   choices = forecasterChoices,
-    #                   selected = "COVIDhub-ensemble",)
-    # updateRadioButtons(session, "ahead",
-    #                   choices = aheadChoices)
-    # updateSelectInput(session, "location",
-    #                   choices = locationChoices,
-    #                   selected = "ak",)
-  # })
+  # When the target variable changes, update available forecasters to choose from
+  observeEvent(input$targetVariable, {
+    forecasterChoices = unique(dfCases$forecaster)
+    if (input$targetVariable == 'deaths') {
+      forecasterChoices = unique(dfDeaths$forecaster)
+    }
+    updateSelectInput(session, "forecasters",
+                      choices = forecasterChoices,
+                      selected = input$forecasters)
+  })
   
+  # When forecaster selections change, update available aheads to choose from
+  observeEvent(input$forecasters, {
+    dfAhead = df %>% filter(forecaster %in% input$forecasters)
+    aheadChoices = unique(dfAhead$ahead)
+    updateRadioButtons(session, "ahead",
+                       choices = aheadChoices)
+  })
 }
 
 shinyApp(ui = ui, server = server)

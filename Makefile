@@ -2,7 +2,7 @@
 S3_URL=https://forecast-eval.s3.us-east-2.amazonaws.com
 S3_BUCKET=s3://forecast-eval
 
-build: score_forecast
+build: build_dashboard
 
 r_build:
 	docker build -t forecast-eval-build docker_build
@@ -36,6 +36,11 @@ start_repl: r_build
 		-w /var/forecast-eval \
 		forecast-eval-build bash
 
-start_dashboard:
-	cp Report/*.rds dashboard
-	docker run --rm -p 3838:3838 -v ${PWD}/dashboard:/srv/shiny-server rocker/shiny-verse
+build_dashboard: pull_data
+	docker build -t ghcr.io/cmu-delphi/forecast-eval:latest -f docker_dashboard/Dockerfile .
+
+deploy_dashboard: build_dashboard
+	docker push ghcr.io/cmu-delphi/forecast-eval:latest
+
+start_dashboard: build_dashboard
+	docker run --rm -p 3838:3838 ghcr.io/cmu-delphi/forecast-eval:latest

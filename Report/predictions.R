@@ -1,12 +1,14 @@
 library(lubridate)
 library(evalcast)
 library(dplyr)
+library(stringr)
 
 # TODO: Use `get_covidhub_forecaster_names()` instead of listing forecasters
 create_prediction_cards = function(prediction_cards_filename){
   start_date = today() - 100 * 7 # last 12 weeks
   
   forecasters = get_covidhub_forecaster_names()
+  print(str_interp("Getting forecasts for ${length(forecasters)} forecasters."))
   
   # Get all forecast dates for these forecasters from COVID Hub
   forecast_dates = vector("list", length = length(forecasters))
@@ -26,6 +28,7 @@ create_prediction_cards = function(prediction_cards_filename){
   # by deleting predictions_cards.rds.
   
   if (file.exists(prediction_cards_filename)) {
+    print("Reading from existing prediction cards")
     predictions_cards = readRDS(file = prediction_cards_filename)
   }
   if(exists(prediction_cards_filename)){
@@ -51,6 +54,7 @@ create_prediction_cards = function(prediction_cards_filename){
     }
     new_dates[[i]] = comparable_forecast_dates
   }
+
   names(new_dates) = forecasters
   
   # Now get new predictions for each forecaster
@@ -59,7 +63,7 @@ create_prediction_cards = function(prediction_cards_filename){
   deaths_sig = "deaths_incidence_num"
   cases_sig = "confirmed_incidence_num"
   for (i in 1:length(forecasters)) {
-    cat(forecasters[i], "...\n")
+    cat(str_interp("#${i}:${forecasters[i]} ...\n"))
     if (length(new_dates[[i]] > 0)){
       predictions_cards_list[[i]] = tryCatch({
         get_covidhub_predictions(forecasters[i], 

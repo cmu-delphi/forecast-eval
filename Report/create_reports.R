@@ -21,11 +21,12 @@ prediction_cards_filepath = case_when(
     TRUE~prediction_cards_filename
 )
 
-print(prediction_cards_filepath)
-
 source("predictions.R")
 create_prediction_cards(prediction_cards_filepath)
 
 source("score.R")
+print("Scoring confirmed incidence...")
 create_score_cards(prediction_cards_filepath, "state", signal = "confirmed_incidence_num", output_dir=opt$dir)
+print("Scoring deaths incidence...")
 create_score_cards(prediction_cards_filepath, "state", signal = "deaths_incidence_num", output_dir=opt$dir)
+print("Done")

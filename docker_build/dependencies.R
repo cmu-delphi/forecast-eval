@@ -2,5 +2,6 @@
 # Other packages should be installed here
 
 install.packages("assertthat")
+install.packages("optparse")
 
 devtools::install_github("cmu-delphi/covidcast",ref = "evalcast-killcards",subdir = "R-packages/evalcast")

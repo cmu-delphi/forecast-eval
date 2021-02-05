@@ -3,7 +3,7 @@ library(evalcast)
 library(dplyr)
 
 # TODO: Use `get_covidhub_forecaster_names()` instead of listing forecasters
-create_prediction_cards = function(){
+create_prediction_cards = function(prediction_cards_filename){
   start_date = today() - 100 * 7 # last 12 weeks
   
   forecasters = get_covidhub_forecaster_names()
@@ -25,10 +25,10 @@ create_prediction_cards = function(){
   # that case it's no longer a true prediction. We can always restart from scratch
   # by deleting predictions_cards.rds.
   
-  if (file.exists("predictions_cards.rds")) {
-    predictions_cards = readRDS(file = "predictions_cards.rds")
+  if (file.exists(prediction_cards_filename)) {
+    predictions_cards = readRDS(file = prediction_cards_filename)
   }
-  if(exists("predictions_cards")){
+  if(exists(prediction_cards_filename)){
     seen_dates = predictions_cards %>% 
       distinct(forecast_date, forecaster)
   }
@@ -89,6 +89,6 @@ create_prediction_cards = function(){
   
   predictions_cards$data_source = "usa-facts"
   saveRDS(predictions_cards,
-          file = "predictions_cards.rds", 
+          file = prediction_cards_filename, 
           compress = "xz")
 }

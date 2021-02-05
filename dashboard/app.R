@@ -6,8 +6,18 @@ library(ggplot2)
 library(RColorBrewer)
 library(stringr)
 
-dfCases <- readRDS("score_cards_state_cases.rds")
-dfDeaths <- readRDS("score_cards_state_deaths.rds")
+
+getData <- function(filename){
+  path = ifelse(
+    file.exists(filename),
+    filename,
+    file.path("../dist/",filename)
+  )
+  readRDS(path)
+}
+
+dfCases <- getData("score_cards_state_cases.rds")
+dfDeaths <- getData("score_cards_state_deaths.rds")
 df <- rbind(dfCases, dfDeaths)
 modelChoices = sort(unique(df$forecaster))
 aheadChoices = unique(df$ahead)

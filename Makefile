@@ -29,12 +29,14 @@ score_forecast: r_build dist pull_data
 deploy: score_forecast
 	aws s3 cp dist/ $(S3_BUCKET)/ --recursive --exclude "*" --include "*rds"
 
-start_repl: r_build
+# Starts a docker image with a full preconfigured R environment
+start_dev: r_build
 	docker run -ti --rm \
 		-v ${PWD}/Report:/var/forecast-eval \
+		-v ${PWD}/dashboard:/var/forecast-eval-dashboard \
 		-v ${PWD}/dist:/var/dist \
 		-w /var/forecast-eval \
-		forecast-eval-build bash
+		ghcr.io/cmu-delphi/forecast-eval:latest bash
 
 build_dashboard: pull_data
 	docker build -t ghcr.io/cmu-delphi/forecast-eval:latest -f docker_dashboard/Dockerfile .

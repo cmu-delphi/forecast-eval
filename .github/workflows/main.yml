@@ -30,7 +30,7 @@ jobs:
         with:
           registry: ghcr.io
           username: cmu-delphi-deploy-machine
-          password: ${{ secrets.CMU_DELPHI_DEPLOY_MACHINE_PAT }
+          password: ${{ secrets.CMU_DELPHI_DEPLOY_MACHINE_PAT }}
 
       # Runs a single command using the runners shell
       - name: Build and deploy dashboard docker image

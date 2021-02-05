@@ -1,5 +1,6 @@
 .DEFAULT_GOAL:=build
 S3_URL=https://forecast-eval.s3.us-east-2.amazonaws.com
+S3_BUCKET=s3://forecast-eval
 
 build: score_forecast
 
@@ -24,6 +25,9 @@ score_forecast: r_build dist pull_data
 		-w /var/forecast-eval \
 		forecast-eval-build \
 		Rscript create_reports.R --dir /var/dist
+
+deploy: score_forecast
+	aws s3 cp dist/ $(S3_BUCKET)/ --recursive --exclude "*" --include "*rds"
 
 start_repl: r_build
 	docker run -ti --rm \

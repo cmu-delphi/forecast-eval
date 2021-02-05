@@ -1,4 +1,4 @@
 from rocker/shiny-verse
 
-COPY dist/*rds /srv/shiny-server
-COPY dashboard/* /srv/shiny-server
+COPY dist/*rds /srv/shiny-server/
+COPY dashboard/* /srv/shiny-server/

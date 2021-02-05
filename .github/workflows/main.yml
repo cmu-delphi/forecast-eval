@@ -28,4 +28,4 @@ jobs:
       # Runs a single command using the runners shell
       - name: Build and deploy dashboard docker image
         run: |
-          make deploy_docker
+          make deploy_dashboard

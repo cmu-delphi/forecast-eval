@@ -45,10 +45,13 @@ create_score_cards = function(geo_type, signal_name = NULL, output_file_name = N
   
   if (geo_type == "state"){
     preds_to_eval = preds_to_eval %>% 
-      filter(nchar(geo_value) == 2)
+      filter(nchar(geo_value) == 2, geo_value != "us")
   } else if (geo_type == "county"){
     preds_to_eval = preds_to_eval %>% 
       filter(nchar(geo_value) == 5)
+  } else if (geo_type == "nation"){
+    preds_to_eval = preds_to_eval %>%
+      filter(geo_value == "us")
   }
   if (file.exists(output_file_name)) {
     score_cards = readRDS(output_file_name)
@@ -69,7 +72,8 @@ create_score_cards = function(geo_type, signal_name = NULL, output_file_name = N
   if(nrow(preds_to_eval) > 0){
     score_cards_new = evaluate_predictions(preds_to_eval, 
                                            err_measures,
-                                           backfill_buffer = 0)
+                                           backfill_buffer = 0,
+                                           geo_type = geo_type)
   } else {
     score_cards_new = data.frame()
   }

@@ -8,7 +8,8 @@ create_prediction_cards = function(prediction_cards_filename){
   start_date = today() - 100 * 7 # last 12 weeks
   
   forecasters = get_covidhub_forecaster_names()
-  print(str_interp("Getting forecasts for ${length(forecasters)} forecasters."))
+  num_forecasters = length(forecasters)
+  print(str_interp("Getting forecasts for ${num_forecasters} forecasters."))
   
   # Get all forecast dates for these forecasters from COVID Hub
   forecast_dates = vector("list", length = length(forecasters))
@@ -30,10 +31,11 @@ create_prediction_cards = function(prediction_cards_filename){
   if (file.exists(prediction_cards_filename)) {
     print("Reading from existing prediction cards")
     predictions_cards = readRDS(file = prediction_cards_filename)
-  }
-  if(exists(prediction_cards_filename)){
     seen_dates = predictions_cards %>% 
       distinct(forecast_date, forecaster)
+    print("Existing prediction cards loaded")
+  }else{
+    print("No prediction cards found, will need to regenerate.")
   }
   
   # new_dates, as opposed to dates for which we already have data for a forecaster
@@ -63,7 +65,7 @@ create_prediction_cards = function(prediction_cards_filename){
   deaths_sig = "deaths_incidence_num"
   cases_sig = "confirmed_incidence_num"
   for (i in 1:length(forecasters)) {
-    cat(str_interp("#${i}:${forecasters[i]} ...\n"))
+    cat(str_interp("${i}/${num_forecasters}:${forecasters[i]} ...\n"))
     if (length(new_dates[[i]] > 0)){
       predictions_cards_list[[i]] = tryCatch({
         get_covidhub_predictions(forecasters[i], 

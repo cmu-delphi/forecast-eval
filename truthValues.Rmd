@@ -1,0 +1,22 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+load("truth_dat_case.rda")
+load("truth_dat_inc.rda")
+# forecastHubCases <- load(file = "truth_dat_case.rda")
+
+# head(forecastHubCases)
+truth_dat_case
+truth_dat_inc
+```
+
+
+```{r}
+hello
+```
+
+

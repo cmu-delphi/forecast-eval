@@ -8,7 +8,7 @@ r_build:
 	docker build -t forecast-eval-build docker_build
 
 predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds :
-	test -f dist/$@ || wget --directory-prefix=dist $(S3_URL)/$@
+	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@ 
 
 pull_data: predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds
 

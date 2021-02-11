@@ -6,7 +6,6 @@ library(ggplot2)
 library(plotly)
 library(shinyjs)
 
-# COVERAGE_INTERVALS = c('cov_10','cov_20','cov_30','cov_40','cov_50','cov_60','cov_70','cov_80','cov_90','cov_95','cov_98')
 COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 DEATH_FILTER = "deaths_incidence_num"
 CASE_FILTER = "confirmed_incidence_num"
@@ -25,7 +24,7 @@ getData <- function(filename){
 dfCases <- getData("score_cards_state_cases.rds")
 dfDeaths <- getData("score_cards_state_deaths.rds")
 df <- rbind(dfCases, dfDeaths)
-df <- rbind(dfCases, dfDeaths) %>% filter(!is.na(ae)) #TODO explain
+df <- rbind(dfCases, dfDeaths) %>% filter(!is.na(ae)) # Make sure we are only including rows that have data (TODO make sure we are gauranteed other scores if we have at least one)
 df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
 
 # Prepare input choices

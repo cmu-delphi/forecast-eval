@@ -13,9 +13,19 @@ CASE_FILTER = "confirmed_incidence_num"
 FACET_LABELS = c("1" = "Horizon: 1 Week", "2" = "Horizon: 2 Weeks", "3" = "Horizon: 3 Weeks", "4" = "Horizon: 4 Weeks")
 
 # Get and prepare data
-dfCases <- readRDS("../Report/score_cards_state_cases.rds")
-dfDeaths <- readRDS("../Report/score_cards_state_deaths.rds")
-df <- rbind(dfCases, dfDeaths) %>% filter(!is.na(ae))
+getData <- function(filename){
+  path = ifelse(
+    file.exists(filename),
+    filename,
+    file.path("../dist/",filename)
+  )
+  readRDS(path)
+}
+
+dfCases <- getData("score_cards_state_cases.rds")
+dfDeaths <- getData("score_cards_state_deaths.rds")
+df <- rbind(dfCases, dfDeaths)
+df <- rbind(dfCases, dfDeaths) %>% filter(!is.na(ae)) #TODO explain
 df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
 
 # Prepare input choices
@@ -335,7 +345,6 @@ server <- function(input, output, session) {
         scale_x_continuous(limits=c(0, 100)) +
         labs(x = "", y = "Coverage Interval", title=titleText) +
         facet_wrap(~ Ahead, ncol=1, labeller = labeller(Ahead = FACET_LABELS))
-      
       return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(2, "lines"))) 
              %>% layout(legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
                         hovermode = 'x unified', xaxis = list(title = 'Coverage Percentage', titlefont=list(size=11)), 

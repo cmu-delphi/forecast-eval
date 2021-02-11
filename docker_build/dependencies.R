@@ -1,7 +1,8 @@
-# install.packages(c(), repo="http://cran.rstudio.com/")
+# Tidyverse is installed in the base image
+# Other packages should be installed here
 
-# blogdown::install_hugo()
+install.packages("assertthat")
+install.packages("optparse")
+install.packages("doParallel")
 
-devtools::install_github("cmu-delphi/covidcast", ref = "main",
-                         upgrade = 'never', 
-                         subdir = "R-packages/covidcast")
+devtools::install_github("cmu-delphi/covidcast",ref = "evalcast-killcards",subdir = "R-packages/evalcast")

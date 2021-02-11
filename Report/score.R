@@ -1,10 +1,11 @@
 library("evalcast")
 library("dplyr")
 library("lubridate")
+library("assertthat")
 
-create_score_cards = function(geo_type, signal_name = NULL, output_file_name = NULL){
+create_score_cards = function(prediction_cards_filepath, geo_type, signal_name = NULL, output_file_name = NULL, output_dir="."){
   if (!exists("predictions_cards")){
-    predictions_cards = readRDS("predictions_cards.rds")
+    predictions_cards = readRDS(prediction_cards_filepath)
   }
   signals = (predictions_cards %>% distinct(signal))$signal
   if (is.null(signal_name)){
@@ -28,7 +29,7 @@ create_score_cards = function(geo_type, signal_name = NULL, output_file_name = N
     } else {
       sig_suffix = "deaths"
     }
-    output_file_name = paste0("score_cards_", geo_type, "_", sig_suffix, ".rds")
+    output_file_name = file.path(output_dir,paste0("score_cards_", geo_type, "_", sig_suffix, ".rds"))
   }
   # central coverage functions named cov_10, cov_20, etc.
   central_intervals = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)

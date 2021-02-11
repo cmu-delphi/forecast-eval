@@ -252,7 +252,7 @@ server <- function(input, output, session) {
     p = ggplot(filteredScoreDf, aes(x = Date, y = Score, color = Forecaster)) +
       geom_line() +
       geom_point() +
-      labs(x = "", y = title, title=titleText) +
+      labs(x = "", y = "", title=titleText) +
       scale_x_date(date_labels = "%b %Y") +
       scale_y_continuous(labels = scales::comma) +
       facet_wrap(~ ahead, ncol=1, labeller = labeller(ahead = FACET_LABELS))
@@ -292,7 +292,7 @@ server <- function(input, output, session) {
     return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Incidence)) +
       geom_line() +
       geom_point() +
-      labs(x = "", y = "Incidence", title = title) +
+      labs(x = "", y = "", title = title) +
       scale_y_continuous(labels = scales::comma) +
       scale_x_date(date_labels = "%b %Y") + theme_bw()) 
       %>% layout(hovermode = 'x unified')

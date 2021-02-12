@@ -98,7 +98,7 @@ create_score_cards = function(prediction_cards_filepath, geo_type, signal_name =
     } else if (signal_name == "deaths_incidence_num"){
       jhu_signal = "inc death"
     } else if (signal_name == "deaths_cumulative_num"){
-      jhu_signal = "cum deaths"
+      jhu_signal = "cum death"
     } else {
       has_jhu_signal == FALSE
       warning(msg = paste("covidHubUtils cannot process provided signal:",

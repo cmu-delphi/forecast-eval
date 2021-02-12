@@ -5,7 +5,7 @@ library(stringr)
 
 # TODO: Use `get_covidhub_forecaster_names()` instead of listing forecasters
 create_prediction_cards = function(prediction_cards_filename){
-  start_date = today() - 100 * 7 # last 12 weeks
+  start_date = today() - 100 * 7 # last 100 weeks
   
   forecasters = get_covidhub_forecaster_names()
   num_forecasters = length(forecasters)
@@ -86,14 +86,8 @@ create_prediction_cards = function(prediction_cards_filename){
   }
   predictions_cards = predictions_cards %>%
                         filter(forecast_date >= start_date) %>%
-                        filter(!is.na(predictions_cards$target_end_date))
+                        filter(!is.na(predictions_cards$target_end_date)) 
   
-  # Hack: must change the response data source to be USAFacts, as JHU-CSSE data is
-  # currently unstable. **TODO**: we shouldn't require `evaluate_predictions()` to 
-  # have the response match what's in the forecaster. If I train my forecaster on
-  # (say) JHU-CSSE data, then I should be able to evaluate it on USAFacts data. 
-  
-  predictions_cards$data_source = "usa-facts"
   saveRDS(predictions_cards,
           file = prediction_cards_filename, 
           compress = "xz")

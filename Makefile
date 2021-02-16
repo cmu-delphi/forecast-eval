@@ -7,10 +7,10 @@ build: build_dashboard
 r_build:
 	docker build -t forecast-eval-build docker_build
 
-predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds: dist
+predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds: dist
 	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@ 
 
-pull_data: predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds
+pull_data: predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds
 
 dist:
 	mkdir $@

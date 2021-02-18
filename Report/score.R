@@ -54,12 +54,6 @@ create_score_cards = function(prediction_cards_filepath, geo_type, signal_name =
     preds_to_eval = preds_to_eval %>%
       filter(geo_value == "us")
   }
-  if (file.exists(output_file_name)) {
-    score_cards = readRDS(output_file_name)
-    preds_to_eval = anti_join(preds_to_eval, 
-                              score_cards, 
-                              by = c("ahead", "forecaster", "forecast_date"))
-  }
   
   #Only score forecasters with atleast 3 forecasts (i.e. more than mean and median)
   quantile_forecasts = preds_to_eval %>% 
@@ -70,22 +64,16 @@ create_score_cards = function(prediction_cards_filepath, geo_type, signal_name =
 
   preds_to_eval = semi_join(preds_to_eval, quantile_forecasts)
   if(nrow(preds_to_eval) > 0){
-    score_cards_new = evaluate_predictions(preds_to_eval, 
+    score_cards = evaluate_predictions(preds_to_eval, 
                                            err_measures,
                                            backfill_buffer = 0,
                                            geo_type = geo_type)
     # filter out scores that couldn't be evaluated to try to evaluate with
     # covidHubUtils.
-    na_scores = score_cards_new %>% filter(is.na(actual))
-    score_cards_new = score_cards_new %>% filter(!is.na(actual))
+    na_scores = score_cards %>% filter(is.na(actual))
+    score_cards = score_cards %>% filter(!is.na(actual))
   } else {
-    score_cards_new = data.frame()
-  }
-  
-  if(exists("score_cards")){
-    score_cards = rbind(score_cards, score_cards_new)
-  } else {
-    score_cards = score_cards_new
+    score_cards = data.frame()
   }
   
   if (nrow(na_scores) > 0){

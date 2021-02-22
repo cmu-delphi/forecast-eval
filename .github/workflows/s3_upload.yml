@@ -37,6 +37,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_TEST_SECRET_KEY }}
           aws-region: ${{ env.AWS_REGION_NAME }}
           
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: cmu-delphi-deploy-machine
+          password: ${{ secrets.CMU_DELPHI_DEPLOY_MACHINE_PAT }}
+          
       - name: Deploy score files to S3 bucket
         run: |
           make deploy

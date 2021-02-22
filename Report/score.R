@@ -46,18 +46,13 @@ create_score_cards = function(prediction_cards_filepath, geo_type, signal_name =
   
   if (geo_type == "state"){
     preds_to_eval = preds_to_eval %>% 
-      filter(nchar(geo_value) == 2)
+      filter(nchar(geo_value) == 2, geo_value != "us")
   } else if (geo_type == "county"){
     preds_to_eval = preds_to_eval %>% 
       filter(nchar(geo_value) == 5)
-  }
-  if (file.exists(output_file_name)) {
-    score_cards = readRDS(output_file_name)
-  }
-  if(exists("score_cards")){
-    preds_to_eval = anti_join(preds_to_eval, 
-                              score_cards, 
-                              by = c("ahead", "forecaster", "forecast_date"))
+  } else if (geo_type == "nation"){
+    preds_to_eval = preds_to_eval %>%
+      filter(geo_value == "us")
   }
   
   #Only score forecasters with atleast 3 forecasts (i.e. more than mean and median)
@@ -66,21 +61,63 @@ create_score_cards = function(prediction_cards_filepath, geo_type, signal_name =
     summarize(num_quantiles = n_distinct(quantile)) %>%
     filter(num_quantiles > 2) %>%
     select(-c(num_quantiles))
+
   preds_to_eval = semi_join(preds_to_eval, quantile_forecasts)
   if(nrow(preds_to_eval) > 0){
-    score_cards_new = evaluate_predictions(preds_to_eval, 
+    score_cards = evaluate_predictions(preds_to_eval, 
                                            err_measures,
-                                           backfill_buffer = 0)
+                                           backfill_buffer = 0,
+                                           geo_type = geo_type)
+    # filter out scores that couldn't be evaluated to try to evaluate with
+    # covidHubUtils.
+    na_scores = score_cards %>% filter(is.na(actual))
+    score_cards = score_cards %>% filter(!is.na(actual))
   } else {
-    score_cards_new = data.frame()
+    score_cards = data.frame()
   }
   
-  if(exists("score_cards")){
-    score_cards = rbind(score_cards, score_cards_new)
-  } else {
-    score_cards = score_cards_new
+  if (nrow(na_scores) > 0){
+    warning(msg = 
+              paste("covidcast could not provide truth data for some",
+            "predictions. Attempting to use covidHubUtils instead."))
+    has_jhu_signal = TRUE
+    if (signal_name == "confirmed_incidence_num"){
+      jhu_signal = "inc case"
+    } else if (signal_name == "deaths_incidence_num"){
+      jhu_signal = "inc death"
+    } else if (signal_name == "deaths_cumulative_num"){
+      jhu_signal = "cum death"
+    } else {
+      has_jhu_signal == FALSE
+      warning(msg = paste("covidHubUtils cannot process provided signal:",
+                          signal_name))
+    }
+    if(has_jhu_signal){
+      na_preds = semi_join(preds_to_eval, na_scores, by = c("forecaster", "ahead", "geo_value", "forecast_date"))
+      chu_truth = covidHubUtils::load_truth("JHU", jhu_signal)
+      chu_truth = chu_truth %>%
+        rename(actual = value) %>%
+        select(-c(model,
+                  target_variable,
+                  location,
+                  location_name,
+                  population,
+                  geo_type,
+                  abbreviation))
+      chu_scores = evaluate_predictions(na_preds, 
+                                        err_measures,
+                                        backfill_buffer = 0,
+                                        geo_type = geo_type,
+                                        side_truth = chu_truth)
+      if (any(is.na(chu_scores$actual))){
+        warning(msg = 
+                  paste("covidHubUtils could not provide actual data for some",
+                        "predictions. These predictions have not been scored."))
+        chu_scores = chu_scores %>% filter(!is.na(actual))
+      }
+      score_cards = rbind(score_cards, chu_scores)
+    }
   }
- # score_cards = score_cards %>% filter(forecast_date >= start_date)
   
   saveRDS(score_cards, 
        file = output_file_name, 

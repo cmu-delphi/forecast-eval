@@ -111,7 +111,7 @@ coverageExplanation = "<div style = 'margin-left:40px;'>
 
 ui <- fluidPage(
     useShinyjs(),
-    titlePanel("Forecaster Evaluation Dashboard"),
+    titlePanel("COVID-19 Forecaster Evaluation Dashboard"),
     tags$br(),
     sidebarLayout(
       sidebarPanel(id = "inputOptions",

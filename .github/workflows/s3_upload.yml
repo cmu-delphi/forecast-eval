@@ -1,5 +1,8 @@
 name: Github Actions S3 Deploy
 
+env:
+  AWS_REGION_NAME : "us-east-2"
+
 # Controls when the action will run. 
 on:
   # Triggers the workflow on push or pull request events but only for the dev branch
@@ -23,14 +26,21 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-
-      # Runs a single command using the runners shell
-      - name: Test command
-        run: |
-          echo "Hello World!"
-          
-      - name: Print current directory
-        run: ls -la
         
       - name: Test AWS cli installation
         run: aws --version
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_TEST_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_TEST_SECRET_KEY }}
+          region: ${{ env.AWS_REGION_NAME }}
+          
+      - name: Deploy score files to S3 bucket
+        run: |
+          make deploy
+        
+        
+        
+        

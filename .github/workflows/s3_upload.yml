@@ -35,7 +35,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_TEST_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_TEST_SECRET_KEY }}
-          region: ${{ env.AWS_REGION_NAME }}
+          aws-region: ${{ env.AWS_REGION_NAME }}
           
       - name: Deploy score files to S3 bucket
         run: |

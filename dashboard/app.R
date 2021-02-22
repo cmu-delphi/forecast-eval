@@ -82,10 +82,7 @@ The absolute error of a forecast is calculated from the <b>Point Forecast</b>. U
 but forecasters can specify their own Point Forecast value. When none is provided explicity, we use the 50% quantile prediction.
 <br><br>
 <b>Coverage</b><br>
-We demonstrate a forecaster's coverage score in multiple ways.
-Our <b>single interval coverage plot</b> shows how well a forecaster performed over time for a certain coverage interval.
-Our <b>multi-interval coverage plot</b> shows how well all of a forecaster's coverage intervals performed in a given location
-or on a given week. <br>
+The <b>coverage plot</b> shows how well a forecaster performed over time for a certain coverage interval.
 For more detailed information on each plot see the score explanation on the plot itself.
 <br><br>
 </div>"
@@ -95,16 +92,20 @@ For more detailed information on each plot see the score explanation on the plot
 wisExplanation = "<div style = 'margin-left:40px;'> The <b>weighted interval score</b> 
                     takes into account all the quantile predictions submitted...</div>"
 aeExplanation = "<div style = 'margin-left:40px;'>
-                  The <b>absolute error</b> of a forecast is calculated from the Point Forecast. Usually this is the 50% quantile prediction, but forecasters can specify their own Point Forecast value. When none is provided explicity, we use the 50% quantile prediction. 
+                  The <b>absolute error</b> of a forecast is calculated from the Point Forecast. 
+                  Usually this is the 50% quantile prediction, but forecasters can specify their own Point Forecast value. 
+                  When none is provided explicity, we use the 50% quantile prediction. 
                 </div>"
-coverageExplanation = "<div style = 'margin-left:40px;'>The <b>coverage plot</b> shows how well a forecaster's confidence intervals performed on a given week, across all locations.
-                      The x-axis is the confidence interval, and the y-xis is the percentage of time that the observed values of the target variable value fell into that confidence interval.
-                      A perfect forecaster on this measure would follow the bold black line.
-                      <br>
-                      For example, a forecaster wants the observed value to be within the 50% confidence interval in 50% of locations for the given week (or 50% of weeks for the given location).
-                      If the y-value at the 50% confidence interval is above the black line, it means that the observed values fell within the forecaster's 50% CI more than 50% of the time, aka the forecaster's 50% CI was under-confident, or too wide that week.
-                      Conversly, if the y-values are below the black line, it means that the forecaster's CIs were overconfident that week, or too narrow.
-                      Note: Since forecasters only submit 7 quantiles for case predicitons, there are only 3 confidence intervals for cases.
+coverageExplanation = "<div style = 'margin-left:40px;'>
+                        The <b>coverage plot</b> shows how well a forecaster's confidence intervals performed on a given week, across all locations.
+                        The horizontal black line is the selected confidence interval, and the y-values are the percentage of time that the observed
+                        values of the target variable value fell into that confidence interval. 
+                        A perfect forecaster on this measure would follow the black line.
+                        <br><br>
+                        For example, a forecaster wants the observed values to be within the 50% confidence interval in 50% of locations for the given week. 
+                        If the y-value is above the horizontal line, it means that the observed values fell within the forecaster's 50% CI more than 50% of 
+                        the time, aka the forecaster's 50% CI was under-confident that week, or too wide. Conversely, if the y-value is below the line, 
+                        it means that the forecaster's 50% CI was over-confident that week, or too narrow.
                       </div>"
 
 
@@ -154,7 +155,7 @@ ui <- fluidPage(
                                "Coverage Interval",
                                choices = coverageChoices,
                                multiple = FALSE,
-                               selected = "95"
+                               selected = "50"
                              ),
                              # tags$br(),
                              # tags$hr(),
@@ -317,7 +318,11 @@ server <- function(input, output, session) {
       filteredScoreDf = filteredScoreDf %>%
         group_by(Forecaster, Date, ahead) %>%
         summarize(Score = sum(Score)/length(locationsIntersect))
-      locationText = paste0(', Location: Averaged over all locations common to these forecasters')
+      if (length(locationsIntersect) > 1) {
+        locationText = paste0(', Location: Averaged over all locations common to these forecasters')
+      } else {
+        locationText = paste0(', Location: Averaged over all locations common to these forecasters (in this case, only ', toupper(locationsIntersect), ')')
+      }
     } else {
       filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(loc)) %>%
         group_by(Forecaster, Date, ahead) %>%
@@ -361,14 +366,24 @@ server <- function(input, output, session) {
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
     }
-    if (input$averageAllLocations) {
+    if (averageAllLocations) {
       title = paste0('<b>Incident ', input$targetVariable, '</b>', ' <br><sup>Summed Over All Locations</sup>')
       scoreDf = scoreDf %>% filter(signal == signalFilter) %>%
         group_by(target_end_date) %>% distinct(geo_value, .keep_all = TRUE)
       #TODO should this not include US when US becomes available?
-      scoreDf = scoreDf %>% filter(!is.na(actual)) %>%
-        group_by(target_end_date) %>%
-        summarize(actual = sum(actual))
+      # scoreDf = scoreDf %>% filter(!is.na(actual)) %>%
+      #   group_by(target_end_date) %>%
+      #   summarize(actual = sum(actual))
+      
+      # intersectList <- split(scoreDf$geo_value, scoreDf$forecaster, scoreDf$ahead)
+      # output$renderTable <- renderDataTable(scoreDf) # TODO remove
+      # print(intersectList)
+      # locationsIntersect =unique(Reduce(intersect, intersectList))
+      # scoreDf = scoreDf %>% filter(geo_value %in% locationsIntersect)
+      # scoreDf = scoreDf %>%
+      #   group_by(target_end_date) %>%
+      #   summarize(actual = sum(actual))
+      
       
     } else {
       title = paste0('<b> Incident ', input$targetVariable, '</b>')
@@ -523,11 +538,16 @@ server <- function(input, output, session) {
     }
     updateForecasterChoices(session, df, input$forecasters)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
-    updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval)
+    updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from
   observeEvent(input$forecasters, {
+    if (input$targetVariable == 'Deaths') {
+      df = df %>% filter(signal == DEATH_FILTER)
+    } else {
+      df = df %>% filter(signal == CASE_FILTER)
+    }
     df = df %>% filter(forecaster %in% input$forecasters)
     aheadChoices = unique(df$ahead)
     # Ensure previsouly selected options are still allowed
@@ -541,7 +561,7 @@ server <- function(input, output, session) {
                       selected = selectedAheads,
                       inline = TRUE)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
-    updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval)
+    updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
   
   # TODO need to ask about doing this...
@@ -587,7 +607,7 @@ updateForecasterChoices = function(session, df, forecasterInput) {
 }
 
 
-updateCoverageChoices = function(session, df, targetVariable, forecasterChoices, coverageInput) {
+updateCoverageChoices = function(session, df, targetVariable, forecasterChoices, coverageInput, output) {
   df = df %>% filter(forecaster %in% forecasterChoices)
   df = Filter(function(x)!all(is.na(x)), df)
   coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)

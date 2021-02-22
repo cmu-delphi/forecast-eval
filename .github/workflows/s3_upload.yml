@@ -24,8 +24,10 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE so your job can access it
-      - uses: actions/forecast-eval/heads@ga-aws
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with:
+          ref: ga-aws
         
       - name: Test AWS cli installation
         run: aws --version

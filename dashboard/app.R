@@ -67,7 +67,18 @@ coverageExplanation = "<div style = 'margin-left:40px;'>
 aboutPageText = HTML("
 <div style='width: 80%'>
 <b><h3>Who We Are</h3></b><br>
-Attribution goes here.
+This app was conceived and built in a collaboration between the Reich Lab's <a href='https://covid19forecasthub.org/'> Forecast Hub </a>
+and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'> Delphi Research Group</a>.
+<br>TODO: should there be more here about what each group is, and why we are collaborating (sharing resources and expertise). 
+For instance, something
+about how the Forecast Hub gathers all the weekly forecasts, and Delphi's evalcast scores them?
+<br><br>
+<b>Collaborators:</b>
+<br>
+TODO: how should these be displayed?
+<br>
+From the Forecast Hub: Nick Reich, Estee Cramer, Johannes Bracher, anyone else? <br>
+From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bien, Daniel McDonald, Logan Brooks, anyone else?
 <br>
 <b><h3>Our Mission</h3></b>
 <br>
@@ -80,8 +91,8 @@ Explanation of where data comes from...<br>
 <h5><b>Terms</b></h5>
 <b>Forecaster:</b> A model producing forecasts<br>
 <b>Forecast:</b> A set of data that, for all locales in a geo type, 
-includes 4 different “horizons” with predictions for the target variable for each of a certain number of quantiles 
-for each horizon <br>
+includes predictions for a target variable for each of a certain number of quantiles 
+for each of a certain number of horizons <br>
 <b>Target Variable:</b> What the forecast is predicting, ie: “weekly incident cases” <br>
 <b>Horizon:</b> 1 epi-week, some number of epi-weeks ahead of the current week <br>
 <b>Epi-week:</b> Week that starts on a Sunday. If it is Sunday or Monday, 
@@ -99,8 +110,6 @@ For many forecasters this is the 50% quantile prediction. <br>
 "<br><br>
 <b>Coverage</b><br>", coverageExplanation, 
 "<br><br></div>")
-
-
 
 
 ui <- fluidPage(

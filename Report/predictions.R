@@ -31,6 +31,7 @@ create_prediction_cards = function(prediction_cards_filename){
   if (file.exists(prediction_cards_filename)) {
     print("Reading from existing prediction cards")
     predictions_cards = readRDS(file = prediction_cards_filename)
+    predictions_cards$data_source = "jhu-csse"
     seen_dates = predictions_cards %>% 
       distinct(forecast_date, forecaster)
     print("Existing prediction cards loaded")

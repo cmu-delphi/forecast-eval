@@ -27,7 +27,7 @@ score_forecast: r_build dist pull_data
 		Rscript create_reports.R --dir /var/dist
 
 deploy: score_forecast
-	aws s3 cp dist/ $(S3_BUCKET)/ --recursive --exclude "*" --include "*rds"
+	aws s3 cp dist/ $(S3_BUCKET)/ --recursive --exclude "*" --include "*rds" --acl public-read
 
 # Starts a docker image with a full preconfigured R environment
 start_dev: r_build

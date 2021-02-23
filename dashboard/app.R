@@ -41,56 +41,10 @@ locationChoices = unique(toupper(df$geo_value))
 # dateChoices = rev(sort(as.Date(unique(df$target_end_date))))
 coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 
-
-# About page content
-aboutPageText = "
-<div style='width: 80%'>
-<b><h3>Who We Are</h3></b><br>
-Attribution goes here.
-<br>
-<b><h3>Our Mission</h3></b>
-<br>
-The goal of the Forecast Evaluation Working Group is to provide a robust set of tools and methods for evaluating the
-performance of COVID-19 forecasting models to help epidemiological researchers gain insights into the models' performance, 
-and ultimately lead to more accurate forecasting of COVID-19 and other diseases. TODO: obviously this needs work.
-<b><h3>About the Data</h3></b><br>
-TODO: Is this useful to include? What else should we have here?<br>
-Explanation of where data comes from...<br>
-<h5><b>Terms</b></h5>
-<b>Forecaster:</b> a model producing forecasts<br>
-<b>Forecast:</b> a set of data that, for all locales in a geo type, 
-includes 4 different “horizons” with predictions for the target variable for each of a certain number of quantiles 
-for each horizon <br>
-<b>Target Variable:</b> what the forecast is predicting, ie: “weekly incident cases” <br>
-<b>Horizon:</b> 1 epi-week, some number of epi-weeks ahead of the current week <br>
-<b>Epi-week:</b> Week that starts on a Sunday. If it is Sunday or Monday, 
-the next epi-week is the week that starts on that Sunday (going back a day if it is Monday). 
-If it is Tuesday-Saturday, it is the week that starts on the subsequent Sunday. <br>
-<b>Point Forecast:</b> The value that each forecaster picks as their “most important” prediction. 
-For many forecasters this is the 50% quantile prediction. <br>
-<b>Geo Type:</b> states, counties or nation
-<br>
-<b><h3>Explanation of Scoring Methods</h3></b>
-<br>
-<b>Weighted Interval Score</b><br>
-The weighted interval score (WIS) is a proper score that combines a set of interval scores.
-See <a href='https://arxiv.org/pdf/2005.12881.pdf'>this preprint</a> about the WIS method for a more in depth explanation.
-TODO: How is it actually calculated from the intervals?
-<br><br>
-<b>Absolute Error</b><br>
-The absolute error of a forecast is calculated from the <b>Point Forecast</b>. Usually this is the 50% quantile prediction,
-but forecasters can specify their own Point Forecast value. When none is provided explicity, we use the 50% quantile prediction.
-<br><br>
-<b>Coverage</b><br>
-The <b>coverage plot</b> shows how well a forecaster performed over time for a certain coverage interval.
-For more detailed information on each plot see the score explanation on the plot itself.
-<br><br>
-</div>"
-
-
 # Score explanations
-wisExplanation = "<div style = 'margin-left:40px;'> The <b>weighted interval score</b> 
-                    takes into account all the quantile predictions submitted...</div>"
+wisExplanation = "<div style = 'margin-left:40px;'> The weighted interval score (WIS) is a proper score that combines a set of interval scores.
+See <a href='https://arxiv.org/pdf/2005.12881.pdf'>this preprint</a> about the WIS method for a more in depth explanation.
+TODO: How is it actually calculated from the intervals?</div>"
 aeExplanation = "<div style = 'margin-left:40px;'>
                   The <b>absolute error</b> of a forecast is calculated from the Point Forecast. 
                   Usually this is the 50% quantile prediction, but forecasters can specify their own Point Forecast value. 
@@ -107,6 +61,46 @@ coverageExplanation = "<div style = 'margin-left:40px;'>
                         the time, aka the forecaster's 50% CI was under-confident that week, or too wide. Conversely, if the y-value is below the line, 
                         it means that the forecaster's 50% CI was over-confident that week, or too narrow.
                       </div>"
+
+
+# About page content
+aboutPageText = HTML("
+<div style='width: 80%'>
+<b><h3>Who We Are</h3></b><br>
+Attribution goes here.
+<br>
+<b><h3>Our Mission</h3></b>
+<br>
+The goal of the Forecast Evaluation Working Group is to provide a robust set of tools and methods for evaluating the
+performance of COVID-19 forecasting models to help epidemiological researchers gain insights into the models' performance, 
+and ultimately lead to more accurate forecasting of COVID-19 and other diseases. TODO: obviously this needs work.
+<b><h3>About the Data</h3></b><br>
+TODO: Is this useful to include? What else should we have here?<br>
+Explanation of where data comes from...<br>
+<h5><b>Terms</b></h5>
+<b>Forecaster:</b> A model producing forecasts<br>
+<b>Forecast:</b> A set of data that, for all locales in a geo type, 
+includes 4 different “horizons” with predictions for the target variable for each of a certain number of quantiles 
+for each horizon <br>
+<b>Target Variable:</b> What the forecast is predicting, ie: “weekly incident cases” <br>
+<b>Horizon:</b> 1 epi-week, some number of epi-weeks ahead of the current week <br>
+<b>Epi-week:</b> Week that starts on a Sunday. If it is Sunday or Monday, 
+the next epi-week is the week that starts on that Sunday (going back a day if it is Monday). 
+If it is Tuesday-Saturday, it is the week that starts on the subsequent Sunday. <br>
+<b>Point Forecast:</b> The value that each forecaster picks as their “most important” prediction. 
+For many forecasters this is the 50% quantile prediction. <br>
+<b>Geo Type:</b> States or U.S. as a nation
+<br>
+<b><h3>Explanation of Scoring Methods</h3></b>
+<br>
+<b>Weighted Interval Score</b><br>", wisExplanation,
+"<br><br>
+<b>Absolute Error</b><br>", aeExplanation, 
+"<br><br>
+<b>Coverage</b><br>", coverageExplanation, 
+"<br><br></div>")
+
+
 
 
 ui <- fluidPage(

@@ -25,6 +25,8 @@ getData <- function(filename){
 
 dfCases <- getData("score_cards_state_cases.rds")
 dfDeaths <- getData("score_cards_state_deaths.rds")
+dfNationCases = getData("score_cards_nation_cases.rds")
+print(dfNationCases)
 df <- rbind(dfCases, dfDeaths)
 df <- rbind(dfCases, dfDeaths) %>% filter(!is.na(ae)) # Make sure we are only including rows that have data (TODO make sure we are gauranteed other scores if we have at least one)
 df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
@@ -35,7 +37,7 @@ forecaster_rand <- sample(unique(df$forecaster))
 color_palette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecaster_rand)
 
 # Prepare input choices
-modelChoices = sort(unique(df$forecaster))
+forecasterChoices = sort(unique(df$forecaster))
 aheadChoices = unique(df$ahead)
 locationChoices = unique(toupper(df$geo_value))
 # dateChoices = rev(sort(as.Date(unique(df$target_end_date))))
@@ -132,7 +134,7 @@ ui <- fluidPage(
             selectInput(
               "forecasters",
               "Forecasters (type a name to select)",
-              choices = modelChoices,
+              choices = forecasterChoices,
               multiple = TRUE,
               selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
             ),
@@ -535,6 +537,7 @@ server <- function(input, output, session) {
   
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
+    print('here')
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
     } else {

@@ -42,7 +42,7 @@ locationChoices = unique(toupper(df$geo_value))
 coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 
 # Score explanations
-wisExplanation = "<div style = 'margin-left:40px;'> The weighted interval score (WIS) is a proper score that combines a set of interval scores.
+wisExplanation = "<div style = 'margin-left:40px;'> The <b>weighted interval score</b> (WIS) is a proper score that combines a set of interval scores.
 See <a href='https://arxiv.org/pdf/2005.12881.pdf'>this preprint</a> about the WIS method for a more in depth explanation.
 TODO: How is it actually calculated from the intervals?</div>"
 aeExplanation = "<div style = 'margin-left:40px;'>
@@ -285,6 +285,7 @@ server <- function(input, output, session) {
   ##############
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
                          horizon, loc, averageOverAllLocations, coverageInterval = NULL) {
+    # output$renderTable <- renderDataTable(scoreDf) # TODO remove
     
     signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {

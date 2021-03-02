@@ -11,7 +11,6 @@ library(viridis)
 COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 DEATH_FILTER = "deaths_incidence_num"
 CASE_FILTER = "confirmed_incidence_num"
-FACET_LABELS = c("1" = "Horizon: 1 Week", "2" = "Horizon: 2 Weeks", "3" = "Horizon: 3 Weeks", "4" = "Horizon: 4 Weeks")
 
 # Get and prepare data
 getData <- function(filename){
@@ -28,8 +27,6 @@ dfStateDeaths <- getData("score_cards_state_deaths.rds")
 dfNationCases = getData("score_cards_nation_cases.rds")
 dfNationDeaths = getData("score_cards_nation_deaths.rds")
 df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
-print(df %>% filter(geo_value == 'al') %>% filter(ahead == 2) %>% filter(forecaster == 'BPagano-RtDriven'))
-# %>% filter(!is.na(ae)) # Make sure we are only including rows that have data (TODO make sure we are gauranteed other scores if we have at least one)
 df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
 
 # Prepare color palette
@@ -42,7 +39,6 @@ forecasterChoices = sort(unique(df$forecaster))
 aheadChoices = unique(df$ahead)
 locationChoices = unique(toupper(df$geo_value))
 locationChoices = locationChoices[c(length(locationChoices), (1:length(locationChoices)-1))] # Move US to front of list
-# dateChoices = rev(sort(as.Date(unique(df$target_end_date))))
 coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 
 # Score explanations
@@ -116,8 +112,16 @@ If it is Tuesday-Saturday, it is the week that starts on the subsequent Sunday.<
 For many forecasters this is the 50% quantile prediction.</div></li>
 <li><b>Geo Type</b>
 <div style = 'margin-left:40px;'>States or U.S. as a nation</div></li></ul>
-<br><h4><b>Forecaster Inclusion Criteria</b></h4>
-TODO: ask Jed about which forecasters get excluded in the script<br>
+<br><h4><b>Dashboard Inclusion Criteria</b></h4>
+<ul>
+<li> Includes only weekly deaths incidence and weekly case incidence target variables</li>
+<li> Includes only horizon < 5 weeks ahead</li>
+<li> Includes only geo values that are 2 characters (states / territories / nation)</li>
+<li> Inlcudes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)</li>
+<li> Includes only predictions with at least 3 quantile values</li>
+<li> Includes only one file per forecaster per week (according to forecast date). That file must be from a Sunday or Monday. If both are present, we keep the Monday data.</li>
+<li> If a forecaster updates a file, we do not include the new predictions</li>
+</ul>
 <br><h4><b>Notes on the Data</b></h4>
 <ul>
 <li>When totaling over all locations, these locations include states and territories and do not include nationwide forecasts.</li>
@@ -152,7 +156,6 @@ ui <- fluidPage(
                                       choices = list("Weighted Interval Score" = "wis", 
                                                      "Absolute Error" = "ae",
                                                      "Coverage" = "coverage")),
-            # uiOutput("forecasterInput"),
             selectInput(
               "forecasters",
               "Forecasters (Type a name or select from dropdown)",
@@ -160,7 +163,6 @@ ui <- fluidPage(
               multiple = TRUE,
               selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
             ),
-            # uiOutput("aheadInput"),
             checkboxGroupInput(
               "aheads", 
               "Forecast Horizon (Weeks)",
@@ -175,7 +177,6 @@ ui <- fluidPage(
                                value = FALSE,
                              )
             ),
-            # uiOutput("coverageIntervalInput"),
             conditionalPanel(condition = "input.scoreType == 'coverage'",
                              selectInput(
                                "coverageInterval",
@@ -184,11 +185,7 @@ ui <- fluidPage(
                                multiple = FALSE,
                                selected = "50"
                              ),
-                             # tags$br(),
-                             # tags$hr(),
-                             # h5("For Multi-Interval Coverage Plot")
             ),
-            # uiOutput("locationInput"),
             conditionalPanel(condition = "!input.allLocations && input.scoreType != 'coverage'",
                              selectInput(
                                "location",
@@ -220,10 +217,6 @@ ui <- fluidPage(
             plotlyOutput(outputId = "summaryPlot"),
             dataTableOutput('renderTable'),
             tags$br(),tags$br(),tags$br(),tags$br(),tags$br(),
-            # hidden(actionLink("multiIntervalCoverage",
-            #            h4(tags$div(style = "color: black; padding-left:40px;", HTML("Multi-Interval Coverage Plot"),
-            #                        icon("arrow-circle-down"))))),
-            # hidden(div(id='multiIntervalCoveragePlot', plotlyOutput(outputId = "multiIntervalCoveragePlot"))),
             HTML('<div style=padding-left:40px>'),
             textOutput('renderLocationText'),
             textOutput('renderAggregateText'),
@@ -238,7 +231,7 @@ ui <- fluidPage(
             actionLink("truthValues",
                        h4(tags$div(style = "color: black; padding-left:40px;", HTML("Observed Values"),
                                    icon("arrow-circle-down")))),
-            hidden(div(id='truthPlot', plotlyOutput(outputId = "truthPlot"))),
+            hidden(div(id="truthSection", hidden(div(id='truthPlot', plotlyOutput(outputId = "truthPlot"))))),
             tags$br(),tags$br()
           )
         ),
@@ -249,75 +242,11 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  
-  # updatedDf = # TODO checkout this version to separate branch where I can keep this and other stuff I might need, then remove all commented out stuff
-  #   reactive({
-  #     signalFilter = CASE_FILTER
-  #     if (input$targetVariable == "Deaths") {
-  #       signalFilter = DEATH_FILTER
-  #     }
-  #     df %>% 
-  #       filter(signal == signalFilter) %>%
-  #         filter(ahead %in% input$aheads) %>%
-  #         filter(forecaster %in% input$forecasters)
-  #   })
-  
-  # output$renderTable <- renderDataTable(updatedDf()) # TODO remove
-
-  
-  # output$forecasterInput = renderUI({
-  #    selectInput(
-  #                                   "forecasters",
-  #                                   "Forecasters (type a name to select)",
-  #                                   choices = modelChoices,
-  #                                   multiple = TRUE,
-  #                                   selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
-  #                                 )
-  # })
-                                  
-  # output$aheadInput = renderUI({
-  #   checkboxGroupInput(
-  #     "aheads", 
-  #     "Forecast Horizon (Weeks)",
-  #     choices = aheadChoices,
-  #     selected = 1,
-  #     inline = TRUE
-  #   )
-  # })
-  # output$coverageIntervalInput = renderUI({
-  #   conditionalPanel(condition = "input.scoreType == 'coverage'",
-  #                    selectInput(
-  #                      "coverageInterval",
-  #                      "Coverage Interval",
-  #                      choices = coverageChoices,
-  #                      multiple = FALSE,
-  #                      selected = "95"
-  #                    ),
-  #                    tags$br(),
-  #                    tags$hr(),
-  #                    h5("For Multi-Interval Coverage Plot"),
-  #   )
-  # })  
-  # output$locationInput = renderUI({
-  #   conditionalPanel(condition = "!input.allLocations",
-  #                    selectInput(
-  #                      "location",
-  #                      "Location",
-  #                      choices = locationChoices,
-  #                      multiple = FALSE,
-  #                      selected = "CA"
-  #                    ),
-  #   )
-  # })
-  
-  
   ##############
   # CREATE PLOTS
   ##############
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
                          horizon, loc, allLocations, coverageInterval = NULL) {
-    output$renderTable <- renderDataTable(scoreDf) # TODO remove
-    
     signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
@@ -368,14 +297,13 @@ server <- function(input, output, session) {
           summarize(Score = sum(Score), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
-      # output$renderTable <- renderDataTable(filteredScoreDf) # TODO remove
-      print(toupper(locationsIntersect))
-      
+
       if (length(locationsIntersect) == 0) {
         output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common.")
         output$renderLocations <- renderText("")
         output$renderAggregateText = renderText("")
         output$renderLocationText = renderText("")
+        hideElement("truthSection")
         return()
       }
       else {
@@ -394,10 +322,10 @@ server <- function(input, output, session) {
       output$renderAggregateText = renderText("")
       output$renderLocations <- renderText("")
       output$renderWarningText <- renderText("")
-      
     }
     
     # Render truth plot with observed values
+    showElement("truthSection")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, targetVariable, locationsIntersect, allLocations)
@@ -414,20 +342,22 @@ server <- function(input, output, session) {
       as_tsibble(key = c(Forecaster, ahead), index = Date) %>%
       group_by(Forecaster, ahead) %>%
       fill_gaps(.full = TRUE)
-
+    
+    filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4), 
+                                    labels = c("Horizon: 1 Week", "Horizon: 2 Weeks", "Horizon: 3 Weeks", "Horizon: 4 Weeks"))
     p = ggplot(filteredScoreDf, aes(x = Date, y = Score, color = Forecaster)) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title=titleText) +
       scale_x_date(date_labels = "%b %Y") +
       scale_y_continuous(labels = scales::comma) +
-      facet_wrap(~ ahead, ncol=1, labeller = labeller(ahead = FACET_LABELS)) +
+      facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = color_palette)
 
+    print(filteredScoreDf$ahead)
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
-    
     return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(2, "lines"))) 
            %>% layout(legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
                       hovermode = 'x unified') 
@@ -435,37 +365,13 @@ server <- function(input, output, session) {
   }
   
   # Create the plot for target variable ground truth
-  truthPlot = function(scoreDf, targetVariable, locationsIntersect = NULL, allLocations = FALSE) {
-    # signalFilter = CASE_FILTER
-    # if (targetVariable == "Deaths") {
-    #   signalFilter = DEATH_FILTER
-    # }
-    print(targetVariable)
+  truthPlot = function(scoreDf = NULL, targetVariable = NULL, locationsIntersect = NULL, allLocations = FALSE) {
     titleText = paste0('<b> Incident ', targetVariable, '</b>')
-    
     if (allLocations) {
       titleText = paste0('<b>Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all locations common to selected forecasters*</sup>')
-      # scoreDf = scoreDf %>%
-      #   group_by(target_end_date) %>% distinct(geo_value, .keep_all = TRUE)
-      #TODO should this not include US when US becomes available?
-      # scoreDf = scoreDf %>% filter(!is.na(actual)) %>%
-      #   group_by(target_end_date) %>%
-      #   summarize(actual = sum(actual))
-      
-      # intersectList <- split(scoreDf$geo_value, scoreDf$forecaster, scoreDf$ahead)
-      # output$renderTable <- renderDataTable(scoreDf) # TODO remove
-      # print(intersectList)
-      # locationsIntersect =unique(Reduce(intersect, intersectList))
-      # scoreDf = scoreDf %>% filter(geo_value %in% locationsIntersect)
-      # scoreDf = scoreDf %>%
-      #   group_by(target_end_date) %>%
-      #   summarize(actual = sum(actual)) #TODO clean up this function get rid of all this
-      
-      
     } 
-
     scoreDf <- scoreDf %>%
-      group_by(Date) %>% summarize(Incidence = actual) #TODO confirm this still works
+      group_by(Date) %>% summarize(Incidence = actual)
     
     return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Incidence)) +
       geom_line() +
@@ -476,59 +382,6 @@ server <- function(input, output, session) {
       %>% layout(hovermode = 'x unified')
       %>% config(displayModeBar = F))
   }
-  
-  # Create alternative, multi-interval coverage plot
-  # multiIntervalCoveragePlot = function(scoreDf, targetVariable, scoreType, forecasters,
-  #                         horizon, loc, allLocations) {
-  #   signalFilter = CASE_FILTER
-  #   if (targetVariable == "Deaths") {
-  #     signalFilter = DEATH_FILTER
-  #   }
-  #   filteredDf = scoreDf %>% filter(signal == signalFilter) %>%
-  #   filter(ahead %in% horizon) %>%
-  #   filter(forecaster %in% forecasters)
-  #   filteredDf = filteredDf %>% rename(Forecaster = forecaster, Date = target_end_date)
-  #   
-  #     filteredDf = filteredDf %>% filter(geo_value == tolower(loc))
-  #     forecasters = unique(filteredDf$Forecaster)
-  #     aheads = unique(filteredDf$ahead)
-  #     coverageDf = data.frame(Ahead=integer(), Forecaster=character(), Interval=character(), Score=double(), stringsAsFactors=FALSE)
-  #     for (horizon in aheads) {
-  #       for (forecaster in forecasters) {
-  #         forecasterDf = filteredDf %>% filter(Forecaster == forecaster) %>% filter(ahead == horizon)
-  #         forecasterDf = Filter(function(x)!all(is.na(x)), forecasterDf)
-  #         intervals = intersect(colnames(forecasterDf), COVERAGE_INTERVALS)
-  #         
-  #         for (interval in intervals) {
-  #           dates = unique(forecasterDf$Date)
-  #           score = sum(forecasterDf[[interval]])/length(dates) * 100
-  #           coverageDf[nrow(coverageDf) + 1,] = c(horizon, forecaster, interval, score)
-  #         }
-  #       }
-  #     }
-  #     coverageDf$Score <- as.numeric(as.character(coverageDf$Score))
-  #     coverageDf$Interval <- as.numeric(as.character(coverageDf$Interval))
-  #     coverageDf = coverageDf %>% mutate(across(is.numeric, ~ round(., 2)))
-  #     titleText = paste0('<b>Multi-Interval Coverage</b>','<br>', '<sup>',
-  #                        'Target Variable: ', input$targetVariable,
-  #                        ', Location: ', loc,
-  #                        ', Averaged Over All Dates',
-  #                        '</sup>')
-  #     p = ggplot(coverageDf, aes(x = Interval, y = Score, color = Forecaster)) +
-  #       geom_line() +
-  #       geom_point() +
-  #       geom_abline(intercept = 0, slope = 1) +
-  #       scale_y_continuous(limits=c(0, 100)) +
-  #       scale_x_continuous(limits=c(0, 100)) +
-  #       labs(x = "", y = "Coverage Interval", title=titleText) +
-  #       facet_wrap(~ Ahead, ncol=1, labeller = labeller(Ahead = FACET_LABELS))
-  #     return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(2, "lines"))) 
-  #            %>% layout(legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
-  #                       hovermode = 'x unified', xaxis = list(title = 'Coverage Percentage', titlefont=list(size=11)), 
-  #                       yaxis = list(title = 'Coverage Interval', titlefont=list(size=12))) 
-  #            %>% config(displayModeBar = F))
-  # }
-  
 
   #############
   # PLOT OUTPUT
@@ -537,16 +390,7 @@ server <- function(input, output, session) {
     summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
                 input$aheads, input$location, input$allLocations, input$coverageInterval)
   })
-  
-  # output$multiIntervalCoveragePlot <- renderPlotly({
-  #   multiIntervalCoveragePlot(df, input$targetVariable, input$scoreType, input$forecasters, 
-  #               input$aheads, input$location, input$allLocations)
-  # })
-  
-  
-  
-  
-  
+
   ###################
   # EVENT OBSERVATION
   ###################
@@ -572,18 +416,7 @@ server <- function(input, output, session) {
                        paste0(h4(tags$div(style = "color: black; padding-left:40px;", HTML("Explanation Of Score"), 
                                           icon))))
   })
-  # observeEvent(input$multiIntervalCoverage, {
-  #   toggle('multiIntervalCoveragePlot')
-  #   if (input$multiIntervalCoverage %% 2 == 1) {
-  #     icon = icon("arrow-circle-up")
-  #   } else {
-  #     icon = icon("arrow-circle-down")
-  #   }
-  #   updateActionLink(session, "multiIntervalCoverage",
-  #                    paste0(h4(tags$div(style = "color: black; padding-left:40px;", HTML("Multi-Interval Coverage Plot"), 
-  #                                       icon))))
-  # })
-  
+
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
     if (input$targetVariable == 'Deaths') {
@@ -607,17 +440,12 @@ server <- function(input, output, session) {
     
     if (input$scoreType == "wis") {
       html("explainScore", paste0(wisExplanation))
-      # hide('multiIntervalCoverage')
-      # hide('multiIntervalCoveragePlot')
     }
     if (input$scoreType == "ae") {
       html("explainScore", paste0(aeExplanation))
-      # hide('multiIntervalCoverage')
-      # hide('multiIntervalCoveragePlot')
     }
     if (input$scoreType == "coverage") {
       html("explainScore", paste0(coverageExplanation))
-      # show('multiIntervalCoverage')
     }
   })
 
@@ -644,18 +472,6 @@ server <- function(input, output, session) {
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
   
-  # TODO need to ask about doing this...
-  # observeEvent(isolate(input$location), {
-  #   if (input$targetVariable == 'Deaths') {
-  #     df = df %>% filter(signal == DEATH_FILTER)
-  #   } else {
-  #     df = df %>% filter(signal == CASE_FILTER)
-  #   }
-  #   updateForecasterChoices(session, df, input$forecasters, input$location)
-  # })
-  # 
-  #TODO update CI and/or horizon based on location? I don't think it is necessary, but can look into it
-  
   # Ensure there is always one ahead value selected and one forecaster selected
   observe({
     if(length(input$aheads) < 1) {
@@ -672,7 +488,6 @@ server <- function(input, output, session) {
 ################
 # UTIL FUNCTIONS
 ################
-
 updateForecasterChoices = function(session, df, forecasterInput, scoreType) {
   if (scoreType == "wis") {
     df = df %>% filter(!is.na(wis))
@@ -697,10 +512,11 @@ updateCoverageChoices = function(session, df, targetVariable, forecasterChoices,
   df = df %>% filter(forecaster %in% forecasterChoices)
   df = Filter(function(x)!all(is.na(x)), df)
   coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
+  # Ensure previsouly selected options are still allowed
   if (coverageInput %in% coverageChoices) {
     selectedCoverage = coverageInput
   } else {
-    selectedCoverage = coverageChoices[1] #TODO might this throw an error?
+    selectedCoverage = coverageChoices[1]
   }
   updateSelectInput(session, "coverageInterval",
                     choices = coverageChoices,
@@ -712,10 +528,11 @@ updateLocationChoices = function(session, df, targetVariable, forecasterChoices,
   df = df %>% filter(forecaster %in% forecasterChoices)
   locationChoices = unique(toupper(df$geo_value))
   locationChoices = locationChoices[c(length(locationChoices), (1:length(locationChoices)-1))] # Move US to front of list
+  # Ensure previsouly selected options are still allowed
   if (locationInput %in% locationChoices) {
     selectedLocation = locationInput
   } else {
-    selectedLocation = locationChoices[1] #TODO might this throw an error? less likely
+    selectedLocation = locationChoices[1]
   }
   updateSelectInput(session, "location",
                     choices = locationChoices,

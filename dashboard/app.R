@@ -354,7 +354,6 @@ server <- function(input, output, session) {
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = color_palette)
 
-    print(filteredScoreDf$ahead)
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }

@@ -7,19 +7,36 @@ library(plotly)
 library(shinyjs)
 library(tsibble)
 library(viridis)
+library(aws.s3)
 
 COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 DEATH_FILTER = "deaths_incidence_num"
 CASE_FILTER = "confirmed_incidence_num"
 
+# Connect to AWS s3bucket
+Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
+s3bucket = tryCatch(
+  {
+    get_bucket(bucket = 'forecast-eval')
+  },
+  error = function(e) {
+    e
+    return(NULL)
+  }
+)
+
 # Get and prepare data
 getData <- function(filename){
-  path = ifelse(
-    file.exists(filename),
-    filename,
-    file.path("../dist/",filename)
-  )
-  readRDS(path)
+  if(!is.null(s3bucket)) {
+    s3readRDS(object = filename, bucket = s3bucket)
+  } else {
+    path = ifelse(
+      file.exists(filename),
+      filename,
+      file.path("../dist/",filename)
+    )
+    readRDS(path)
+  }
 }
 
 dfStateCases <- getData("score_cards_state_cases.rds")
@@ -117,7 +134,7 @@ For many forecasters this is the 50% quantile prediction.</div></li>
 <li> Includes only weekly deaths incidence and weekly case incidence target variables</li>
 <li> Includes only horizon < 5 weeks ahead</li>
 <li> Includes only geo values that are 2 characters (states / territories / nation)</li>
-<li> Inlcudes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)</li>
+<li> Includes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)</li>
 <li> Includes only predictions with at least 3 quantile values</li>
 <li> Includes only one file per forecaster per week (according to forecast date). That file must be from a Sunday or Monday. If both are present, we keep the Monday data.</li>
 <li> If a forecaster updates a file, we do not include the new predictions</li>
@@ -332,7 +349,7 @@ server <- function(input, output, session) {
     })
     
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Date", "Score", "ahead")]
-    filteredScoreDf = filteredScoreDf %>% mutate(across(is.numeric, ~ round(., 2)))
+    filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
                        'Target Variable: ', targetVariable,
                        locationSubtitleText,

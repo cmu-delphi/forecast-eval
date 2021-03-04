@@ -28,15 +28,27 @@ s3bucket = tryCatch(
 # Get and prepare data
 getData <- function(filename){
   if(!is.null(s3bucket)) {
-    s3readRDS(object = filename, bucket = s3bucket)
-  } else {
-    path = ifelse(
-      file.exists(filename),
-      filename,
-      file.path("../dist/",filename)
+    tryCatch(
+      {
+        s3readRDS(object = filename, bucket = s3bucket)
+      },
+      error = function(e) {
+        e
+        getFallbackData(filename)
+      }
     )
-    readRDS(path)
+  } else {
+    getFallbackData(filename)
   }
+}
+
+getFallbackData = function(filename) {
+  path = ifelse(
+    file.exists(filename),
+    filename,
+    file.path("../dist/",filename)
+  )
+  readRDS(path)
 }
 
 dfStateCases <- getData("score_cards_state_cases.rds")
@@ -84,23 +96,38 @@ coverageExplanation = "<div style = 'margin-left:40px;'>
 aboutPageText = HTML("
 <div style='width: 80%'>
 <b><h3><u>Who We Are</u></h3></b><br>
-This app was conceived and built in a collaboration between the Reich Lab's <a href='https://covid19forecasthub.org/'>Forecast Hub</a>
-and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'> Delphi Research Group</a>.
+The Forecast Evaluation Research Collaborative was founded by the <a href='https://reichlab.io/'>Reich Lab</a>
+at University of Massachusetts Amherst and the Carnegie Mellon University <a href = 'https://delphi.cmu.edu'> Delphi Group</a>.
+Both groups are funded by the CDC as Centers of Excellence for Influenza and COVID-19 Forecasting. 
+We have partnered together on this project to focus on providing a robust set of tools and methods for evaluating the performance of epidemic forecasts.
+<br><br>
+The collaborative’s mission is to help epidemiological researchers gain insights into the performance of their forecasts, 
+and ultimately lead to more accurate forecasting of epidemics. 
+<br><br>
+Both groups have led initiatives related to COVID-19 data and forecast curation. 
+The Reich Lab has created the <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub</a>, 
+a collaborative effort with over 80 groups submitting forecasts to be part of the official 
+<a href='https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html'> CDC COVID-19 ensemble forecast</a>.
+The Delphi Group has created COVIDcast, a platform for <a href='https://delphi.cmu.edu/covidcast/'>epidemiological surveillance data</a>, 
+and runs the <a href='https://delphi.cmu.edu/covidcast/surveys/'>Delphi Pandemic Survey via Facebook</a>, 
+which is a <a href='https://delphi.cmu.edu/blog/2020/09/21/can-symptoms-surveys-improve-covid-19-forecasts/'>valuable signal</a> 
+for Delphi’s participation in the ensemble forecast.
+<br><br>
+This Forecaster Evaluation Dashboard is a collaborative project, also made possible by the Google Fellowship program... TODO more to add
+
+
 <br>TODO: should there be more here about what each group is, and why we are collaborating (sharing resources and expertise). 
 For instance, something
 about how the Forecast Hub gathers all the weekly forecasts, and Delphi's evalcast scores them?
 <br><br>
 <br><h4><b>Collaborators</b></h4>
-TODO: how should these be displayed?
 <br>
-From the Forecast Hub: Nick Reich, Estee Cramer, Johannes Bracher, anyone else? <br>
-From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bien, Daniel McDonald, Logan Brooks, anyone else?
+From the Forecast Hub: Estee Cramer, NIcholas Reich, <a href='https://covid19forecasthub.org/doc/team/'>the COVID-19 Forecast Hub Team</a>
+<br>
+From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bien, Daniel McDonald, Logan Brooks
 <br>
 <br><b><h3><u>Our Mission</u></h3></b>
 <br>
-The goal of the Forecast Evaluation Working Group is to provide a robust set of tools and methods for evaluating the
-performance of COVID-19 forecasting models to help epidemiological researchers gain insights into the models' performance, 
-and ultimately lead to more accurate forecasting of COVID-19 and other diseases. TODO: obviously this needs work.
 <br><br><b><h3><u>About the Data</u></h3></b>
 <br><h4><b>Sources</b></h4>
 <b>Observed values</b> are from the 
@@ -144,7 +171,6 @@ For many forecasters this is the 50% quantile prediction.</div></li>
 <li>When totaling over all locations, these locations include states and territories and do not include nationwide forecasts.</li>
 <li>We do include revisions of observed values, meaning the scores for forecasts made in the past can change. 
 Scores change as our understanding of the truth changes.</li>
-<li>TODO: Is there anything else missing here?</li>
 </ul>
 <br><br>
 <b><h3><u>Explanation of Scoring Methods</u></h3></b>
@@ -214,11 +240,11 @@ ui <- fluidPage(
             ),
             tags$hr(),
         ),
-        tags$div(HTML("This app was conceived and built by the Forecast Evaluation Working Group, a collaboration between 
-                  the Reich Lab's <a href='https://covid19forecasthub.org/'>Forecast Hub</a> and 
-                  Carnegie Mellon's <a href = 'https://delphi.cmu.edu'> Delphi Research Group</a>.
+        tags$div(HTML("This app was conceived and built by the Forecast Evaluation Research Collaborative, a collaboration between 
+                  the <a href='https://reichlab.io/'>Reich Lab</a> and 
+                  the <a href = 'https://delphi.cmu.edu'> Delphi Group</a>.
                   <br><br>
-                  This data can also be viewed in a weekly report on the Forecast Hub site.")),
+                  This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link")),
         a("View Weekly Report", href = "#"),
         width=3,
       ),

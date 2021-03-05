@@ -90,7 +90,9 @@ coverageExplanation = "<div style = 'margin-left:40px;'>
                         the time, aka the forecaster's 50% CI was under-confident that week, or too wide. Conversely, if the y-value is below the line, 
                         it means that the forecaster's 50% CI was over-confident that week, or too narrow.
                       </div>"
-
+# Truth data disclaimer
+observedValueDisclaimer = 
+  "All forecasts are evaluated against the latest version of observed data. Scores of pasts forecasts may change as observed data is revised."
 
 # About page content
 aboutPageText = HTML("
@@ -113,22 +115,16 @@ and runs the <a href='https://delphi.cmu.edu/covidcast/surveys/'>Delphi Pandemic
 which is a <a href='https://delphi.cmu.edu/blog/2020/09/21/can-symptoms-surveys-improve-covid-19-forecasts/'>valuable signal</a> 
 for Delphi’s participation in the ensemble forecast.
 <br><br>
-This Forecaster Evaluation Dashboard is a collaborative project, also made possible by the Google Fellowship program... TODO more to add
-
-
-<br>TODO: should there be more here about what each group is, and why we are collaborating (sharing resources and expertise). 
-For instance, something
-about how the Forecast Hub gathers all the weekly forecasts, and Delphi's evalcast scores them?
+The Forecaster Evaluation Dashboard is a collaborative project, which has been made possible by members of the Google.org Fellowship 
+engaged with the Delphi Group. Google.org is <a href='https://www.google.org/covid-19/'>committed</a> to the recovery of lives 
+and communities that have been impacted by COVID-19 and investing in developing the science to mitigate the damage of future pandemics.
 <br><br>
 <br><h4><b>Collaborators</b></h4>
 <br>
 From the Forecast Hub: Estee Cramer, NIcholas Reich, <a href='https://covid19forecasthub.org/doc/team/'>the COVID-19 Forecast Hub Team</a>
 <br>
 From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bien, Daniel McDonald, Logan Brooks
-<br>
-<br><b><h3><u>Our Mission</u></h3></b>
-<br>
-<br><br><b><h3><u>About the Data</u></h3></b>
+<br><br><br><b><h3><u>About the Data</u></h3></b>
 <br><h4><b>Sources</b></h4>
 <b>Observed values</b> are from the 
 <a href='https://github.com/CSSEGISandData/COVID-19'>COVID-19 Data Repository</a> 
@@ -258,7 +254,6 @@ ui <- fluidPage(
           tabPanel("Evaluation Plots", value = "evaluations",
             textOutput('renderWarningText'),
             plotlyOutput(outputId = "summaryPlot"),
-            dataTableOutput('renderTable'),
             tags$br(),tags$br(),tags$br(),tags$br(),tags$br(),
             HTML('<div style=padding-left:40px>'),
             textOutput('renderLocationText'),
@@ -274,7 +269,9 @@ ui <- fluidPage(
             actionLink("truthValues",
                        h4(tags$div(style = "color: black; padding-left:40px;", HTML("Observed Values"),
                                    icon("arrow-circle-down")))),
-            hidden(div(id="truthSection", hidden(div(id='truthPlot', plotlyOutput(outputId = "truthPlot"))))),
+            hidden(div(id="truthSection", hidden(div(id='truthPlot', 
+                                HTML('<div style=padding-left:40px>'), textOutput('renderObservedValueDisclaimer'), HTML('</div>'), 
+                                plotlyOutput(outputId = "truthPlot"))))),
             tags$br(),tags$br()
           )
         ),
@@ -290,7 +287,7 @@ server <- function(input, output, session) {
   ##############
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
                          horizon, loc, allLocations, coverageInterval = NULL) {
-    signalFilter = CASE_FILTER
+        signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
     }
@@ -415,6 +412,7 @@ server <- function(input, output, session) {
     scoreDf <- scoreDf %>%
       group_by(Date) %>% summarize(Incidence = actual)
     
+    output$renderObservedValueDisclaimer = renderText(observedValueDisclaimer)
     return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Incidence)) +
       geom_line() +
       geom_point() +

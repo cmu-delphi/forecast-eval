@@ -287,7 +287,7 @@ server <- function(input, output, session) {
   ##############
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
                          horizon, loc, allLocations, coverageInterval = NULL) {
-        signalFilter = CASE_FILTER
+    signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
     }

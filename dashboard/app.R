@@ -6,8 +6,8 @@ library(ggplot2)
 library(viridis)
 library(plotly)
 library(shinyjs)
-library(tsibble)
 library(aws.s3)
+library(tsibble)
 
 COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 DEATH_FILTER = "deaths_incidence_num"

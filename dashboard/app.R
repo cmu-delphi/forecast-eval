@@ -71,122 +71,15 @@ locationChoices = locationChoices[c(length(locationChoices), (1:length(locationC
 coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 
 # Score explanations
-wisExplanation = "<div style = 'margin-left:40px;'> The <b>weighted interval score</b> (WIS) is a proper score that combines a set of interval scores.
-                   See <a href='https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008618'>this article</a> about the WIS method for 
-                   a more in depth explanation. The WIS factors in both the sharpness of prediction intervals and their calibration (or coverage) of the 
-                   actual observations.
-                </div>"
-aeExplanation = "<div style = 'margin-left:40px;'>
-                  The <b>absolute error</b> of a forecast is calculated from the Point Forecast. 
-                  Usually this is the 50% quantile prediction, but forecasters can specify their own Point Forecast value. 
-                  When none is provided explicity, we use the 50% quantile prediction. 
-                </div>"
-coverageExplanation = "<div style = 'margin-left:40px;'>
-                        The <b>coverage plot</b> shows how well a forecaster's confidence intervals performed on a given week, across all locations.
-                        The horizontal black line is the selected confidence interval, and the y-values are the percentage of time that the observed
-                        values of the target variable value fell into that confidence interval. 
-                        A perfect forecaster on this measure would follow the black line.
-                        <br><br>
-                        For example, a forecaster wants the observed values to be within the 50% confidence interval in 50% of locations for the given week. 
-                        If the y-value is above the horizontal line, it means that the observed values fell within the forecaster's 50% CI more than 50% of 
-                        the time, aka the forecaster's 50% CI was under-confident that week, or too wide. Conversely, if the y-value is below the line, 
-                        it means that the forecaster's 50% CI was over-confident that week, or too narrow.
-                      </div>"
+wisExplanation = includeMarkdown("wis.md")
+aeExplanation = includeMarkdown("ae.md")
+coverageExplanation = includeMarkdown("coverageplot.md")
 # Truth data disclaimer
 observedValueDisclaimer = 
   "All forecasts are evaluated against the latest version of observed data. Scores of pasts forecasts may change as observed data is revised."
 
 # About page content
-aboutPageText = HTML("
-<div style='width: 80%'>
-<b><h3><u>Who We Are</u></h3></b><br>
-The Forecast Evaluation Research Collaborative was founded by the <a href='https://reichlab.io/'>Reich Lab</a>
-at University of Massachusetts Amherst and the Carnegie Mellon University <a href = 'https://delphi.cmu.edu'> Delphi Group</a>.
-Both groups are funded by the CDC as Centers of Excellence for Influenza and COVID-19 Forecasting. 
-We have partnered together on this project to focus on providing a robust set of tools and methods for evaluating the performance of epidemic forecasts.
-<br><br>
-The collaborative’s mission is to help epidemiological researchers gain insights into the performance of their forecasts, 
-and ultimately lead to more accurate forecasting of epidemics. 
-<br><br>
-Both groups have led initiatives related to COVID-19 data and forecast curation. 
-The Reich Lab has created the <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub</a>, 
-a collaborative effort with over 80 groups submitting forecasts to be part of the official 
-<a href='https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html'> CDC COVID-19 ensemble forecast</a>.
-The Delphi Group has created COVIDcast, a platform for <a href='https://delphi.cmu.edu/covidcast/'>epidemiological surveillance data</a>, 
-and runs the <a href='https://delphi.cmu.edu/covidcast/surveys/'>Delphi Pandemic Survey via Facebook</a>, 
-which is a <a href='https://delphi.cmu.edu/blog/2020/09/21/can-symptoms-surveys-improve-covid-19-forecasts/'>valuable signal</a> 
-for Delphi’s participation in the ensemble forecast.
-<br><br>
-The Forecaster Evaluation Dashboard is a collaborative project, which has been made possible by the 13 pro bono Google.org Fellows 
-who have spent 6 months working full-time with the Delphi Group. 
-Google.org is <a href='https://www.google.org/covid-19/'>committed</a> to the recovery of lives 
-and communities that have been impacted by COVID-19 and investing in developing the science to mitigate the damage of future pandemics.
-<br><br>
-<br><h4><b>Collaborators</b></h4>
-<br>
-From the Forecast Hub: Estee Cramer, NIcholas Reich, <a href='https://covid19forecasthub.org/doc/team/'>the COVID-19 Forecast Hub Team</a>
-<br>
-From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bien, Daniel McDonald, Logan Brooks
-<br><br><br><b><h3><u>About the Data</u></h3></b>
-<br><h4><b>Sources</b></h4>
-<b>Observed values</b> are from the 
-<a href='https://github.com/CSSEGISandData/COVID-19'>COVID-19 Data Repository</a> 
-by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University.
-<br><br><b>Forecaster predictions</b> are drawn from the <a href='https://github.com/reichlab/covid19-forecast-hub/'>COVID-19 Forecast Hub GitHub repository</a>
-<br><br>Data for the dashboard is pulled once a week from these sources, on Tuesdays.
-<br><br>
-<h4><b>Terms</b></h4>
-<ul><li><b>Forecaster</b> 
-<div style = 'margin-left:40px;'>A model producing quantile predictions</div></li>
-<li><b>Forecast</b>
-<div style = 'margin-left:40px;'>A set of data that, for all locales in a geo type, 
-includes predictions for a target variable for each of a certain number of quantiles 
-for each of a certain number of horizons </div></li>
-<li><b>Target Variable</b>
-<div style = 'margin-left:40px;'>What the forecast is predicting, ie: “weekly incident cases”</div></li>
-<li><b>Horizon</b>
-<div style = 'margin-left:40px;'>
-The duration of time between when the prediction was made and the predicted event, typically in units of epidemiological weeks.
-</div></li>
-<li><b>Epidemiological Week (Epi-week)</b>
-<div style = 'margin-left:40px;'>Week that starts on a Sunday. If it is Sunday or Monday, 
-the next epi-week is the week that starts on that Sunday (going back a day if it is Monday). 
-If it is Tuesday-Saturday, it is the week that starts on the subsequent Sunday, following 
-<a href='https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf'>CDC convention</a>.</div></li>
-
-<li><b>Point Forecast</b>
-<div style = 'margin-left:40px;'>The value that each forecaster picks as their “most likely” prediction. 
-For many forecasters this is the 50th quantile of the predictive distribution, for others it might be the mean of the distribution.
-</div></li>
-<li><b>Geo Type</b>
-<div style = 'margin-left:40px;'>States or U.S. as a nation</div></li></ul>
-<br><h4><b>Dashboard Inclusion Criteria</b></h4>
-<ul>
-<li> Includes only weekly deaths incidence and weekly case incidence target variables</li>
-<li> Includes only horizon < 5 weeks ahead</li>
-<li> Includes only geo values that are 2 characters (states / territories / nation)</li>
-<li> Includes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)</li>
-<li> Includes only predictions with at least 3 quantile values</li>
-<li> Includes only one file per forecaster per week (according to forecast date). That file must be from a Sunday or Monday. If both are present, we keep the Monday data.</li>
-<li> If a forecaster updates a file after that Monday, we do not include the new predictions</li>
-</ul>
-<br><h4><b>Notes on the Data</b></h4>
-<ul>
-<li>When totaling over all locations, these locations include states and territories and do not include nationwide forecasts. 
-We only include states and territories common to the selected forecasters (over all time) that have data for at least one location.</li>
-<li>We do include revisions of observed values, meaning the scores for forecasts made in the past can change. 
-Scores change as our understanding of the truth changes.</li>
-</ul>
-<br><br>
-<b><h3><u>Explanation of Scoring Methods</u></h3></b>
-<br>
-<b>Weighted Interval Score</b><br>", wisExplanation,
-"<br><br>
-<b>Absolute Error</b><br>", aeExplanation, 
-"<br><br>
-<b>Coverage</b><br>", coverageExplanation, 
-"<br><br></div>")
-
+aboutPageText = includeMarkdown("about.md")
 
 ui <- fluidPage(
     useShinyjs(),
@@ -260,29 +153,29 @@ ui <- fluidPage(
         tabsetPanel(id = "tabset",
           selected = "evaluations",
           tabPanel("About",
-                   tags$div(HTML("<br>", aboutPageText))),
+            fluidRow(column(10,aboutPageText)),
+            fluidRow(column(10,h3("Explanation of Scoring Methods"))),
+            fluidRow(column(10,h4("Weighted Interval Score"))),
+            fluidRow(column(10,wisExplanation)),
+            fluidRow(column(10,h4("Absolute Error"))),
+            fluidRow(column(10,aeExplanation)),
+            fluidRow(column(10,h4("Coverage Plot"))),
+            fluidRow(column(10,coverageExplanation))
+          ),
           tabPanel("Evaluation Plots", value = "evaluations",
-            textOutput('renderWarningText'),
-            plotlyOutput(outputId = "summaryPlot"),
-            tags$br(),tags$br(),tags$br(),tags$br(),tags$br(),
-            HTML('<div style=padding-left:40px>'),
-            textOutput('renderLocationText'),
-            textOutput('renderAggregateText'),
-            textOutput('renderLocations'),
-            HTML('</div>'),
-            
-            actionLink("scoreExplanation",
-                       h4(tags$div(style = "color: black; padding-left:40px;", HTML("Explanation Of Score"),
-                                   icon("arrow-circle-down")))),
-            hidden(div(id='explainScore',
-                       tags$div(style = "width: 90%", HTML("")))),
-            actionLink("truthValues",
-                       h4(tags$div(style = "color: black; padding-left:40px;", HTML("Observed Values"),
-                                   icon("arrow-circle-down")))),
-            hidden(div(id="truthSection", hidden(div(id='truthPlot', 
-                                HTML('<div style=padding-left:40px>'), textOutput('renderObservedValueDisclaimer'), HTML('</div>'), 
-                                plotlyOutput(outputId = "truthPlot"))))),
-            tags$br(),tags$br()
+            fluidRow(column(10,textOutput('renderWarningText'))),
+            fluidRow(column(10,plotlyOutput(outputId = "summaryPlot", height = "auto"))),
+            fluidRow(
+              column(9,offset=1,
+                hidden(div(id = "wisExplanation", wisExplanation)),
+                hidden(div(id = "aeExplanation", aeExplanation)),
+                hidden(div(id = "coverageExplanation", coverageExplanation))
+              )
+            ),
+            fluidRow(column(10,textOutput('renderLocationText'))),
+            fluidRow(column(10,textOutput('renderAggregateText'))),
+            fluidRow(column(10,textOutput('renderLocations'))),
+            fluidRow(column(10,plotlyOutput(outputId = "truthPlot")))   
           )
         ),
       ),
@@ -489,13 +382,19 @@ server <- function(input, output, session) {
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     
     if (input$scoreType == "wis") {
-      html("explainScore", paste0(wisExplanation))
+      show("wisExplanation")
+      hide("aeExplanation")
+      hide("coverageExplanation")
     }
     if (input$scoreType == "ae") {
-      html("explainScore", paste0(aeExplanation))
+      hide("wisExplanation")
+      show("aeExplanation")
+      hide("coverageExplanation")
     }
     if (input$scoreType == "coverage") {
-      html("explainScore", paste0(coverageExplanation))
+      hide("wisExplanation")
+      hide("aeExplanation")
+      show("coverageExplanation")
     }
   })
 

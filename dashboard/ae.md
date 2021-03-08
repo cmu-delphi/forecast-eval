@@ -1,0 +1,1 @@
+The **absolute error** of a forecast is calculated from the Point Forecast. Usually this is the 50% quantile prediction, but forecasters can specify their own Point Forecast value. When none is provided explicity, we use the 50% quantile prediction.

@@ -2,7 +2,7 @@ FROM rocker/shiny-verse
 
 ADD docker_dashboard/dependencies.R .
 ADD docker_dashboard/shiny_server.conf .
-RUN Rscript ./dependencies.R
+RUN install2.r plotly shinyjs tsibble viridis aws.s3
 
 COPY dist/*rds /srv/shiny-server/
 ADD dashboard/* /srv/shiny-server/

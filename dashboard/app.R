@@ -59,7 +59,7 @@ locationChoices = locationChoices[c(length(locationChoices), (1:length(locationC
 coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 
 # Score explanations
-wisExplanation = "<div style = 'margin-left:40px;'> The <b>weighted interval score</b> (WIS) is a proper score that combines a set of interval scores.
+wisExplanation = "<div style = 'margin-left:40px;'> HELLO The <b>weighted interval score</b> (WIS) is a proper score that combines a set of interval scores.
 See <a href='https://arxiv.org/pdf/2005.12881.pdf'>this preprint</a> about the WIS method for a more in depth explanation.
 TODO: How is it actually calculated from the intervals?</div>"
 aeExplanation = "<div style = 'margin-left:40px;'>

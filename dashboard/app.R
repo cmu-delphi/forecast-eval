@@ -3,10 +3,10 @@ library(tidyr)
 library(dplyr)
 library(lubridate)
 library(ggplot2)
+library(viridis)
 library(plotly)
 library(shinyjs)
 library(tsibble)
-library(viridis)
 library(aws.s3)
 
 COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
@@ -72,8 +72,10 @@ coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 
 # Score explanations
 wisExplanation = "<div style = 'margin-left:40px;'> The <b>weighted interval score</b> (WIS) is a proper score that combines a set of interval scores.
-See <a href='https://arxiv.org/pdf/2005.12881.pdf'>this preprint</a> about the WIS method for a more in depth explanation.
-TODO: How is it actually calculated from the intervals?</div>"
+                   See <a href='https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008618'>this article</a> about the WIS method for 
+                   a more in depth explanation. The WIS factors in both the sharpness of prediction intervals and their calibration (or coverage) of the 
+                   actual observations.
+                </div>"
 aeExplanation = "<div style = 'margin-left:40px;'>
                   The <b>absolute error</b> of a forecast is calculated from the Point Forecast. 
                   Usually this is the 50% quantile prediction, but forecasters can specify their own Point Forecast value. 
@@ -115,8 +117,9 @@ and runs the <a href='https://delphi.cmu.edu/covidcast/surveys/'>Delphi Pandemic
 which is a <a href='https://delphi.cmu.edu/blog/2020/09/21/can-symptoms-surveys-improve-covid-19-forecasts/'>valuable signal</a> 
 for Delphi’s participation in the ensemble forecast.
 <br><br>
-The Forecaster Evaluation Dashboard is a collaborative project, which has been made possible by members of the Google.org Fellowship 
-engaged with the Delphi Group. Google.org is <a href='https://www.google.org/covid-19/'>committed</a> to the recovery of lives 
+The Forecaster Evaluation Dashboard is a collaborative project, which has been made possible by the 13 pro bono Google.org Fellows 
+who have spent 6 months working full-time with the Delphi Group. 
+Google.org is <a href='https://www.google.org/covid-19/'>committed</a> to the recovery of lives 
 and communities that have been impacted by COVID-19 and investing in developing the science to mitigate the damage of future pandemics.
 <br><br>
 <br><h4><b>Collaborators</b></h4>
@@ -129,7 +132,7 @@ From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bi
 <b>Observed values</b> are from the 
 <a href='https://github.com/CSSEGISandData/COVID-19'>COVID-19 Data Repository</a> 
 by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University.
-<br><br><b>Forecaster predictions</b> are drawn from the Forecast Hub. TODO is there a good link this should go to? Git repo?
+<br><br><b>Forecaster predictions</b> are drawn from the <a href='https://github.com/reichlab/covid19-forecast-hub/'>COVID-19 Forecast Hub GitHub repository</a>
 <br><br>Data for the dashboard is pulled once a week from these sources, on Tuesdays.
 <br><br>
 <h4><b>Terms</b></h4>
@@ -142,14 +145,19 @@ for each of a certain number of horizons </div></li>
 <li><b>Target Variable</b>
 <div style = 'margin-left:40px;'>What the forecast is predicting, ie: “weekly incident cases”</div></li>
 <li><b>Horizon</b>
-<div style = 'margin-left:40px;'>1 epi-week, some number of epi-weeks ahead of the current week</div></li>
-<li><b>Epi-week</b>
+<div style = 'margin-left:40px;'>
+The duration of time between when the prediction was made and the predicted event, typically in units of epidemiological weeks.
+</div></li>
+<li><b>Epidemiological Week (Epi-week)</b>
 <div style = 'margin-left:40px;'>Week that starts on a Sunday. If it is Sunday or Monday, 
 the next epi-week is the week that starts on that Sunday (going back a day if it is Monday). 
-If it is Tuesday-Saturday, it is the week that starts on the subsequent Sunday.</div></li>
+If it is Tuesday-Saturday, it is the week that starts on the subsequent Sunday, following 
+<a href='https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf'>CDC convention</a>.</div></li>
+
 <li><b>Point Forecast</b>
-<div style = 'margin-left:40px;'>The value that each forecaster picks as their “most important” prediction. 
-For many forecasters this is the 50% quantile prediction.</div></li>
+<div style = 'margin-left:40px;'>The value that each forecaster picks as their “most likely” prediction. 
+For many forecasters this is the 50th quantile of the predictive distribution, for others it might be the mean of the distribution.
+</div></li>
 <li><b>Geo Type</b>
 <div style = 'margin-left:40px;'>States or U.S. as a nation</div></li></ul>
 <br><h4><b>Dashboard Inclusion Criteria</b></h4>
@@ -160,11 +168,12 @@ For many forecasters this is the 50% quantile prediction.</div></li>
 <li> Includes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)</li>
 <li> Includes only predictions with at least 3 quantile values</li>
 <li> Includes only one file per forecaster per week (according to forecast date). That file must be from a Sunday or Monday. If both are present, we keep the Monday data.</li>
-<li> If a forecaster updates a file, we do not include the new predictions</li>
+<li> If a forecaster updates a file after that Monday, we do not include the new predictions</li>
 </ul>
 <br><h4><b>Notes on the Data</b></h4>
 <ul>
-<li>When totaling over all locations, these locations include states and territories and do not include nationwide forecasts.</li>
+<li>When totaling over all locations, these locations include states and territories and do not include nationwide forecasts. 
+We only include states and territories common to the selected forecasters (over all time) that have data for at least one location.</li>
 <li>We do include revisions of observed values, meaning the scores for forecasts made in the past can change. 
 Scores change as our understanding of the truth changes.</li>
 </ul>
@@ -236,9 +245,10 @@ ui <- fluidPage(
             ),
             tags$hr(),
         ),
-        tags$div(HTML("This app was conceived and built by the Forecast Evaluation Research Collaborative, a collaboration between 
-                  the <a href='https://reichlab.io/'>Reich Lab</a> and 
-                  the <a href = 'https://delphi.cmu.edu'> Delphi Group</a>.
+        tags$div(HTML("This app was conceived and built by the Forecast Evaluation Research Collaborative, 
+                  a collaboration between the <a href='http://reichlab.io/'>UMass-Amherst Reich Lab's</a> 
+                  <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub<a/>
+                  and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'>Delphi Research Group</a>.
                   <br><br>
                   This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link")),
         a("View Weekly Report", href = "#"),
@@ -287,7 +297,7 @@ server <- function(input, output, session) {
   ##############
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
                          horizon, loc, allLocations, coverageInterval = NULL) {
-        signalFilter = CASE_FILTER
+    signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
     }

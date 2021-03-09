@@ -3,10 +3,10 @@ library(tidyr)
 library(dplyr)
 library(lubridate)
 library(ggplot2)
+library(viridis)
 library(plotly)
 library(shinyjs)
 library(tsibble)
-library(viridis)
 library(aws.s3)
 
 COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
@@ -28,15 +28,27 @@ s3bucket = tryCatch(
 # Get and prepare data
 getData <- function(filename){
   if(!is.null(s3bucket)) {
-    s3readRDS(object = filename, bucket = s3bucket)
-  } else {
-    path = ifelse(
-      file.exists(filename),
-      filename,
-      file.path("../dist/",filename)
+    tryCatch(
+      {
+        s3readRDS(object = filename, bucket = s3bucket)
+      },
+      error = function(e) {
+        e
+        getFallbackData(filename)
+      }
     )
-    readRDS(path)
+  } else {
+    getFallbackData(filename)
   }
+}
+
+getFallbackData = function(filename) {
+  path = ifelse(
+    file.exists(filename),
+    filename,
+    file.path("../dist/",filename)
+  )
+  readRDS(path)
 }
 
 dfStateCases <- getData("score_cards_state_cases.rds")
@@ -60,8 +72,10 @@ coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 
 # Score explanations
 wisExplanation = "<div style = 'margin-left:40px;'> The <b>weighted interval score</b> (WIS) is a proper score that combines a set of interval scores.
-See <a href='https://arxiv.org/pdf/2005.12881.pdf'>this preprint</a> about the WIS method for a more in depth explanation.
-TODO: How is it actually calculated from the intervals?</div>"
+                   See <a href='https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008618'>this article</a> about the WIS method for 
+                   a more in depth explanation. The WIS factors in both the sharpness of prediction intervals and their calibration (or coverage) of the 
+                   actual observations.
+                </div>"
 aeExplanation = "<div style = 'margin-left:40px;'>
                   The <b>absolute error</b> of a forecast is calculated from the Point Forecast. 
                   Usually this is the 50% quantile prediction, but forecasters can specify their own Point Forecast value. 
@@ -78,35 +92,47 @@ coverageExplanation = "<div style = 'margin-left:40px;'>
                         the time, aka the forecaster's 50% CI was under-confident that week, or too wide. Conversely, if the y-value is below the line, 
                         it means that the forecaster's 50% CI was over-confident that week, or too narrow.
                       </div>"
-
+# Truth data disclaimer
+observedValueDisclaimer = 
+  "All forecasts are evaluated against the latest version of observed data. Scores of pasts forecasts may change as observed data is revised."
 
 # About page content
 aboutPageText = HTML("
 <div style='width: 80%'>
 <b><h3><u>Who We Are</u></h3></b><br>
-This app was conceived and built in a collaboration between the Reich Lab's <a href='https://covid19forecasthub.org/'>Forecast Hub</a>
-and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'> Delphi Research Group</a>.
-<br>TODO: should there be more here about what each group is, and why we are collaborating (sharing resources and expertise). 
-For instance, something
-about how the Forecast Hub gathers all the weekly forecasts, and Delphi's evalcast scores them?
+The Forecast Evaluation Research Collaborative was founded by the <a href='https://reichlab.io/'>Reich Lab</a>
+at University of Massachusetts Amherst and the Carnegie Mellon University <a href = 'https://delphi.cmu.edu'> Delphi Group</a>.
+Both groups are funded by the CDC as Centers of Excellence for Influenza and COVID-19 Forecasting. 
+We have partnered together on this project to focus on providing a robust set of tools and methods for evaluating the performance of epidemic forecasts.
+<br><br>
+The collaborative’s mission is to help epidemiological researchers gain insights into the performance of their forecasts, 
+and ultimately lead to more accurate forecasting of epidemics. 
+<br><br>
+Both groups have led initiatives related to COVID-19 data and forecast curation. 
+The Reich Lab has created the <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub</a>, 
+a collaborative effort with over 80 groups submitting forecasts to be part of the official 
+<a href='https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html'> CDC COVID-19 ensemble forecast</a>.
+The Delphi Group has created COVIDcast, a platform for <a href='https://delphi.cmu.edu/covidcast/'>epidemiological surveillance data</a>, 
+and runs the <a href='https://delphi.cmu.edu/covidcast/surveys/'>Delphi Pandemic Survey via Facebook</a>, 
+which is a <a href='https://delphi.cmu.edu/blog/2020/09/21/can-symptoms-surveys-improve-covid-19-forecasts/'>valuable signal</a> 
+for Delphi’s participation in the ensemble forecast.
+<br><br>
+The Forecaster Evaluation Dashboard is a collaborative project, which has been made possible by the 13 pro bono Google.org Fellows 
+who have spent 6 months working full-time with the Delphi Group. 
+Google.org is <a href='https://www.google.org/covid-19/'>committed</a> to the recovery of lives 
+and communities that have been impacted by COVID-19 and investing in developing the science to mitigate the damage of future pandemics.
 <br><br>
 <br><h4><b>Collaborators</b></h4>
-TODO: how should these be displayed?
 <br>
-From the Forecast Hub: Nick Reich, Estee Cramer, Johannes Bracher, anyone else? <br>
-From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bien, Daniel McDonald, Logan Brooks, anyone else?
+From the Forecast Hub: Estee Cramer, NIcholas Reich, <a href='https://covid19forecasthub.org/doc/team/'>the COVID-19 Forecast Hub Team</a>
 <br>
-<br><b><h3><u>Our Mission</u></h3></b>
-<br>
-The goal of the Forecast Evaluation Working Group is to provide a robust set of tools and methods for evaluating the
-performance of COVID-19 forecasting models to help epidemiological researchers gain insights into the models' performance, 
-and ultimately lead to more accurate forecasting of COVID-19 and other diseases. TODO: obviously this needs work.
-<br><br><b><h3><u>About the Data</u></h3></b>
+From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bien, Daniel McDonald, Logan Brooks
+<br><br><br><b><h3><u>About the Data</u></h3></b>
 <br><h4><b>Sources</b></h4>
 <b>Observed values</b> are from the 
 <a href='https://github.com/CSSEGISandData/COVID-19'>COVID-19 Data Repository</a> 
 by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University.
-<br><br><b>Forecaster predictions</b> are drawn from the Forecast Hub. TODO is there a good link this should go to? Git repo?
+<br><br><b>Forecaster predictions</b> are drawn from the <a href='https://github.com/reichlab/covid19-forecast-hub/'>COVID-19 Forecast Hub GitHub repository</a>
 <br><br>Data for the dashboard is pulled once a week from these sources, on Tuesdays.
 <br><br>
 <h4><b>Terms</b></h4>
@@ -119,14 +145,19 @@ for each of a certain number of horizons </div></li>
 <li><b>Target Variable</b>
 <div style = 'margin-left:40px;'>What the forecast is predicting, ie: “weekly incident cases”</div></li>
 <li><b>Horizon</b>
-<div style = 'margin-left:40px;'>1 epi-week, some number of epi-weeks ahead of the current week</div></li>
-<li><b>Epi-week</b>
+<div style = 'margin-left:40px;'>
+The duration of time between when the prediction was made and the predicted event, typically in units of epidemiological weeks.
+</div></li>
+<li><b>Epidemiological Week (Epi-week)</b>
 <div style = 'margin-left:40px;'>Week that starts on a Sunday. If it is Sunday or Monday, 
 the next epi-week is the week that starts on that Sunday (going back a day if it is Monday). 
-If it is Tuesday-Saturday, it is the week that starts on the subsequent Sunday.</div></li>
+If it is Tuesday-Saturday, it is the week that starts on the subsequent Sunday, following 
+<a href='https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf'>CDC convention</a>.</div></li>
+
 <li><b>Point Forecast</b>
-<div style = 'margin-left:40px;'>The value that each forecaster picks as their “most important” prediction. 
-For many forecasters this is the 50% quantile prediction.</div></li>
+<div style = 'margin-left:40px;'>The value that each forecaster picks as their “most likely” prediction. 
+For many forecasters this is the 50th quantile of the predictive distribution, for others it might be the mean of the distribution.
+</div></li>
 <li><b>Geo Type</b>
 <div style = 'margin-left:40px;'>States or U.S. as a nation</div></li></ul>
 <br><h4><b>Dashboard Inclusion Criteria</b></h4>
@@ -137,14 +168,14 @@ For many forecasters this is the 50% quantile prediction.</div></li>
 <li> Includes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)</li>
 <li> Includes only predictions with at least 3 quantile values</li>
 <li> Includes only one file per forecaster per week (according to forecast date). That file must be from a Sunday or Monday. If both are present, we keep the Monday data.</li>
-<li> If a forecaster updates a file, we do not include the new predictions</li>
+<li> If a forecaster updates a file after that Monday, we do not include the new predictions</li>
 </ul>
 <br><h4><b>Notes on the Data</b></h4>
 <ul>
-<li>When totaling over all locations, these locations include states and territories and do not include nationwide forecasts.</li>
+<li>When totaling over all locations, these locations include states and territories and do not include nationwide forecasts. 
+We only include states and territories common to the selected forecasters (over all time) that have data for at least one location.</li>
 <li>We do include revisions of observed values, meaning the scores for forecasts made in the past can change. 
 Scores change as our understanding of the truth changes.</li>
-<li>TODO: Is there anything else missing here?</li>
 </ul>
 <br><br>
 <b><h3><u>Explanation of Scoring Methods</u></h3></b>
@@ -214,11 +245,12 @@ ui <- fluidPage(
             ),
             tags$hr(),
         ),
-        tags$div(HTML("This app was conceived and built by the Forecast Evaluation Working Group, a collaboration between 
-                  the Reich Lab's <a href='https://covid19forecasthub.org/'>Forecast Hub</a> and 
-                  Carnegie Mellon's <a href = 'https://delphi.cmu.edu'> Delphi Research Group</a>.
+        tags$div(HTML("This app was conceived and built by the Forecast Evaluation Research Collaborative, 
+                  a collaboration between the <a href='http://reichlab.io/'>UMass-Amherst Reich Lab's</a> 
+                  <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub<a/>
+                  and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'>Delphi Research Group</a>.
                   <br><br>
-                  This data can also be viewed in a weekly report on the Forecast Hub site.")),
+                  This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link")),
         a("View Weekly Report", href = "#"),
         width=3,
       ),
@@ -232,7 +264,6 @@ ui <- fluidPage(
           tabPanel("Evaluation Plots", value = "evaluations",
             textOutput('renderWarningText'),
             plotlyOutput(outputId = "summaryPlot"),
-            dataTableOutput('renderTable'),
             tags$br(),tags$br(),tags$br(),tags$br(),tags$br(),
             HTML('<div style=padding-left:40px>'),
             textOutput('renderLocationText'),
@@ -248,7 +279,9 @@ ui <- fluidPage(
             actionLink("truthValues",
                        h4(tags$div(style = "color: black; padding-left:40px;", HTML("Observed Values"),
                                    icon("arrow-circle-down")))),
-            hidden(div(id="truthSection", hidden(div(id='truthPlot', plotlyOutput(outputId = "truthPlot"))))),
+            hidden(div(id="truthSection", hidden(div(id='truthPlot', 
+                                HTML('<div style=padding-left:40px>'), textOutput('renderObservedValueDisclaimer'), HTML('</div>'), 
+                                plotlyOutput(outputId = "truthPlot"))))),
             tags$br(),tags$br()
           )
         ),
@@ -389,6 +422,7 @@ server <- function(input, output, session) {
     scoreDf <- scoreDf %>%
       group_by(Date) %>% summarize(Incidence = actual)
     
+    output$renderObservedValueDisclaimer = renderText(observedValueDisclaimer)
     return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Incidence)) +
       geom_line() +
       geom_point() +

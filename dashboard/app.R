@@ -94,7 +94,7 @@ coverageExplanation = "<div style = 'margin-left:40px;'>
                       </div>"
 # Truth data disclaimer
 observedValueDisclaimer = 
-  "All forecasts are evaluated against the latest version of observed data. Scores of pasts forecasts may change as observed data is revised."
+  "All forecasts are evaluated against the latest version of observed data. Scores of past forecasts may change as observed data is revised."
 
 # About page content
 aboutPageText = HTML("
@@ -124,7 +124,7 @@ and communities that have been impacted by COVID-19 and investing in developing 
 <br><br>
 <br><h4><b>Collaborators</b></h4>
 <br>
-From the Forecast Hub: Estee Cramer, NIcholas Reich, <a href='https://covid19forecasthub.org/doc/team/'>the COVID-19 Forecast Hub Team</a>
+From the Forecast Hub: Estee Cramer, Nicholas Reich, <a href='https://covid19forecasthub.org/doc/team/'>the COVID-19 Forecast Hub Team</a>
 <br>
 From the Delphi Research Group: Jed Grabman, Kate Harwood, Chris Scott, Jacob Bien, Daniel McDonald, Logan Brooks
 <br><br><br><b><h3><u>About the Data</u></h3></b>
@@ -206,11 +206,12 @@ ui <- fluidPage(
                                                      "Coverage" = "coverage")),
             selectInput(
               "forecasters",
-              "Forecasters (Type a name or select from dropdown)",
+              p("Forecasters", tags$br(), tags$span("Type a name or select from dropdown", style="font-weight:normal; font-size:13px")),
               choices = forecasterChoices,
               multiple = TRUE,
               selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
             ),
+            tags$p("Some forecasters may not have data for the chosen location", style="margin-top:-20px; font-size:12px"),
             checkboxGroupInput(
               "aheads", 
               "Forecast Horizon (Weeks)",
@@ -231,7 +232,7 @@ ui <- fluidPage(
                                "Coverage Interval",
                                choices = coverageChoices,
                                multiple = FALSE,
-                               selected = "50"
+                               selected = "95"
                              ),
             ),
             conditionalPanel(condition = "!input.allLocations && input.scoreType != 'coverage'",
@@ -248,10 +249,10 @@ ui <- fluidPage(
         tags$div(HTML("This app was conceived and built by the Forecast Evaluation Research Collaborative, 
                   a collaboration between the <a href='http://reichlab.io/'>UMass-Amherst Reich Lab's</a> 
                   <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub<a/>
-                  and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'>Delphi Research Group</a>.
-                  <br><br>
-                  This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link")),
-        a("View Weekly Report", href = "#"),
+                  and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'>Delphi Research Group</a>.")),
+                  # <br><br>
+                  # This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link")),
+        # a("View Weekly Report", href = "#"),
         width=3,
       ),
       
@@ -266,7 +267,6 @@ ui <- fluidPage(
             plotlyOutput(outputId = "summaryPlot"),
             tags$br(),tags$br(),tags$br(),tags$br(),tags$br(),
             HTML('<div style=padding-left:40px>'),
-            textOutput('renderLocationText'),
             textOutput('renderAggregateText'),
             textOutput('renderLocations'),
             HTML('</div>'),
@@ -352,7 +352,6 @@ server <- function(input, output, session) {
         output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common.")
         output$renderLocations <- renderText("")
         output$renderAggregateText = renderText("")
-        output$renderLocationText = renderText("")
         hideElement("truthSection")
         return()
       }
@@ -361,14 +360,12 @@ server <- function(input, output, session) {
         output$renderLocations <- renderText(toupper(locationsIntersect))
         output$renderWarningText = renderText("")
       }
-      output$renderLocationText <- renderText("")
     # Not totaling over all locations
     } else {
       filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(loc)) %>%
         group_by(Forecaster, Date, ahead) %>%
         summarize(Score = Score, actual = actual)
-      locationSubtitleText = paste0(', Location: ', input$location, '*')
-      output$renderLocationText <- renderText("*Some forecasters may not have data for the location chosen.")
+      locationSubtitleText = paste0(', Location: ', input$location)
       output$renderAggregateText = renderText("")
       output$renderLocations <- renderText("")
       output$renderWarningText <- renderText("")
@@ -400,7 +397,7 @@ server <- function(input, output, session) {
       geom_point() +
       labs(x = "", y = "", title=titleText) +
       scale_x_date(date_labels = "%b %Y") +
-      scale_y_continuous(labels = scales::comma) +
+      scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = color_palette)
 
@@ -409,7 +406,8 @@ server <- function(input, output, session) {
     }
     return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(2, "lines"))) 
            %>% layout(legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
-                      hovermode = 'x unified') 
+                      hovermode = 'x unified', xaxis = list(title = list(text = "Target Date",
+                                                                               standoff = 8L), titlefont = list(size = 12))) 
            %>% config(displayModeBar = F))
   }
   

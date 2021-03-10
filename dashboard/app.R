@@ -219,13 +219,6 @@ ui <- fluidPage(
               selected = 1,
               inline = TRUE
             ),
-            conditionalPanel(condition = "input.scoreType != 'coverage'",
-                             checkboxInput(
-                               "allLocations",
-                               "Totals Over All Locations",
-                               value = FALSE,
-                             )
-            ),
             conditionalPanel(condition = "input.scoreType == 'coverage'",
                              selectInput(
                                "coverageInterval",
@@ -242,6 +235,13 @@ ui <- fluidPage(
                                choices = locationChoices,
                                multiple = FALSE,
                                selected = "US"
+                             )
+            ),
+            conditionalPanel(condition = "input.scoreType != 'coverage'",
+                             checkboxInput(
+                               "allLocations",
+                               "Totals Over All Locations",
+                               value = FALSE,
                              )
             ),
             tags$hr(),
@@ -404,7 +404,7 @@ server <- function(input, output, session) {
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
-    return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(2, "lines"))) 
+    return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(0.5, "lines"))) 
            %>% layout(legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
                       hovermode = 'x unified', xaxis = list(title = list(text = "Target Date",
                                                                                standoff = 8L), titlefont = list(size = 12))) 
@@ -418,10 +418,10 @@ server <- function(input, output, session) {
       titleText = paste0('<b>Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all locations common to selected forecasters*</sup>')
     } 
     scoreDf <- scoreDf %>%
-      group_by(Date) %>% summarize(Incidence = actual)
+      group_by(Date) %>% summarize(Reported_Incidence = actual)
     
     output$renderObservedValueDisclaimer = renderText(observedValueDisclaimer)
-    return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Incidence)) +
+    return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Reported_Incidence)) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title = titleText) +

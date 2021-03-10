@@ -81,9 +81,21 @@ observedValueDisclaimer =
 # About page content
 aboutPageText = includeMarkdown("about.md")
 
-ui <- fluidPage(
+ui <- fluidPage(padding=0,
+    tags$head(
+      tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
+    ),
     useShinyjs(),
-    titlePanel("COVID-19 Forecaster Evaluation Dashboard"),
+    div(id="header",class="row",
+      div(id="logo",class="col-sm-3",
+        a(href="https://delphi.cmu.edu",
+          img(src="cmu_brand.png",width="220px",heigh="50px",alt="Carnegie Mellon University Delphi Group")
+        )
+      ),
+      div(class="col-sm-9",
+        span(id="title","FORECAST EVALUATION DASHBOARD")
+      )
+    ),
     tags$br(),
     sidebarLayout(
       sidebarPanel(id = "inputOptions",

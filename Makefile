@@ -38,6 +38,8 @@ start_dev: r_build
 		-w /var/forecast-eval \
 		ghcr.io/cmu-delphi/forecast-eval:latest bash
 
+build_dashboard_dev: pull_data
+	docker build -t ghcr.io/cmu-delphi/forecast-eval:latest -f docker_dashboard/Dockerfile .
 
 build_dashboard: pull_data
 	docker build --no-cache=true -t ghcr.io/cmu-delphi/forecast-eval:latest -f docker_dashboard/Dockerfile .
@@ -45,5 +47,5 @@ build_dashboard: pull_data
 deploy_dashboard: build_dashboard
 	docker push ghcr.io/cmu-delphi/forecast-eval:latest
 
-start_dashboard: build_dashboard
+start_dashboard: build_dashboard_dev
 	docker run --rm -p 3838:3838 ghcr.io/cmu-delphi/forecast-eval:latest

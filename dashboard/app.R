@@ -74,9 +74,6 @@ coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 wisExplanation = includeMarkdown("wis.md")
 aeExplanation = includeMarkdown("ae.md")
 coverageExplanation = includeMarkdown("coverageplot.md")
-# Truth data disclaimer
-observedValueDisclaimer = 
-  "All forecasts are evaluated against the latest version of observed data. Scores of past forecasts may change as observed data is revised."
 
 # About page content
 aboutPageText = includeMarkdown("about.md")
@@ -175,12 +172,14 @@ ui <- fluidPage(
                 hidden(div(id = "coverageExplanation", coverageExplanation))
               )
             ),
+            tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
               column(9,offset=1,
                 textOutput('renderLocationText'),
                 textOutput('renderAggregateText'),
-                textOutput('renderLocations')
+                textOutput('renderLocations'),
+                tags$br()
               )
             )
           )
@@ -304,8 +303,9 @@ server <- function(input, output, session) {
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
+    plotHeight = 500 + (length(horizon)-1)*100
     return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(0.5, "lines"))) 
-           %>% layout(legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
+           %>% layout(height = plotHeight, legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
                       hovermode = 'x unified', xaxis = list(title = list(text = "Target Date",
                                                                                standoff = 8L), titlefont = list(size = 12))) 
            %>% config(displayModeBar = F))
@@ -313,14 +313,13 @@ server <- function(input, output, session) {
   
   # Create the plot for target variable ground truth
   truthPlot = function(scoreDf = NULL, targetVariable = NULL, locationsIntersect = NULL, allLocations = FALSE) {
-    titleText = paste0('<b> Incident ', targetVariable, '</b>')
+    titleText = paste0('<b>Observed Incident ', targetVariable, '</b>')
     if (allLocations) {
-      titleText = paste0('<b>Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all locations common to selected forecasters*</sup>')
+      titleText = paste0('<b>Observed Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all locations common to selected forecasters*</sup>')
     } 
     scoreDf <- scoreDf %>%
       group_by(Date) %>% summarize(Reported_Incidence = actual)
     
-    output$renderObservedValueDisclaimer = renderText(observedValueDisclaimer)
     return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Reported_Incidence)) +
       geom_line() +
       geom_point() +

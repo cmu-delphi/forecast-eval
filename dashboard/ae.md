@@ -1,3 +1,3 @@
-The **absolute error** of a forecast is calculated from the Point Forecast. Usually this is the 50% quantile prediction, but forecasters can specify their own Point Forecast value. When none is provided explicity, we use the 50% quantile prediction.
+The **absolute error** of a forecast is the absolute value of the difference between the actual value and the point forecast. The point forecast of a model when not provided explicitly is taken to be the 50% quantile of the forecast distribution.
 
-All forecasts are evaluated against the latest version of observed data. Some forecasts may be scored against data that are quite different from what was observed when the forecast was made.
+

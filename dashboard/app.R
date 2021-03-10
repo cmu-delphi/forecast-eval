@@ -74,13 +74,26 @@ coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 wisExplanation = includeMarkdown("wis.md")
 aeExplanation = includeMarkdown("ae.md")
 coverageExplanation = includeMarkdown("coverageplot.md")
+scoringDisclaimer = includeMarkdown("scoring-disclaimer.md")
 
 # About page content
 aboutPageText = includeMarkdown("about.md")
 
-ui <- fluidPage(
+ui <- fluidPage(padding=0,
+    tags$head(
+      tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
+    ),
     useShinyjs(),
-    titlePanel("COVID-19 Forecaster Evaluation Dashboard"),
+    div(id="header",class="row",
+      div(id="logo",class="col-sm-3",
+        a(href="https://delphi.cmu.edu",
+          img(src="cmu_brand.png",width="220px",heigh="50px",alt="Carnegie Mellon University Delphi Group")
+        )
+      ),
+      div(class="col-sm-9",
+        span(id="title","FORECAST EVALUATION DASHBOARD")
+      )
+    ),
     tags$br(),
     sidebarLayout(
       sidebarPanel(id = "inputOptions",
@@ -136,13 +149,7 @@ ui <- fluidPage(
             ),
             tags$hr(),
         ),
-        tags$div(HTML("This app was conceived and built by the Forecast Evaluation Research Collaborative, 
-                  a collaboration between the <a href='http://reichlab.io/'>UMass-Amherst Reich Lab's</a> 
-                  <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub</a>
-                  and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'>Delphi Research Group</a>.")),
-                  # <br><br>
-                  # This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link")),
-        # a("View Weekly Report", href = "#"),
+        includeMarkdown("about-dashboard.md"),
         width=3,
       ),
       
@@ -151,25 +158,31 @@ ui <- fluidPage(
         tabsetPanel(id = "tabset",
           selected = "evaluations",
           tabPanel("About",
-            fluidRow(column(9,offset=1,
-              aboutPageText,
-              h3("Explanation of Scoring Methods"),
-              h4("Weighted Interval Score"),
-              wisExplanation,
-              h4("Absolute Error"),
-              aeExplanation,
-              h4("Coverage Plot"),
-              coverageExplanation
+            fluidRow(column(10,
+              div(
+                id="aboutContentArea",
+                aboutPageText,
+                tags$br(),
+                h3("Explanation of Scoring Methods"),
+                h4("Weighted Interval Score"),
+                wisExplanation,
+                h4("Absolute Error"),
+                aeExplanation,
+                h4("Coverage Plot"),
+                coverageExplanation
+              ),
+              tags$br()
             )),
           ),
           tabPanel("Evaluation Plots", value = "evaluations",
-            fluidRow(column(9, offset=1, textOutput('renderWarningText'))),
+            fluidRow(column(11, textOutput('renderWarningText'))),
             plotlyOutput(outputId = "summaryPlot", height="auto"),
             fluidRow(
-              column(9, offset=1,
+              column(11, offset=1,
                 hidden(div(id = "wisExplanation", wisExplanation)),
                 hidden(div(id = "aeExplanation", aeExplanation)),
-                hidden(div(id = "coverageExplanation", coverageExplanation))
+                hidden(div(id = "coverageExplanation", coverageExplanation)),
+                div(id = "scoringDisclaimer", scoringDisclaimer)
               )
             ),
             tags$br(),

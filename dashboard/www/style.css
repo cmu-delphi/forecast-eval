@@ -1,6 +1,9 @@
 #logo{
     min-width: 220px;
 }
+#aboutContentArea{
+    max-width: 50rem;
+}
 #header{
     margin-top: 20px;
     border-bottom: solid 1px #999; 

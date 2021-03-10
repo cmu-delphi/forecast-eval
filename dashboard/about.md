@@ -1,9 +1,27 @@
+## FORECAST EVALUATION DASHBOARD
+
+This dashboard was developed by
+
+* Jed Grabman (Delphi Group, Google Fellow)
+* Kate Harwood (Delphi Group, Google Fellow)
+* Chris Scott (Delphi Group, Google Fellow)
+
+with the Forecast Evaluation Research Collaborative by
+
+* Nicholas Reich (Reich Lab)
+* Jacob Bien (Delphi Group)
+* Logan Brooks (Delphi Group)
+* Estee Cramer (Reich Lab)
+* Daniel McDonald (Delphi Group)
+* [The COVID-19 Forecast Hub Team](https://covid19forecasthub.org/doc/team/)
+
+This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link
 ### Forecast Evaluation Research Collaborative
 
 The Forecast Evaluation Research Collaborative was founded:
 
-* The Carnegie Mellon University [Delphi Group](https://delphi.cmu.edu)
-* The [Reich Lab](https://reichlab.io/) at University of Massachusetts Amherst
+* Carnegie Mellon University [Delphi Group](https://delphi.cmu.edu)
+* UMass-Amherst [Reich Lab](https://reichlab.io/)
 
 Both groups are funded by the CDC as Centers of Excellence for Influenza and COVID-19 Forecasting. We have partnered together on this project to focus on providing a robust set of tools and methods for evaluating the performance of epidemic forecasts.  
   

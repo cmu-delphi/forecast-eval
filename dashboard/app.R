@@ -153,29 +153,35 @@ ui <- fluidPage(
         tabsetPanel(id = "tabset",
           selected = "evaluations",
           tabPanel("About",
-            fluidRow(column(10,aboutPageText)),
-            fluidRow(column(10,h3("Explanation of Scoring Methods"))),
-            fluidRow(column(10,h4("Weighted Interval Score"))),
-            fluidRow(column(10,wisExplanation)),
-            fluidRow(column(10,h4("Absolute Error"))),
-            fluidRow(column(10,aeExplanation)),
-            fluidRow(column(10,h4("Coverage Plot"))),
-            fluidRow(column(10,coverageExplanation))
+            fluidRow(column(9,offset=1,
+              aboutPageText,
+              h3("Explanation of Scoring Methods"),
+              h4("Weighted Interval Score"),
+              wisExplanation,
+              h4("Absolute Error"),
+              aeExplanation,
+              h4("Coverage Plot"),
+              coverageExplanation
+            )),
           ),
           tabPanel("Evaluation Plots", value = "evaluations",
-            fluidRow(column(10,textOutput('renderWarningText'))),
-            fluidRow(column(10,plotlyOutput(outputId = "summaryPlot", height = "auto"))),
+            fluidRow(column(9, offset=1, textOutput('renderWarningText'))),
+            plotlyOutput(outputId = "summaryPlot", height="auto"),
             fluidRow(
-              column(9,offset=1,
+              column(9, offset=1,
                 hidden(div(id = "wisExplanation", wisExplanation)),
                 hidden(div(id = "aeExplanation", aeExplanation)),
                 hidden(div(id = "coverageExplanation", coverageExplanation))
               )
             ),
-            fluidRow(column(10,textOutput('renderLocationText'))),
-            fluidRow(column(10,textOutput('renderAggregateText'))),
-            fluidRow(column(10,textOutput('renderLocations'))),
-            fluidRow(column(10,plotlyOutput(outputId = "truthPlot")))   
+            plotlyOutput(outputId = "truthPlot", height="auto"),
+            fluidRow(
+              column(9,offset=1,
+                textOutput('renderLocationText'),
+                textOutput('renderAggregateText'),
+                textOutput('renderLocations')
+              )
+            )
           )
         ),
       ),

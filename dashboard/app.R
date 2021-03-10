@@ -248,7 +248,7 @@ ui <- fluidPage(
         ),
         tags$div(HTML("This app was conceived and built by the Forecast Evaluation Research Collaborative, 
                   a collaboration between the <a href='http://reichlab.io/'>UMass-Amherst Reich Lab's</a> 
-                  <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub<a/>
+                  <a href='https://covid19forecasthub.org/'>COVID-19 Forecast Hub</a>
                   and Carnegie Mellon's <a href = 'https://delphi.cmu.edu'>Delphi Research Group</a>.")),
                   # <br><br>
                   # This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link")),

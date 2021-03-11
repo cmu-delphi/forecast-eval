@@ -49,7 +49,7 @@ Data for the dashboard is pulled once a week from these sources, on Tuesdays.
     
 *   **Forecast**
     
-    A set of data that, for all locales in a geo type, includes quantile target variable predictions for each of  the horizons  
+    A set of data that includes quantile target variable predictions for a certain horizon, epidemiological week, and location 
     
 *   **Target Variable**
     

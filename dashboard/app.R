@@ -79,6 +79,9 @@ scoringDisclaimer = includeMarkdown("scoring-disclaimer.md")
 # About page content
 aboutPageText = includeMarkdown("about.md")
 
+########
+# Layout
+########
 ui <- fluidPage(padding=0,
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
@@ -114,7 +117,7 @@ ui <- fluidPage(padding=0,
               multiple = TRUE,
               selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
             ),
-            tags$p("Some forecasters may not have data for the chosen location", style="margin-top:-20px; font-size:12px"),
+            tags$p("Some forecasters may not have data for the chosen location or scoring metric", style="margin-top:-20px; font-size:12px"),
             checkboxGroupInput(
               "aheads", 
               "Forecast Horizon (Weeks)",
@@ -223,6 +226,12 @@ server <- function(input, output, session) {
     if (scoreType == "wis") {
       filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
       title = "Weighted Interval Score"
+      # Only show WIS for forecasts that have all intervals
+      filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
+      if (targetVariable == "Deaths") {
+        filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
+                          filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
+      }
     }
     if (scoreType == "ae") {
       filteredScoreDf <- filteredScoreDf %>% rename(Score = ae)
@@ -264,7 +273,7 @@ server <- function(input, output, session) {
         output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common.")
         output$renderLocations <- renderText("")
         output$renderAggregateText = renderText("")
-        hideElement("truthSection")
+        hideElement("truthPlot")
         return()
       }
       else {
@@ -284,7 +293,7 @@ server <- function(input, output, session) {
     }
     
     # Render truth plot with observed values
-    showElement("truthSection")
+    showElement("truthPlot")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, targetVariable, locationsIntersect, allLocations)
@@ -354,29 +363,7 @@ server <- function(input, output, session) {
   ###################
   # EVENT OBSERVATION
   ###################
-  observeEvent(input$truthValues, {
-    toggle('truthPlot')
-    if (input$truthValues %% 2 == 1) {
-      icon = icon("arrow-circle-up")
-    } else {
-      icon = icon("arrow-circle-down")
-    }
-    updateActionLink(session, "truthValues",
-                       paste0(h4(tags$div(style = "color: black; padding-left:40px;", HTML("Observed Values"), 
-                                   icon))))
-  })
-  observeEvent(input$scoreExplanation, {
-    toggle('explainScore')
-    if (input$scoreExplanation %% 2 == 1) {
-      icon = icon("arrow-circle-up")
-    } else {
-      icon = icon("arrow-circle-down")
-    }
-    updateActionButton(session, "scoreExplanation",
-                       paste0(h4(tags$div(style = "color: black; padding-left:40px;", HTML("Explanation Of Score"), 
-                                          icon))))
-  })
-
+  
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
     if (input$targetVariable == 'Deaths') {

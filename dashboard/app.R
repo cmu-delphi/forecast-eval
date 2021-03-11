@@ -74,6 +74,7 @@ coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 wisExplanation = includeMarkdown("wis.md")
 aeExplanation = includeMarkdown("ae.md")
 coverageExplanation = includeMarkdown("coverageplot.md")
+
 # Truth data disclaimer
 observedValueDisclaimer = 
   "All forecasts are evaluated against the latest version of observed data. Scores of pasts forecasts may change as observed data is revised."
@@ -89,11 +90,18 @@ ui <- fluidPage(padding=0,
     div(id="header",class="row",
       div(id="logo",class="col-sm-3",
         a(href="https://delphi.cmu.edu",
-          img(src="cmu_brand.png",width="220px",heigh="50px",alt="Carnegie Mellon University Delphi Group")
+          img(src="cmu_brand.png",width="220px",height="50px",alt="Carnegie Mellon University Delphi Group")
         )
       ),
-      div(class="col-sm-9",
-        span(id="title","FORECAST EVALUATION DASHBOARD")
+      div(class="col-sm-7",
+        span(id="title","FORECAST EVALUATION DASHBOARD"),
+      ),
+      div(class="col-sm-2",
+        
+        a(id="github-logo",href="https://github.com/cmu-delphi/forecast-eval/",
+          includeHTML("github.svg"),
+          HTML("&nbsp;GITHUB")
+        )
       )
     ),
     tags$br(),

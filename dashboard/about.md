@@ -1,5 +1,3 @@
-## FORECAST EVALUATION DASHBOARD
-
 This dashboard was developed by
 
 * Jed Grabman (Delphi Group, Google Fellow)

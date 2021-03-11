@@ -146,7 +146,7 @@ ui <- fluidPage(padding=0,
             conditionalPanel(condition = "input.scoreType != 'coverage'",
                              checkboxInput(
                                "allLocations",
-                               "Totals Over All Locations",
+                               "Totals Over All States and Territories (common to selected forecasters)*",
                                value = FALSE,
                              )
             ),
@@ -277,7 +277,7 @@ server <- function(input, output, session) {
         return()
       }
       else {
-        locationSubtitleText = paste0(', Location: ', aggregate ,' over all locations common to these forecasters*')
+        locationSubtitleText = paste0(', Location: ', aggregate ,' over all states and territories common to these forecasters*')
         output$renderLocations <- renderText(toupper(locationsIntersect))
         output$renderWarningText = renderText("")
       }
@@ -337,7 +337,7 @@ server <- function(input, output, session) {
   truthPlot = function(scoreDf = NULL, targetVariable = NULL, locationsIntersect = NULL, allLocations = FALSE) {
     titleText = paste0('<b>Observed Incident ', targetVariable, '</b>')
     if (allLocations) {
-      titleText = paste0('<b>Observed Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all locations common to selected forecasters*</sup>')
+      titleText = paste0('<b>Observed Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all states and territories common to selected forecasters*</sup>')
     } 
     scoreDf <- scoreDf %>%
       group_by(Date) %>% summarize(Reported_Incidence = actual)

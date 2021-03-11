@@ -2,7 +2,7 @@
     min-width: 220px;
 }
 #aboutContentArea{
-    max-width: 50rem;
+    max-width: 600px;
 }
 #header{
     display: flex;

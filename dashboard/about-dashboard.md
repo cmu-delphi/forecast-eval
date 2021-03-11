@@ -1,3 +1,1 @@
-This dashboard was developed by the Delphi Group in collaboration with the Forecast Evaluation Research Collaborative
-
-This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link
+This dashboard was developed by the Delphi Group from Carnegie Mellon in collaboration with the Reich Lab and US COVID-19 Forecast Hub from UMass-Amherst, as part of the Forecast Evaluation Research Collaborative.

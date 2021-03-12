@@ -221,7 +221,7 @@ server <- function(input, output, session) {
       filter(ahead %in% horizon) %>%
       filter(forecaster %in% forecasters)
     
-    filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Date = target_end_date)
+    filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Week_End_Date = target_end_date)
     
     if (scoreType == "wis") {
       filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
@@ -245,7 +245,7 @@ server <- function(input, output, session) {
     if (allLocations || scoreType == "coverage") {
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
       # Create df with col for all locations across each unique date, ahead and forecaster combo
-      locationDf = filteredScoreDf %>% group_by(Forecaster, Date, ahead) %>% 
+      locationDf = filteredScoreDf %>% group_by(Forecaster, Week_End_Date, ahead) %>% 
         summarize(location_list = paste(sort(unique(geo_value)),collapse=","))
       # Create a list containing each row's location list
       locationList = sapply(locationDf$location_list, function(x) strsplit(x, ","))
@@ -257,14 +257,14 @@ server <- function(input, output, session) {
       if (scoreType == "coverage") {
         aggregate = "Averaged"
         filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Date, ahead) %>%
+          group_by(Forecaster, Week_End_Date, ahead) %>%
           summarize(Score = sum(Score)/length(locationsIntersect), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText," Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "))
       }
       else {
         aggregate = "Totaled"
         filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Date, ahead) %>%
+          group_by(Forecaster, Week_End_Date, ahead) %>%
           summarize(Score = sum(Score), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
@@ -284,7 +284,7 @@ server <- function(input, output, session) {
     # Not totaling over all locations
     } else {
       filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(loc)) %>%
-        group_by(Forecaster, Date, ahead) %>%
+        group_by(Forecaster, Week_End_Date, ahead) %>%
         summarize(Score = Score, actual = actual)
       locationSubtitleText = paste0(', Location: ', input$location)
       output$renderAggregateText = renderText("")
@@ -299,7 +299,7 @@ server <- function(input, output, session) {
       truthPlot(truthDf, targetVariable, locationsIntersect, allLocations)
     })
     
-    filteredScoreDf = filteredScoreDf[c("Forecaster", "Date", "Score", "ahead")]
+    filteredScoreDf = filteredScoreDf[c("Forecaster", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
                        'Target Variable: ', targetVariable,
@@ -307,13 +307,13 @@ server <- function(input, output, session) {
                        '</sup>')
     # Fill gaps so there are line breaks on weeks without data
     filteredScoreDf = filteredScoreDf %>%
-      as_tsibble(key = c(Forecaster, ahead), index = Date) %>%
+      as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, ahead) %>%
       fill_gaps(.full = TRUE)
     
     filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4), 
                                     labels = c("Horizon: 1 Week", "Horizon: 2 Weeks", "Horizon: 3 Weeks", "Horizon: 4 Weeks"))
-    p = ggplot(filteredScoreDf, aes(x = Date, y = Score, color = Forecaster)) +
+    p = ggplot(filteredScoreDf, aes(x = Week_End_Date, y = Score, color = Forecaster, linetype = Forecaster)) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title=titleText) +
@@ -326,7 +326,7 @@ server <- function(input, output, session) {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
     plotHeight = 500 + (length(horizon)-1)*100
-    return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(0.5, "lines"))) 
+    return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(0.5, "lines")), tooltip = c("x", "y", "linetype"))
            %>% layout(height = plotHeight, legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
                       hovermode = 'x unified', xaxis = list(title = list(text = "Target Date",
                                                                                standoff = 8L), titlefont = list(size = 12))) 
@@ -340,9 +340,9 @@ server <- function(input, output, session) {
       titleText = paste0('<b>Observed Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all states and territories common to selected forecasters*</sup>')
     } 
     scoreDf <- scoreDf %>%
-      group_by(Date) %>% summarize(Reported_Incidence = actual)
+      group_by(Week_End_Date) %>% summarize(Reported_Incidence = actual)
     
-    return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Reported_Incidence)) +
+    return (ggplotly(ggplot(scoreDf, aes(x = Week_End_Date, y = Reported_Incidence)) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title = titleText) +

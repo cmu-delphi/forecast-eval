@@ -171,7 +171,7 @@ ui <- fluidPage(padding=0,
                 wisExplanation,
                 h4("Absolute Error"),
                 aeExplanation,
-                h4("Coverage Plot"),
+                h4("Coverage"),
                 coverageExplanation
               ),
               tags$br()
@@ -180,16 +180,17 @@ ui <- fluidPage(padding=0,
           tabPanel("Evaluation Plots", value = "evaluations",
             fluidRow(column(11, textOutput('renderWarningText'))),
             plotlyOutput(outputId = "summaryPlot", height="auto"),
-            fluidRow(
-              column(11, offset=1,
-                hidden(div(id = "wisExplanation", wisExplanation)),
-                hidden(div(id = "aeExplanation", aeExplanation)),
-                hidden(div(id = "coverageExplanation", coverageExplanation)),
-                div(id = "scoringDisclaimer", scoringDisclaimer)
-              )
-            ),
             tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
+            fluidRow(
+              column(11, offset=1,
+                     div(id="notes", "About the Scores"),
+                     hidden(div(id = "wisExplanation", wisExplanation)),
+                     hidden(div(id = "aeExplanation", aeExplanation)),
+                     hidden(div(id = "coverageExplanation", coverageExplanation)),
+                     div(id = "scoringDisclaimer", scoringDisclaimer)
+              )
+            ),
             fluidRow(
               column(11,offset=1,
                 textOutput('renderLocationText'),
@@ -198,6 +199,7 @@ ui <- fluidPage(padding=0,
                 tags$br()
               )
             )
+            
           )
         ),
       ),

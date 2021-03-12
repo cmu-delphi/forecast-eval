@@ -83,6 +83,6 @@ Data for the dashboard is pulled once a week from these sources, on Tuesdays.
 
 #### **Notes on the Data**
 
-*   WIS is only shown for those forecasts that have predictions for all intervals (11 for deaths and 7 for cases)
+*   WIS is only shown for forecasts that have predictions for all intervals (11 intervals for deaths and 7 for cases)
 *   When totaling over all locations, these locations include states and territories and do not include nationwide forecasts. We only include states and territories common to the selected forecasters (over all time) that have data for at least one location.
 *   We do include revisions of observed values, meaning the scores for forecasts made in the past can change. Scores change as our understanding of the truth changes.

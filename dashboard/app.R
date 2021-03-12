@@ -296,7 +296,7 @@ server <- function(input, output, session) {
     showElement("truthPlot")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
-      truthPlot(truthDf, targetVariable, locationsIntersect, allLocations)
+      truthPlot(truthDf, targetVariable, locationsIntersect, allLocations || scoreType == "coverage")
     })
     
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Week_End_Date", "Score", "ahead")]

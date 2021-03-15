@@ -39,7 +39,7 @@ The Forecaster Evaluation Dashboard is a collaborative project, which has been m
   
 **Forecaster predictions** are drawn from the [COVID-19 Forecast Hub GitHub repository](https://github.com/reichlab/covid19-forecast-hub/)  
   
-Data for the dashboard is pulled once a week from these sources, on Tuesdays.  
+Data for the dashboard is pulled from these sources on Mondays and Tuesdays.  
 
 #### **Terms**
 
@@ -78,8 +78,8 @@ Data for the dashboard is pulled once a week from these sources, on Tuesdays.
 *   Includes only geo values that are 2 characters (states / territories / nation)
 *   Includes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)
 *   Includes only predictions with at least 3 quantile values
-*   Includes only one file per forecaster per week (according to forecast date). That file must be from a Sunday or Monday. If both are present, we keep the Monday data.
-*   If a forecaster updates a file after that Monday, we do not include the new predictions
+*   Includes only one file per forecaster per week (according to forecast date).
+*   Includes only forecasts that are made on or before Monday of the relevant week. If multiple versions of a forecast are submitted only the latest forecast meeting the date restriction will be included.
 
 #### **Notes on the Data**
 

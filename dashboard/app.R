@@ -255,7 +255,7 @@ server <- function(input, output, session) {
       # Get the intersection of all the locations in these lists
       locationsIntersect = unique(Reduce(intersect, locationList))
       filteredScoreDf = filteredScoreDf %>% filter(geo_value %in% locationsIntersect)
-      aggregateText = "*All states and territories common to the selected forecasters (over all time) that have data for at least one location."
+      aggregateText = "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (scoreType == "coverage") {
         aggregate = "Averaged"
         filteredScoreDf = filteredScoreDf %>%

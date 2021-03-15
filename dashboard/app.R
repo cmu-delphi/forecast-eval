@@ -305,7 +305,8 @@ server <- function(input, output, session) {
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
                        'Target Variable: ', targetVariable,
-                       locationSubtitleText,
+                       locationSubtitleText, '<br>',
+                       tags$span(" Drag to zoom", style="font-size:11px"),
                        '</sup>')
     # Fill gaps so there are line breaks on weeks without data
     filteredScoreDf = filteredScoreDf %>%
@@ -327,7 +328,7 @@ server <- function(input, output, session) {
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
-    plotHeight = 500 + (length(horizon)-1)*100
+    plotHeight = 550 + (length(horizon)-1)*100
     return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(0.5, "lines")), tooltip = c("x", "y", "linetype"))
            %>% layout(height = plotHeight, legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
                       hovermode = 'x unified', xaxis = list(title = list(text = "Target Date",

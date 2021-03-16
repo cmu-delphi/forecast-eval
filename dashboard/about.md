@@ -1,4 +1,4 @@
-## FORECAST EVALUATION DASHBOARD
+### Forecast Evaluation Dashboard
 
 This dashboard was developed by
 
@@ -13,9 +13,11 @@ with the Forecast Evaluation Research Collaborative by
 * Logan Brooks (Delphi Group)
 * Estee Cramer (Reich Lab)
 * Daniel McDonald (Delphi Group)
-* [The COVID-19 Forecast Hub Team](https://covid19forecasthub.org/doc/team/)
 
-This data can also be viewed in a weekly report on the Forecast Hub site. TODO need link
+Forecast data in all states and U.S. territories are supplied by:
+
+[![COVID-19 Forecast Hub](forecast-hub-logo.png)](https://covid19forecasthub.org)
+
 ### Forecast Evaluation Research Collaborative
 
 The Forecast Evaluation Research Collaborative was founded:

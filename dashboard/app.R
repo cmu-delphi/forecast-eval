@@ -93,8 +93,14 @@ ui <- fluidPage(padding=0,
           img(src="cmu_brand.png",width="220px",heigh="50px",alt="Carnegie Mellon University Delphi Group")
         )
       ),
-      div(class="col-sm-9",
-        span(id="title","FORECAST EVALUATION DASHBOARD")
+      div(class="col-sm-7",
+          span(id="title","FORECAST EVALUATION DASHBOARD"),
+        ),
+      div(id="github-logo-container", class="col-sm-2",
+        a(id="github-logo",href="https://github.com/cmu-delphi/forecast-eval/",
+            includeHTML("github.svg"),
+            HTML("&nbsp;GITHUB")
+          )
       )
     ),
     tags$br(),
@@ -112,12 +118,12 @@ ui <- fluidPage(padding=0,
                                                      "Coverage" = "coverage")),
             selectInput(
               "forecasters",
-              p("Forecasters", tags$br(), tags$span("Type a name or select from dropdown", style="font-weight:normal; font-size:13px")),
+              p("Forecasters", tags$br(), tags$span(id="forecaster-input", "Type a name or select from dropdown")),
               choices = forecasterChoices,
               multiple = TRUE,
               selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
             ),
-            tags$p("Some forecasters may not have data for the chosen location or scoring metric", style="margin-top:-20px; font-size:12px"),
+            tags$p(id="forecaster-disclaimer", "Some forecasters may not have data for the chosen location or scoring metric"),
             checkboxGroupInput(
               "aheads", 
               "Forecast Horizon (Weeks)",
@@ -306,7 +312,7 @@ server <- function(input, output, session) {
     titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
                        'Target Variable: ', targetVariable,
                        locationSubtitleText, '<br>',
-                       tags$span(" Drag to zoom", style="font-size:11px"),
+                       tags$span(id="drag-to-zoom", " Drag to zoom"),
                        '</sup>')
     # Fill gaps so there are line breaks on weeks without data
     filteredScoreDf = filteredScoreDf %>%
@@ -349,7 +355,7 @@ server <- function(input, output, session) {
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title = titleText) +
-      scale_y_continuous(labels = scales::comma) +
+      scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       scale_x_date(date_labels = "%b %Y") + theme_bw()) 
       %>% layout(hovermode = 'x unified')
       %>% config(displayModeBar = F))

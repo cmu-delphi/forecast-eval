@@ -6,7 +6,9 @@ name: CI
 on:
   # Triggers the workflow on push to the dev branch
   push:
-    branches: [ dev ]
+    branches: 
+	- dev
+	- main
   pull_request:
 
   # Allows you to run this workflow manually from the Actions tab
@@ -34,4 +36,21 @@ jobs:
       # Runs a single command using the runners shell
       - name: Build and deploy dashboard docker image
         run: |
-          make deploy_dashboard
+	   baseRef="${GITHUB_REF#*/}"
+          baseRef="${baseRef#*/}"
+          case "${baseRef}" in
+          main)
+            imageTag="latest"
+            ;;
+          *)
+            imageTag="${baseRef//\//_}" # replace `/` with `_` in branch name
+            ;;
+          esac
+          echo "using tag: --${imageTag}--"
+          make deploy_dashboard imageTag=$imageTag
+
+	  # Trigger a webhook update
+          curl -H "Authorization: Bearer ${{ secrets.DELPHI_DEPLOY_WEBHOOK_TOKEN }}" \
+               -X POST ${{ secrets.DELPHI_DEPLOY_WEBHOOK_URL }} \
+               -H "Content-Type: application/x-www-form-urlencoded" \
+               -d "repository=ghcr.io/cmu-delphi/forecast-eval&tag=$imageTag"

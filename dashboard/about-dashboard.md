@@ -1,1 +1,1 @@
-This dashboard was developed by the Delphi Group from Carnegie Mellon in collaboration with the Reich Lab and US COVID-19 Forecast Hub from UMass-Amherst, as part of the Forecast Evaluation Research Collaborative.
+This dashboard was developed by [CMU Delphi](https://delphi.cmu.edu) in collaboration with the [Reich Lab](https://reichlab.io) and US [COVID-19 Forecast Hub](https://covid19forecasthub.org/) from UMass-Amherst, as part of the Forecast Evaluation Research Collaborative.

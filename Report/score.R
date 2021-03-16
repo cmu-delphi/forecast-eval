@@ -54,15 +54,7 @@ create_score_cards = function(prediction_cards_filepath, geo_type, signal_name =
     preds_to_eval = preds_to_eval %>%
       filter(geo_value == "us")
   }
-  
-  #Only score forecasters with atleast 3 forecasts (i.e. more than mean and median)
-  quantile_forecasts = preds_to_eval %>% 
-    group_by(forecaster, forecast_date, geo_value, ahead) %>% 
-    summarize(num_quantiles = n_distinct(quantile)) %>%
-    filter(num_quantiles > 2) %>%
-    select(-c(num_quantiles))
 
-  preds_to_eval = semi_join(preds_to_eval, quantile_forecasts)
   if(nrow(preds_to_eval) > 0){
     score_cards = evaluate_predictions(preds_to_eval, 
                                            err_measures,

@@ -45,7 +45,7 @@ build_dashboard: pull_data
 	docker build --no-cache=true -t ghcr.io/cmu-delphi/forecast-eval:$(imageTag) -f docker_dashboard/Dockerfile .
 
 deploy_dashboard: build_dashboard
-	docker push ghcr.io/cmu-delphi/forecast-eval:$imageTag
+	docker push ghcr.io/cmu-delphi/forecast-eval:$(imageTag)
 
 start_dashboard: build_dashboard_dev
 	docker run --rm -p 3838:3838 ghcr.io/cmu-delphi/forecast-eval:latest

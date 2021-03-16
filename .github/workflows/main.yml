@@ -4,11 +4,9 @@ name: CI
 
 # Controls when the action will run. 
 on:
-  # Triggers the workflow on push to the dev branch
+  # Triggers the workflow on push to the dev and main branches
   push:
-    branches: 
-	- dev
-	- main
+    branches: [ dev, main ]
   pull_request:
 
   # Allows you to run this workflow manually from the Actions tab

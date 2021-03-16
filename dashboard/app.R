@@ -96,7 +96,7 @@ ui <- fluidPage(padding=0,
       div(class="col-sm-7",
         span(id="title","FORECAST EVALUATION DASHBOARD"),
       ),
-      div(class="col-sm-2",
+      div(id="github-logo-container", class="col-sm-2",
         
         a(id="github-logo",href="https://github.com/cmu-delphi/forecast-eval/",
           includeHTML("github.svg"),

@@ -30,3 +30,7 @@
     height:16px;
     fill: #505565;
 }
+#github-logo-container {
+    display: flex;
+    justify-content: flex-end;
+}

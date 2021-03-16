@@ -34,7 +34,7 @@ jobs:
       # Runs a single command using the runners shell
       - name: Build and deploy dashboard docker image
         run: |
-	   baseRef="${GITHUB_REF#*/}"
+	        baseRef="${GITHUB_REF#*/}"
           baseRef="${baseRef#*/}"
           case "${baseRef}" in
           main)
@@ -47,7 +47,7 @@ jobs:
           echo "using tag: --${imageTag}--"
           make deploy_dashboard imageTag=$imageTag
 
-	  # Trigger a webhook update
+	        # Trigger a webhook update
           curl -H "Authorization: Bearer ${{ secrets.DELPHI_DEPLOY_WEBHOOK_TOKEN }}" \
                -X POST ${{ secrets.DELPHI_DEPLOY_WEBHOOK_URL }} \
                -H "Content-Type: application/x-www-form-urlencoded" \

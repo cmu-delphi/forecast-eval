@@ -9,7 +9,7 @@ on:
   push:
     branches: [ dev ]
   schedule:
-    - cron: '0 10 * * *'  # every day at 10am
+    - cron: '0 14 * * MON-TUE'  # every Monday and Tuesday  at 9amET
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:

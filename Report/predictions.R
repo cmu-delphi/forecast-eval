@@ -7,7 +7,7 @@ library(stringr)
 create_prediction_cards = function(prediction_cards_filename){
   start_date = today() - 100 * 7 # last 100 weeks
   
-  forecasters = get_covidhub_forecaster_names()
+  forecasters = get_covidhub_forecaster_names(designations = "primary")
   num_forecasters = length(forecasters)
   print(str_interp("Getting forecasts for ${num_forecasters} forecasters."))
   
@@ -20,7 +20,10 @@ create_prediction_cards = function(prediction_cards_filename){
     error = function(e) cat(sprintf("%i. %s\n", i, e$message))
     )
   }
-  
+  # Convert NULL to empty vector. Useful when a model has no forecasts,
+  # resulting in a 404 and no forecast_dates.
+  forecast_dates = lapply(forecast_dates,
+                          function(dates) if (is.null(dates)) Date() else dates)
   forecast_dates = lapply(forecast_dates, function(date) date[date >= start_date])
   
   # Load data from previous run so we don't have to re-ingest / process it. This

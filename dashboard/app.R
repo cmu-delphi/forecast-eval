@@ -74,14 +74,14 @@ coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
 wisExplanation = includeMarkdown("wis.md")
 aeExplanation = includeMarkdown("ae.md")
 coverageExplanation = includeMarkdown("coverageplot.md")
-
-# Truth data disclaimer
-observedValueDisclaimer = 
-  "All forecasts are evaluated against the latest version of observed data. Scores of pasts forecasts may change as observed data is revised."
+scoringDisclaimer = includeMarkdown("scoring-disclaimer.md")
 
 # About page content
 aboutPageText = includeMarkdown("about.md")
 
+########
+# Layout
+########
 ui <- fluidPage(padding=0,
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
@@ -90,18 +90,17 @@ ui <- fluidPage(padding=0,
     div(id="header",class="row",
       div(id="logo",class="col-sm-3",
         a(href="https://delphi.cmu.edu",
-          img(src="cmu_brand.png",width="220px",height="50px",alt="Carnegie Mellon University Delphi Group")
+          img(src="cmu_brand.png",width="220px",heigh="50px",alt="Carnegie Mellon University Delphi Group")
         )
       ),
       div(class="col-sm-7",
-        span(id="title","FORECAST EVALUATION DASHBOARD"),
-      ),
+          span(id="title","FORECAST EVALUATION DASHBOARD"),
+        ),
       div(id="github-logo-container", class="col-sm-2",
-        
         a(id="github-logo",href="https://github.com/cmu-delphi/forecast-eval/",
-          includeHTML("github.svg"),
-          HTML("&nbsp;GITHUB")
-        )
+            includeHTML("github.svg"),
+            HTML("&nbsp;GITHUB")
+          )
       )
     ),
     tags$br(),
@@ -119,11 +118,12 @@ ui <- fluidPage(padding=0,
                                                      "Coverage" = "coverage")),
             selectInput(
               "forecasters",
-              "Forecasters (Type a name or select from dropdown)",
+              p("Forecasters", tags$br(), tags$span(id="forecaster-input", "Type a name or select from dropdown")),
               choices = forecasterChoices,
               multiple = TRUE,
               selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
             ),
+            tags$p(id="forecaster-disclaimer", "Some forecasters may not have data for the chosen location or scoring metric"),
             checkboxGroupInput(
               "aheads", 
               "Forecast Horizon (Weeks)",
@@ -131,20 +131,13 @@ ui <- fluidPage(padding=0,
               selected = 1,
               inline = TRUE
             ),
-            conditionalPanel(condition = "input.scoreType != 'coverage'",
-                             checkboxInput(
-                               "allLocations",
-                               "Totals Over All Locations",
-                               value = FALSE,
-                             )
-            ),
             conditionalPanel(condition = "input.scoreType == 'coverage'",
                              selectInput(
                                "coverageInterval",
                                "Coverage Interval",
                                choices = coverageChoices,
                                multiple = FALSE,
-                               selected = "50"
+                               selected = "95"
                              ),
             ),
             conditionalPanel(condition = "!input.allLocations && input.scoreType != 'coverage'",
@@ -154,6 +147,13 @@ ui <- fluidPage(padding=0,
                                choices = locationChoices,
                                multiple = FALSE,
                                selected = "US"
+                             )
+            ),
+            conditionalPanel(condition = "input.scoreType != 'coverage'",
+                             checkboxInput(
+                               "allLocations",
+                               "Totals Over All States and Territories (common to selected forecasters)*",
+                               value = FALSE,
                              )
             ),
             tags$hr(),
@@ -171,34 +171,41 @@ ui <- fluidPage(padding=0,
               div(
                 id="aboutContentArea",
                 aboutPageText,
+                tags$br(),
                 h3("Explanation of Scoring Methods"),
                 h4("Weighted Interval Score"),
                 wisExplanation,
                 h4("Absolute Error"),
                 aeExplanation,
-                h4("Coverage Plot"),
+                h4("Coverage"),
                 coverageExplanation
-              )
+              ),
+              tags$br()
             )),
           ),
           tabPanel("Evaluation Plots", value = "evaluations",
-            fluidRow(column(10, offset=1, textOutput('renderWarningText'))),
+            fluidRow(column(11, textOutput('renderWarningText'))),
             plotlyOutput(outputId = "summaryPlot", height="auto"),
-            fluidRow(
-              column(9, offset=1,
-                hidden(div(id = "wisExplanation", wisExplanation)),
-                hidden(div(id = "aeExplanation", aeExplanation)),
-                hidden(div(id = "coverageExplanation", coverageExplanation))
-              )
-            ),
+            tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
-              column(9,offset=1,
+              column(11, offset=1,
+                     div(id="notes", "About the Scores"),
+                     hidden(div(id = "wisExplanation", wisExplanation)),
+                     hidden(div(id = "aeExplanation", aeExplanation)),
+                     hidden(div(id = "coverageExplanation", coverageExplanation)),
+                     div(id = "scoringDisclaimer", scoringDisclaimer)
+              )
+            ),
+            fluidRow(
+              column(11,offset=1,
                 textOutput('renderLocationText'),
                 textOutput('renderAggregateText'),
-                textOutput('renderLocations')
+                textOutput('renderLocations'),
+                tags$br()
               )
             )
+            
           )
         ),
       ),
@@ -222,11 +229,17 @@ server <- function(input, output, session) {
       filter(ahead %in% horizon) %>%
       filter(forecaster %in% forecasters)
     
-    filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Date = target_end_date)
+    filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Week_End_Date = target_end_date)
     
     if (scoreType == "wis") {
       filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
       title = "Weighted Interval Score"
+      # Only show WIS for forecasts that have all intervals
+      filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
+      if (targetVariable == "Deaths") {
+        filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
+                          filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
+      }
     }
     if (scoreType == "ae") {
       filteredScoreDf <- filteredScoreDf %>% rename(Score = ae)
@@ -240,7 +253,7 @@ server <- function(input, output, session) {
     if (allLocations || scoreType == "coverage") {
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
       # Create df with col for all locations across each unique date, ahead and forecaster combo
-      locationDf = filteredScoreDf %>% group_by(Forecaster, Date, ahead) %>% 
+      locationDf = filteredScoreDf %>% group_by(Forecaster, Week_End_Date, ahead) %>% 
         summarize(location_list = paste(sort(unique(geo_value)),collapse=","))
       # Create a list containing each row's location list
       locationList = sapply(locationDf$location_list, function(x) strsplit(x, ","))
@@ -248,18 +261,18 @@ server <- function(input, output, session) {
       # Get the intersection of all the locations in these lists
       locationsIntersect = unique(Reduce(intersect, locationList))
       filteredScoreDf = filteredScoreDf %>% filter(geo_value %in% locationsIntersect)
-      aggregateText = "*All states and territories common to the selected forecasters (over all time) that have data for at least one location."
+      aggregateText = "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (scoreType == "coverage") {
         aggregate = "Averaged"
         filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Date, ahead) %>%
+          group_by(Forecaster, Week_End_Date, ahead) %>%
           summarize(Score = sum(Score)/length(locationsIntersect), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText," Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "))
       }
       else {
         aggregate = "Totaled"
         filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Date, ahead) %>%
+          group_by(Forecaster, Week_End_Date, ahead) %>%
           summarize(Score = sum(Score), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
@@ -268,82 +281,81 @@ server <- function(input, output, session) {
         output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common.")
         output$renderLocations <- renderText("")
         output$renderAggregateText = renderText("")
-        output$renderLocationText = renderText("")
-        hideElement("truthSection")
+        hideElement("truthPlot")
         return()
       }
       else {
-        locationSubtitleText = paste0(', Location: ', aggregate ,' over all locations common to these forecasters*')
+        locationSubtitleText = paste0(', Location: ', aggregate ,' over all states and territories common to these forecasters*')
         output$renderLocations <- renderText(toupper(locationsIntersect))
         output$renderWarningText = renderText("")
       }
-      output$renderLocationText <- renderText("")
     # Not totaling over all locations
     } else {
       filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(loc)) %>%
-        group_by(Forecaster, Date, ahead) %>%
+        group_by(Forecaster, Week_End_Date, ahead) %>%
         summarize(Score = Score, actual = actual)
-      locationSubtitleText = paste0(', Location: ', input$location, '*')
-      output$renderLocationText <- renderText("*Some forecasters may not have data for the location chosen.")
+      locationSubtitleText = paste0(', Location: ', input$location)
       output$renderAggregateText = renderText("")
       output$renderLocations <- renderText("")
       output$renderWarningText <- renderText("")
     }
     
     # Render truth plot with observed values
-    showElement("truthSection")
+    showElement("truthPlot")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
-      truthPlot(truthDf, targetVariable, locationsIntersect, allLocations)
+      truthPlot(truthDf, targetVariable, locationsIntersect, allLocations || scoreType == "coverage")
     })
     
-    filteredScoreDf = filteredScoreDf[c("Forecaster", "Date", "Score", "ahead")]
+    filteredScoreDf = filteredScoreDf[c("Forecaster", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
                        'Target Variable: ', targetVariable,
-                       locationSubtitleText,
+                       locationSubtitleText, '<br>',
+                       tags$span(id="drag-to-zoom", " Drag to zoom"),
                        '</sup>')
     # Fill gaps so there are line breaks on weeks without data
     filteredScoreDf = filteredScoreDf %>%
-      as_tsibble(key = c(Forecaster, ahead), index = Date) %>%
+      as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, ahead) %>%
       fill_gaps(.full = TRUE)
     
     filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4), 
                                     labels = c("Horizon: 1 Week", "Horizon: 2 Weeks", "Horizon: 3 Weeks", "Horizon: 4 Weeks"))
-    p = ggplot(filteredScoreDf, aes(x = Date, y = Score, color = Forecaster)) +
+    p = ggplot(filteredScoreDf, aes(x = Week_End_Date, y = Score, color = Forecaster, linetype = Forecaster)) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title=titleText) +
       scale_x_date(date_labels = "%b %Y") +
-      scale_y_continuous(labels = scales::comma) +
+      scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = color_palette)
 
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
-    return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(2, "lines"))) 
-           %>% layout(legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
-                      hovermode = 'x unified') 
+    plotHeight = 550 + (length(horizon)-1)*100
+    return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(0.5, "lines")), tooltip = c("x", "y", "linetype"))
+           %>% layout(height = plotHeight, legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
+                      hovermode = 'x unified', xaxis = list(title = list(text = "Target Date",
+                                                                               standoff = 8L), titlefont = list(size = 12))) 
            %>% config(displayModeBar = F))
   }
   
   # Create the plot for target variable ground truth
   truthPlot = function(scoreDf = NULL, targetVariable = NULL, locationsIntersect = NULL, allLocations = FALSE) {
-    titleText = paste0('<b> Incident ', targetVariable, '</b>')
+    titleText = paste0('<b>Observed Incident ', targetVariable, '</b>')
     if (allLocations) {
-      titleText = paste0('<b>Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all locations common to selected forecasters*</sup>')
+      titleText = paste0('<b>Observed Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all states and territories common to selected forecasters*</sup>')
     } 
     scoreDf <- scoreDf %>%
-      group_by(Date) %>% summarize(Incidence = actual)
+      group_by(Week_End_Date) %>% summarize(Reported_Incidence = actual)
     
-    output$renderObservedValueDisclaimer = renderText(observedValueDisclaimer)
-    return (ggplotly(ggplot(scoreDf, aes(x = Date, y = Incidence)) +
+    return (ggplotly(ggplot(scoreDf, aes(x = Week_End_Date, y = Reported_Incidence)) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title = titleText) +
-      scale_y_continuous(labels = scales::comma) +
+      scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       scale_x_date(date_labels = "%b %Y") + theme_bw()) 
       %>% layout(hovermode = 'x unified')
       %>% config(displayModeBar = F))
@@ -360,29 +372,7 @@ server <- function(input, output, session) {
   ###################
   # EVENT OBSERVATION
   ###################
-  observeEvent(input$truthValues, {
-    toggle('truthPlot')
-    if (input$truthValues %% 2 == 1) {
-      icon = icon("arrow-circle-up")
-    } else {
-      icon = icon("arrow-circle-down")
-    }
-    updateActionLink(session, "truthValues",
-                       paste0(h4(tags$div(style = "color: black; padding-left:40px;", HTML("Observed Values"), 
-                                   icon))))
-  })
-  observeEvent(input$scoreExplanation, {
-    toggle('explainScore')
-    if (input$scoreExplanation %% 2 == 1) {
-      icon = icon("arrow-circle-up")
-    } else {
-      icon = icon("arrow-circle-down")
-    }
-    updateActionButton(session, "scoreExplanation",
-                       paste0(h4(tags$div(style = "color: black; padding-left:40px;", HTML("Explanation Of Score"), 
-                                          icon))))
-  })
-
+  
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
     if (input$targetVariable == 'Deaths') {

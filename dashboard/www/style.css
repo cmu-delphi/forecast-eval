@@ -2,7 +2,7 @@
     min-width: 220px;
 }
 #aboutContentArea{
-    max-width: 600px;
+    max-width: 70rem;
 }
 #header{
     display: flex;
@@ -33,4 +33,19 @@
 #github-logo-container {
     display: flex;
     justify-content: flex-end;
+}
+#notes {
+    font-weight: 600;
+    font-size: 18px;
+}
+#forecaster-input {
+    font-weight:normal; 
+    font-size:13px;
+}
+#forecaster-disclaimer {
+    margin-top:-20px; 
+    font-size:12px;
+}
+#drag-to-zoom {
+    font-size:11px;
 }

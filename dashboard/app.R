@@ -58,12 +58,10 @@ dfNationDeaths = getData("score_cards_nation_deaths.rds")
 df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
 df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
 
-# Prepare color palette and linetypes
+# Prepare color palette
 set.seed(100)
 forecaster_rand <- sample(unique(df$forecaster))
 color_palette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecaster_rand)
-avail_linetypes = rep(c("blank", "solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), length.out = length(unique(df$forecaster)))
-linetypes = setNames(object = avail_linetypes, nm = forecaster_rand)
 
 # Prepare input choices
 forecasterChoices = sort(unique(df$forecaster))
@@ -326,16 +324,15 @@ server <- function(input, output, session) {
                                     labels = c("Horizon: 1 Week", "Horizon: 2 Weeks", "Horizon: 3 Weeks", "Horizon: 4 Weeks"))
     p = ggplot(
         filteredScoreDf, 
-        aes(x = Week_End_Date, y = Score, color = Forecaster, linetype = Forecaster)
+        aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster)
       ) +
       geom_line() +
-      geom_point() +
+      geom_point(size=2) +
       labs(x = "", y = "", title=titleText) +
       scale_x_date(date_labels = "%b %Y") +
       scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = color_palette) +
-      scale_linetype_manual(values = linetypes) + 
       theme_bw() + 
       theme(panel.spacing=unit(0.5, "lines"))
 
@@ -345,7 +342,7 @@ server <- function(input, output, session) {
     plotHeight = 550 + (length(horizon)-1)*100
     
     finalPlot <- 
-      ggplotly(p,tooltip = c("x", "y", "linetype")) %>% 
+      ggplotly(p,tooltip = c("x", "y", "shape")) %>% 
       layout(
         height = plotHeight, 
         legend = list(orientation = "h", y = -0.1), 

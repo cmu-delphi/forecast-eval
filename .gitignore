@@ -31,9 +31,21 @@ vignettes/*.pdf
 *_cache/
 /cache/
 
+# Build output files
+/dist/
+
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
 
 # R Environment Variables
 .Renviron
+
+# Build output
+dist/
+
+# Data files
+.csv
+.rds
+dashboard/**.csv
+dashboard/**.rds

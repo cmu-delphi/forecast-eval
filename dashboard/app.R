@@ -58,10 +58,12 @@ dfNationDeaths = getData("score_cards_nation_deaths.rds")
 df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
 df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
 
-# Prepare color palette
+# Prepare color palette and linetypes
 set.seed(100)
 forecaster_rand <- sample(unique(df$forecaster))
 color_palette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecaster_rand)
+avail_linetypes = rep(c("blank", "solid", "dashed", "dotted", "dotdash", "longdash", "twodash"), length.out = length(unique(df$forecaster)))
+linetypes = setNames(object = avail_linetypes, nm = forecaster_rand)
 
 # Prepare input choices
 forecasterChoices = sort(unique(df$forecaster))
@@ -330,6 +332,7 @@ server <- function(input, output, session) {
       scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = color_palette)
+      scale_linetype_manual(values = linetypes)
 
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))

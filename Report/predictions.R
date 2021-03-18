@@ -43,19 +43,14 @@ create_prediction_cards = function(prediction_cards_filename){
   new_dates = list()
   for (i in 1:length(forecasters)) {
     given_dates = forecast_dates[[i]]
-    # dates must be on a Sunday or Monday
-    comparable_forecast_dates = given_dates[wday(given_dates) %in% c(1,2)]
-    
-    # ...but only include Monday if both dates included
-    comparable_forecast_dates = comparable_forecast_dates[!((comparable_forecast_dates + 1) %in% comparable_forecast_dates)]
     if(exists("seen_dates")){
       if(forecasters[[i]] %in% seen_dates$forecaster){
         seen_forecaster_dates = (seen_dates %>% 
                                    filter(forecaster == forecasters[[i]]))$forecast_date
-        comparable_forecast_dates = as_date(setdiff(comparable_forecast_dates, seen_forecaster_dates))
+        given_dates = as_date(setdiff(given_dates, seen_forecaster_dates))
       }
     }
-    new_dates[[i]] = comparable_forecast_dates
+    new_dates[[i]] = given_dates
   }
 
   names(new_dates) = forecasters
@@ -88,6 +83,15 @@ create_prediction_cards = function(prediction_cards_filename){
   predictions_cards = predictions_cards %>%
                         filter(forecast_date >= start_date) %>%
                         filter(!is.na(predictions_cards$target_end_date)) 
+  
+  # Only accept forecasts made Monday or earlier
+  predictions_cards = predictions_cards %>%
+                        filter(target_end_date - (forecast_date + 7 * ahead) >= -2)
+  
+  # And only a forecaster's last forecast if multiple were made
+  predictions_cards = predictions_cards %>% 
+                        group_by(forecaster, geo_value, target_end_date, quantile, ahead, signal) %>%
+                        filter(forecast_date == max(forecast_date))
   
   saveRDS(predictions_cards,
           file = prediction_cards_filename, 

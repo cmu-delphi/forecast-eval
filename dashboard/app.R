@@ -324,25 +324,41 @@ server <- function(input, output, session) {
     
     filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4), 
                                     labels = c("Horizon: 1 Week", "Horizon: 2 Weeks", "Horizon: 3 Weeks", "Horizon: 4 Weeks"))
-    p = ggplot(filteredScoreDf, aes(x = Week_End_Date, y = Score, color = Forecaster, linetype = Forecaster)) +
+    p = ggplot(
+        filteredScoreDf, 
+        aes(x = Week_End_Date, y = Score, color = Forecaster, linetype = Forecaster)
+      ) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title=titleText) +
       scale_x_date(date_labels = "%b %Y") +
       scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       facet_wrap(~ahead, ncol=1) +
-      scale_color_manual(values = color_palette)
-      scale_linetype_manual(values = linetypes)
+      scale_color_manual(values = color_palette) +
+      scale_linetype_manual(values = linetypes) + 
+      theme_bw() + 
+      theme(panel.spacing=unit(0.5, "lines"))
 
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
     plotHeight = 550 + (length(horizon)-1)*100
-    return(ggplotly(p + theme_bw() + theme(panel.spacing=unit(0.5, "lines")), tooltip = c("x", "y", "linetype"))
-           %>% layout(height = plotHeight, legend = list(orientation = "h", y = -0.1), margin = list(t=90), height=500, 
-                      hovermode = 'x unified', xaxis = list(title = list(text = "Target Date",
-                                                                               standoff = 8L), titlefont = list(size = 12))) 
-           %>% config(displayModeBar = F))
+    
+    finalPlot <- 
+      ggplotly(p,tooltip = c("x", "y", "linetype")) %>% 
+      layout(
+        height = plotHeight, 
+        legend = list(orientation = "h", y = -0.1), 
+        margin = list(t=90), 
+        height=500, 
+        hovermode = 'x unified', 
+        xaxis = list(
+          title = list(text = "Target Date",standoff = 8L), 
+          titlefont = list(size = 12))
+      ) %>%
+      config(displayModeBar = F)
+      
+    return(finalPlot)
   }
   
   # Create the plot for target variable ground truth

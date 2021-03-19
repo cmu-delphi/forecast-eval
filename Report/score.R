@@ -56,9 +56,8 @@ create_score_cards = function(prediction_cards_filepath, geo_type, signal_name =
   }
 
   if(nrow(preds_to_eval) > 0){
-    score_cards = evaluate_predictions(preds_to_eval, 
+    score_cards = evaluate_covid_predictions(preds_to_eval, 
                                            err_measures,
-                                           backfill_buffer = 0,
                                            geo_type = geo_type)
     # filter out scores that couldn't be evaluated to try to evaluate with
     # covidHubUtils.

@@ -7,7 +7,7 @@ library(stringr)
 create_prediction_cards = function(prediction_cards_filename){
   start_date = today() - 100 * 7 # last 100 weeks
   
-  forecasters = get_covidhub_forecaster_names()
+  forecasters = get_covidhub_forecaster_names(designations = "primary")
   num_forecasters = length(forecasters)
   print(str_interp("Getting forecasts for ${num_forecasters} forecasters."))
   
@@ -20,7 +20,10 @@ create_prediction_cards = function(prediction_cards_filename){
     error = function(e) cat(sprintf("%i. %s\n", i, e$message))
     )
   }
-  
+  # Convert NULL to empty vector. Useful when a model has no forecasts,
+  # resulting in a 404 and no forecast_dates.
+  forecast_dates = lapply(forecast_dates,
+                          function(dates) if (is.null(dates)) Date() else dates)
   forecast_dates = lapply(forecast_dates, function(date) date[date >= start_date])
   
   # Load data from previous run so we don't have to re-ingest / process it. This
@@ -43,19 +46,14 @@ create_prediction_cards = function(prediction_cards_filename){
   new_dates = list()
   for (i in 1:length(forecasters)) {
     given_dates = forecast_dates[[i]]
-    # dates must be on a Sunday or Monday
-    comparable_forecast_dates = given_dates[wday(given_dates) %in% c(1,2)]
-    
-    # ...but only include Monday if both dates included
-    comparable_forecast_dates = comparable_forecast_dates[!((comparable_forecast_dates + 1) %in% comparable_forecast_dates)]
     if(exists("seen_dates")){
       if(forecasters[[i]] %in% seen_dates$forecaster){
         seen_forecaster_dates = (seen_dates %>% 
                                    filter(forecaster == forecasters[[i]]))$forecast_date
-        comparable_forecast_dates = as_date(setdiff(comparable_forecast_dates, seen_forecaster_dates))
+        given_dates = as_date(setdiff(given_dates, seen_forecaster_dates))
       }
     }
-    new_dates[[i]] = comparable_forecast_dates
+    new_dates[[i]] = given_dates
   }
 
   names(new_dates) = forecasters
@@ -88,6 +86,15 @@ create_prediction_cards = function(prediction_cards_filename){
   predictions_cards = predictions_cards %>%
                         filter(forecast_date >= start_date) %>%
                         filter(!is.na(predictions_cards$target_end_date)) 
+  
+  # Only accept forecasts made Monday or earlier
+  predictions_cards = predictions_cards %>%
+                        filter(target_end_date - (forecast_date + 7 * ahead) >= -2)
+  
+  # And only a forecaster's last forecast if multiple were made
+  predictions_cards = predictions_cards %>% 
+                        group_by(forecaster, geo_value, target_end_date, quantile, ahead, signal) %>%
+                        filter(forecast_date == max(forecast_date))
   
   saveRDS(predictions_cards,
           file = prediction_cards_filename, 

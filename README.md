@@ -34,3 +34,18 @@ To start a docker image of the shiny server locally:
 ```bash
 > make start_dashboard
 ```
+
+# Releasing
+```
+git checkout dev
+git pull
+git checkout -b release_v1.0 origin/dev
+```
+Update version number in DESCRIPTION FILE
+```
+git add .
+git commit -m "Version 1.0 updates"
+git tag -a v1.0 -m "Version 1.0"
+git push origin release_v1.0
+git push origin v1.0
+```

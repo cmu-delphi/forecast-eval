@@ -56,6 +56,14 @@ create_prediction_cards = function(prediction_cards_filename){
     new_dates[[i]] = given_dates
   }
 
+  seen_forecasts <- predictions_cards %>% 
+    group_by(forecaster) %>% 
+    distinct(forecaster, forecast_date)
+  names(new_dates) = forecasters
+  new_length = length(unlist(new_dates))
+  print(str_interp("Out of ${nrow(seen_forecasts)} forecasts we will pull ${new_length} new forecasts\n"))
+ 
+
   names(new_dates) = forecasters
   
   # Now get new predictions for each forecaster
@@ -64,7 +72,7 @@ create_prediction_cards = function(prediction_cards_filename){
   deaths_sig = "deaths_incidence_num"
   cases_sig = "confirmed_incidence_num"
   for (i in 1:length(forecasters)) {
-    cat(str_interp("${i}/${num_forecasters}:${forecasters[i]} ...\n"))
+    cat(str_interp("${i}/${num_forecasters}:${forecasters[i]} with ${length(new_dates[[i]])} forecasts ...\n"))
     if (length(new_dates[[i]] > 0)){
       predictions_cards_list[[i]] = tryCatch({
         get_covidhub_predictions(forecasters[i], 

@@ -102,7 +102,9 @@ create_prediction_cards = function(prediction_cards_filename){
   # And only a forecaster's last forecast if multiple were made
   predictions_cards = predictions_cards %>% 
                         group_by(forecaster, geo_value, target_end_date, quantile, ahead, signal) %>%
-                        filter(forecast_date == max(forecast_date))
+                        filter(forecast_date == max(forecast_date)) %>%
+                        ungroup()
+  class(predictions_cards) = c("predictions_cards", class(predictions_cards))
   
   saveRDS(predictions_cards,
           file = prediction_cards_filename, 

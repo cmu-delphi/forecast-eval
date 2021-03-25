@@ -55,7 +55,7 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
     
 *   **Target Variable**
     
-    What the forecast is predicting, i.e., “weekly incident cases”
+    What the forecast is predicting, e.g., “weekly incident cases”
     
 *   **Horizon**
     

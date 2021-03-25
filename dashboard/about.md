@@ -55,7 +55,7 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
     
 *   **Target Variable**
     
-    What the forecast is predicting, ie: “weekly incident cases”
+    What the forecast is predicting, i.e., “weekly incident cases”
     
 *   **Horizon**
     
@@ -64,27 +64,19 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 *   **Epidemiological week (MMWR week)**
     
     Week that starts on a Sunday. If the day on which the forecast is being made is a Sunday or Monday, the next epidemiological week is the week that starts on that Sunday (going back a day if it is Monday). If the forecast is being made on Tuesday-Saturday, the next epidemiological week is the week that starts on the subsequent Sunday, following [CDC convention](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf).
-    
-*   **Point Forecast**
-    
-  The value that each forecaster picks as their “most likely” prediction. Usually this is the median (50% quantile prediction), but forecasters can specify alternative Point Forecasts different from the median. 
-  
-*   **Geo Type**
-    
-    States, territories or U.S. as a nation
 
 #### **Dashboard Inclusion Criteria**
+A forecast is only included if all the following criteria are met:
 
-*   Includes only weekly deaths incidence and weekly case incidence target variables
-*   Includes only horizon < 5 weeks ahead
-*   Includes only geo values that are 2 characters (states / territories / nation)
-*   Includes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)
-*   Includes only predictions with at least 3 quantile values
-*   Includes only one file per forecaster per week (according to forecast date).
-*   Includes only forecasts that are made on or before Monday of the relevant week. If multiple versions of a forecast are submitted only the latest forecast meeting the date restriction will be included.
+*   The target variable is the weekly incidence of either cases or deaths
+*   The horizon is no more than 4 weeks ahead
+*   The location is a U.S. state, territory, or the nation as a whole
+*   All dates are parsable. If a date is not in yyyy/mm/dd format, the forecast may be dropped.
+*   The forecast was made on or before the Monday of the relevant week. If multiple versions of a forecast are submitted then only the last forecast that meets the date restriction is included.
 
 #### **Notes on the Data**
 
-*   WIS is only shown for forecasts that have predictions for all intervals (11 intervals for deaths and 7 for cases)
-*   When totaling over all locations, these locations include states and territories and do not include nationwide forecasts. We only include states and territories common to the selected forecasters (over all time) that have data for at least one location.
-*   We do include revisions of observed values, meaning the scores for forecasts made in the past can change. Scores change as our understanding of the truth changes.
+*   If a forecast does not include an explicit point estimate, the 0.5 quantile is taken as the point estimate for calculating absolute error.
+*   WIS is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and 15 for cases)
+*   Totaling over all states and territories does not include nationwide forecasts. To ensure that values are comparable, these totals also exclude any locations that are absent from any file that was submitted by one of the selected forecasters.
+*   We include revisions of observed values, which means that the scores for forecasts made in the past can change as our understanding of the ground truth changes.

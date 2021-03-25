@@ -47,23 +47,23 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 
 *   **Forecaster**
     
-    A model producing quantile predictions
+    A named model that produces forecasts, e.g., "COVIDhub-ensemble"
     
 *   **Forecast**
     
-    A set of data that includes quantile target variable predictions for a certain horizon, epidemiological week, and location 
+    A set of quantile predictions for a specific target variable, epidemiological week, and location 
     
 *   **Target Variable**
     
     What the forecast is predicting, e.g., “weekly incident cases”
     
-*   **Horizon**
-    
-    The duration of time between when the prediction was made and the predicted event in units of epidemiological weeks.
-    
 *   **Epidemiological week (MMWR week)**
     
-    Week that starts on a Sunday. If the day on which the forecast is being made is a Sunday or Monday, the next epidemiological week is the week that starts on that Sunday (going back a day if it is Monday). If the forecast is being made on Tuesday-Saturday, the next epidemiological week is the week that starts on the subsequent Sunday, following [CDC convention](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf).
+    A standardized week that starts on a Sunday. See the [CDC definition](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf) for additional details.
+
+*   **Horizon**
+    
+    The duration of time between when a prediction was made and the end of the corresponding epidemiological week. Following the [Reich Lab definition](https://github.com/reichlab/covid19-forecast-hub/blob/master/data-processed/README.md#target), a forecast has a horizon of 1 week if it was produced no later than the Monday of the epidemiological week it forecasts. Thus, forecasts made 5-11 days before the end of the corresponding epidemiological week have a horizon of 1 week, 12-18 days before have a horizon of 2 weeks, etc. 
 
 #### **Dashboard Inclusion Criteria**
 A forecast is only included if all the following criteria are met:

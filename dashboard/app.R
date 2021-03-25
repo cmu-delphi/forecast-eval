@@ -13,63 +13,6 @@ COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95
 DEATH_FILTER = "deaths_incidence_num"
 CASE_FILTER = "confirmed_incidence_num"
 
-# Connect to AWS s3bucket
-Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
-s3bucket = tryCatch(
-  {
-    get_bucket(bucket = 'forecast-eval')
-  },
-  error = function(e) {
-    e
-    return(NULL)
-  }
-)
-
-# Get and prepare data
-getData <- function(filename){
-  if(!is.null(s3bucket)) {
-    tryCatch(
-      {
-        s3readRDS(object = filename, bucket = s3bucket)
-      },
-      error = function(e) {
-        e
-        getFallbackData(filename)
-      }
-    )
-  } else {
-    getFallbackData(filename)
-  }
-}
-
-getFallbackData = function(filename) {
-  path = ifelse(
-    file.exists(filename),
-    filename,
-    file.path("../dist/",filename)
-  )
-  readRDS(path)
-}
-
-dfStateCases <- getData("score_cards_state_cases.rds")
-dfStateDeaths <- getData("score_cards_state_deaths.rds")
-dfNationCases = getData("score_cards_nation_cases.rds")
-dfNationDeaths = getData("score_cards_nation_deaths.rds")
-df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
-df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
-
-# Prepare color palette
-set.seed(100)
-forecaster_rand <- sample(unique(df$forecaster))
-color_palette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecaster_rand)
-
-# Prepare input choices
-forecasterChoices = sort(unique(df$forecaster))
-aheadChoices = unique(df$ahead)
-locationChoices = unique(toupper(df$geo_value))
-locationChoices = locationChoices[c(length(locationChoices), (1:length(locationChoices)-1))] # Move US to front of list
-coverageChoices = intersect(colnames(df), COVERAGE_INTERVALS)
-
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
 aeExplanation = includeMarkdown("ae.md")
@@ -119,7 +62,7 @@ ui <- fluidPage(padding=0,
             selectInput(
               "forecasters",
               p("Forecasters", tags$br(), tags$span(id="forecaster-input", "Type a name or select from dropdown")),
-              choices = forecasterChoices,
+              choices = c("COVIDhub-baseline", "COVIDhub-ensemble"),
               multiple = TRUE,
               selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
             ),
@@ -127,7 +70,7 @@ ui <- fluidPage(padding=0,
             checkboxGroupInput(
               "aheads", 
               "Forecast Horizon (Weeks)",
-              choices = aheadChoices,
+              choices = c(1,2,3,4),
               selected = 1,
               inline = TRUE
             ),
@@ -135,7 +78,7 @@ ui <- fluidPage(padding=0,
                              selectInput(
                                "coverageInterval",
                                "Coverage Interval",
-                               choices = coverageChoices,
+                               choices = '',
                                multiple = FALSE,
                                selected = "95"
                              ),
@@ -144,7 +87,7 @@ ui <- fluidPage(padding=0,
                              selectInput(
                                "location",
                                "Location",
-                               choices = locationChoices,
+                               choices = '',
                                multiple = FALSE,
                                selected = "US"
                              )
@@ -213,6 +156,60 @@ ui <- fluidPage(padding=0,
 
 
 server <- function(input, output, session) {
+  # Connect to AWS s3bucket
+  Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
+  s3bucket = tryCatch(
+    {
+      get_bucket(bucket = 'forecast-eval')
+    },
+    error = function(e) {
+      e
+      return(NULL)
+    }
+  )
+  
+  # Get and prepare data
+  getData <- function(filename){
+    if(!is.null(s3bucket)) {
+      tryCatch(
+        {
+          s3readRDS(object = filename, bucket = s3bucket)
+        },
+        error = function(e) {
+          e
+          getFallbackData(filename)
+        }
+      )
+    } else {
+      getFallbackData(filename)
+    }
+  }
+  
+  getFallbackData = function(filename) {
+    path = ifelse(
+      file.exists(filename),
+      filename,
+      file.path("../dist/",filename)
+    )
+    readRDS(path)
+  }
+  
+  dfStateCases <- getData("score_cards_state_cases.rds")
+  dfStateDeaths <- getData("score_cards_state_deaths.rds")
+  dfNationCases = getData("score_cards_nation_cases.rds")
+  dfNationDeaths = getData("score_cards_nation_deaths.rds")
+  df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
+  df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
+  
+  # Prepare color palette
+  set.seed(100)
+  forecaster_rand <- sample(unique(df$forecaster))
+  color_palette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecaster_rand)
+  
+  # Prepare input choices
+  forecasterChoices = sort(unique(df$forecaster))
+  updateForecasterChoices(session, df, forecasterChoices, 'wis')
+    
   
   ##################
   # CREATE MAIN PLOT
@@ -388,6 +385,7 @@ server <- function(input, output, session) {
                 input$aheads, input$location, input$allLocations, input$coverageInterval)
   })
   
+  
   ##########################
   # RENDER NOTES BELOW PLOTS
   ##########################
@@ -396,6 +394,8 @@ server <- function(input, output, session) {
   output$aeExplanation = renderUI({tags$div(aeExplanation)})
   output$coverageExplanation = renderUI({tags$div(coverageExplanation)})
   output$scoringDisclaimer = renderUI({tags$div(scoringDisclaimer)})
+  
+  
   
 
   ###################
@@ -487,15 +487,9 @@ updateForecasterChoices = function(session, df, forecasterInput, scoreType) {
     df = df %>% filter(!is.na(ae))
   }
   forecasterChoices = unique(df$forecaster)
-  # Ensure previsouly selected options are still allowed
-  if (forecasterInput %in% forecasterChoices) {
-    selectedForecasters = forecasterInput
-  } else {
-    selectedForecasters = c("COVIDhub-ensemble", "COVIDhub-baseline")
-  }
   updateSelectInput(session, "forecasters",
                     choices = forecasterChoices,
-                    selected = selectedForecasters)
+                    selected = forecasterInput)
 }
 
 

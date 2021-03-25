@@ -132,7 +132,7 @@ ui <- fluidPage(padding=0,
             tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
-              column(11, offset=1, 
+              column(11, offset=1,
                      div(id="notes", "About the Scores"),
                      hidden(div(id = "wisExplanation", wisExplanation)),
                      hidden(div(id = "aeExplanation", aeExplanation)),

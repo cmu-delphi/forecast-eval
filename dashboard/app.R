@@ -132,11 +132,11 @@ ui <- fluidPage(padding=0,
             tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
-              column(11, offset=1, uiOutput("notes"),
-                     uiOutput("wisExplanation"),
-                     uiOutput("aeExplanation"),
-                     uiOutput("coverageExplanation"),
-                     uiOutput("scoringDisclaimer"),
+              column(11, offset=1, div(id="notes", "About the Scores"),
+                     hidden(div(id = "wisExplanation", wisExplanation)),
+                     hidden(div(id = "aeExplanation", aeExplanation)),
+                     hidden(div(id = "coverageExplanation", coverageExplanation)),
+                     div(id = "scoringDisclaimer", scoringDisclaimer)
               )
             ),
             fluidRow(
@@ -384,19 +384,6 @@ server <- function(input, output, session) {
     summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
                 input$aheads, input$location, input$allLocations, input$coverageInterval)
   })
-  
-  
-  ##########################
-  # RENDER NOTES BELOW PLOTS
-  ##########################
-  output$notes = renderUI({tags$div(tags$div("About the Scores"))})
-  output$wisExplanation = renderUI({tags$div(wisExplanation)})
-  output$aeExplanation = renderUI({tags$div(aeExplanation)})
-  output$coverageExplanation = renderUI({tags$div(coverageExplanation)})
-  output$scoringDisclaimer = renderUI({tags$div(scoringDisclaimer)})
-  
-  
-  
 
   ###################
   # EVENT OBSERVATION

@@ -27,7 +27,7 @@ aboutPageText = includeMarkdown("about.md")
 ########
 ui <- fluidPage(padding=0,
     tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
+      tags$link(rel = "stylesheet", type = "text/css", href = "style_v1.2.css")
     ),
     tags$head(includeHTML(("google-analytics.html"))),
     useShinyjs(),

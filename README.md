@@ -41,7 +41,7 @@ git checkout dev
 git pull
 git checkout -b release_v1.0 origin/dev
 ```
-Update version number in DESCRIPTION FILE
+Update version number in DESCRIPTION FILE  
 Update version number in css file title and update reference to file in app.R
 ```
 git add .

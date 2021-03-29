@@ -32,3 +32,40 @@ save_score_cards = function(score_card, geo_type = c("state", "nation"),
        file = output_file_name, 
        compress = "xz")
 }
+
+evaluate_chu = function(predictions, signals, err_measures){
+  allowed_signals = c("confirmed_incidence_num",
+                      "deaths_incidence_num")
+  assert_that(all(signals %in% allowed_signals),
+              msg = paste("Signal not allowed:",
+                          setdiff(signals, allowed_signals)))
+  scores = c()
+  for(signal_name in signals){
+    preds_signal = predictions %>%
+      filter(signal == signal_name)
+    if (signal_name == "confirmed_incidence_num"){
+      jhu_signal = "inc case"
+    } else {
+      jhu_signal = "inc death"
+    }
+    chu_truth = covidHubUtils::load_truth("JHU", jhu_signal)
+    chu_truth = chu_truth %>%
+      rename(actual = value) %>%
+      select(-c(model,
+                target_variable,
+                location,
+                location_name,
+                population,
+                geo_type,
+                abbreviation))
+    signal_scores = evaluate_predictions(preds_signal, 
+                                         truth_data = chu_truth,
+                                         err_measures,
+                                         grp_vars = c("target_end_date",
+                                                      "geo_value",
+                                                      "ahead",
+                                                      "forecaster"))
+    scores = rbind(scores, signal_scores)
+  }
+  return(scores)
+}

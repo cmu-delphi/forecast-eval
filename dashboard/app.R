@@ -29,6 +29,7 @@ ui <- fluidPage(padding=0,
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
     ),
+    tags$head(includeHTML(("google-analytics.html"))),
     useShinyjs(),
     div(id="header",class="row",
       div(id="logo",class="col-sm-3",

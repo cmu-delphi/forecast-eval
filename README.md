@@ -38,7 +38,7 @@ To start a docker image of the shiny server locally:
 # Releasing
 ```
 git checkout dev
-git pull
+git pull origin dev
 git checkout -b release_v1.0 origin/dev
 ```
 Update version number in DESCRIPTION FILE

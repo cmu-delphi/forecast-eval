@@ -45,26 +45,18 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 
 #### **Terms**
 
-*   **Forecaster**
+*   **Forecaster**:  A named model that produces forecasts, e.g., "COVIDhub-ensemble"
     
-    A named model that produces forecasts, e.g., "COVIDhub-ensemble"
+*   **Forecast**: A set of quantile predictions for a specific target variable, epidemiological week, and location 
     
-*   **Forecast**
+*   **Target Variable**: What the forecast is predicting, e.g., “weekly incident cases”
     
-    A set of quantile predictions for a specific target variable, epidemiological week, and location 
-    
-*   **Target Variable**
-    
-    What the forecast is predicting, e.g., “weekly incident cases”
-    
-*   **Epidemiological week (MMWR week)**
-    
-    A standardized week that starts on a Sunday. See the [CDC definition](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf) for additional details.
+*   **Horizon**: The duration of time between when the prediction was made and the predicted event in units of epidemiological weeks.
+        
+*   **Epidemiological week (MMWR week)** A standardized week that starts on a Sunday. See the [CDC definition](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf) for additional details.
 
-*   **Horizon**
-    
-    The duration of time between when a prediction was made and the end of the corresponding epidemiological week. Following the [Reich Lab definition](https://github.com/reichlab/covid19-forecast-hub/blob/master/data-processed/README.md#target), a forecast has a horizon of 1 week if it was produced no later than the Monday of the epidemiological week it forecasts. Thus, forecasts made 5-11 days before the end of the corresponding epidemiological week have a horizon of 1 week, 12-18 days before have a horizon of 2 weeks, etc. 
-
+*   **Horizon** The duration of time between when a prediction was made and the end of the corresponding epidemiological week. Following the [Reich Lab definition](https://github.com/reichlab/covid19-forecast-hub/blob/master/data-processed/README.md#target), a forecast has a horizon of 1 week if it was produced no later than the Monday of the epidemiological week it forecasts. Thus, forecasts made 5-11 days before the end of the corresponding epidemiological week have a horizon of 1 week, 12-18 days before have a horizon of 2 weeks, etc. 
+  
 #### **Dashboard Inclusion Criteria**
 A forecast is only included if all the following criteria are met:
 
@@ -80,3 +72,18 @@ A forecast is only included if all the following criteria are met:
 *   WIS is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and 15 for cases)
 *   Totaling over all states and territories does not include nationwide forecasts. To ensure that values are comparable, these totals also exclude any locations that are absent from any file that was submitted by one of the selected forecasters.
 *   We include revisions of observed values, which means that the scores for forecasts made in the past can change as our understanding of the ground truth changes.
+
+#### **Accessing the Data**
+The forecasts and scores are available as RDS files and are uploaded weekly to a publicly accessible AWS bucket.  
+
+You can use the url https://forecast-eval.s3.us-east-2.amazonaws.com/ + filename to download
+any of the files from the bucket. For instance: https://forecast-eval.s3.us-east-2.amazonaws.com/score_cards_nation_cases.rds to download scores for nation level case predictions.  
+
+The available files are:
+* predictions_cards.rds (forecasts)
+* score_cards_nation_cases.rds
+* score_cards_nation_deaths.rds
+* score_cards_state_cases.rds
+* score_cards_state_deaths.rds
+  
+  

@@ -3,11 +3,11 @@ library(evalcast)
 library(dplyr)
 library(stringr)
 
-# TODO: Use `get_covidhub_forecaster_names()` instead of listing forecasters
 create_prediction_cards = function(prediction_cards_filename){
   start_date = today() - 100 * 7 # last 100 weeks
   
-  forecasters = get_covidhub_forecaster_names(designations = "primary")
+  forecasters = c("COVIDhub-baseline",
+                  get_covidhub_forecaster_names(designations = "primary"))
   num_forecasters = length(forecasters)
   print(str_interp("Getting forecasts for ${num_forecasters} forecasters."))
   
@@ -25,38 +25,8 @@ create_prediction_cards = function(prediction_cards_filename){
   forecast_dates = lapply(forecast_dates,
                           function(dates) if (is.null(dates)) Date() else dates)
   forecast_dates = lapply(forecast_dates, function(date) date[date >= start_date])
-  
-  # Load data from previous run so we don't have to re-ingest / process it. This
-  # data could end up out of date if a forecast is retrospectively updated, but in
-  # that case it's no longer a true prediction. We can always restart from scratch
-  # by deleting predictions_cards.rds.
-  
-  if (file.exists(prediction_cards_filename)) {
-    print("Reading from existing prediction cards")
-    predictions_cards = readRDS(file = prediction_cards_filename)
-    predictions_cards$data_source = "jhu-csse"
-    seen_dates = predictions_cards %>% 
-      distinct(forecast_date, forecaster)
-    print("Existing prediction cards loaded")
-  }else{
-    print("No prediction cards found, will need to regenerate.")
-  }
-  
-  # new_dates, as opposed to dates for which we already have data for a forecaster
-  new_dates = list()
-  for (i in 1:length(forecasters)) {
-    given_dates = forecast_dates[[i]]
-    if(exists("seen_dates")){
-      if(forecasters[[i]] %in% seen_dates$forecaster){
-        seen_forecaster_dates = (seen_dates %>% 
-                                   filter(forecaster == forecasters[[i]]))$forecast_date
-        given_dates = as_date(setdiff(given_dates, seen_forecaster_dates))
-      }
-    }
-    new_dates[[i]] = given_dates
-  }
 
-  names(new_dates) = forecasters
+  names(forecast_dates) = forecasters
   
   # Now get new predictions for each forecaster
   
@@ -65,10 +35,10 @@ create_prediction_cards = function(prediction_cards_filename){
   cases_sig = "confirmed_incidence_num"
   for (i in 1:length(forecasters)) {
     cat(str_interp("${i}/${num_forecasters}:${forecasters[i]} ...\n"))
-    if (length(new_dates[[i]] > 0)){
+    if (length(forecast_dates[[i]] > 0)){
       predictions_cards_list[[i]] = tryCatch({
         get_covidhub_predictions(forecasters[i], 
-                                 rev(new_dates[[i]])) %>% 
+                                 rev(forecast_dates[[i]])) %>% 
           filter(ahead < 5) %>% 
           filter(nchar(geo_value) == 2 & signal %in% c(deaths_sig, cases_sig))
       },

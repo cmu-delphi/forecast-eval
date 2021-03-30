@@ -14,6 +14,7 @@ pull_data: predictions_cards.rds score_cards_state_deaths.rds score_cards_state_
 
 dist:
 	mkdir $@
+	cp dashboard/www/style.css dist/style-`md5sum dashboard/www/style.css | cut -d ' ' -f 1`.css
 
 clean:
 	rm -rf dist

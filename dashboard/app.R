@@ -22,13 +22,22 @@ scoringDisclaimer = includeMarkdown("scoring-disclaimer.md")
 # About page content
 aboutPageText = includeMarkdown("about.md")
 
+# Get css file
+cssFiles = list.files(path="www",pattern="style*")
+if(length(cssFiles)!=1){
+  cat(file=stderr(),"Error: couldn't load style files\n")
+}
+cssFile = cssFiles[1]
+cat(file=stderr(),"Loaded css file:",cssFile,"\n")
+
 ########
 # Layout
 ########
 ui <- fluidPage(padding=0,
     tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
+      tags$link(rel = "stylesheet", type = "text/css", href = cssFile)
     ),
+    tags$head(includeHTML(("google-analytics.html"))),
     useShinyjs(),
     div(id="header",class="row",
       div(id="logo",class="col-sm-3",

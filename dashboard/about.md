@@ -50,8 +50,6 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 *   **Forecast**: A set of quantile predictions for a specific target variable, epidemiological week, and location 
     
 *   **Target Variable**: What the forecast is predicting, e.g., “weekly incident cases”
-    
-*   **Horizon**: The duration of time between when the prediction was made and the predicted event in units of epidemiological weeks.
         
 *   **Epidemiological week (MMWR week)**: A standardized week that starts on a Sunday. See the [CDC definition](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf) for additional details.
 

@@ -45,33 +45,19 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 
 #### **Terms**
 
-*   **Forecaster**
+*   **Forecaster**: A model producing quantile predictions
     
-    A model producing quantile predictions
+*   **Forecast**: A set of data that includes quantile target variable predictions for a certain horizon, epidemiological week, and location 
     
-*   **Forecast**
+*   **Target Variable**: What the forecast is predicting, ie: “weekly incident cases”
     
-    A set of data that includes quantile target variable predictions for a certain horizon, epidemiological week, and location 
+*   **Horizon**: The duration of time between when the prediction was made and the predicted event in units of epidemiological weeks.
     
-*   **Target Variable**
+*   **Epidemiological week (MMWR week)**: Week that starts on a Sunday. If the day on which the forecast is being made is a Sunday or Monday, the next epidemiological week is the week that starts on that Sunday (going back a day if it is Monday). If the forecast is being made on Tuesday-Saturday, the next epidemiological week is the week that starts on the subsequent Sunday, following [CDC convention](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf).
     
-    What the forecast is predicting, ie: “weekly incident cases”
-    
-*   **Horizon**
-    
-    The duration of time between when the prediction was made and the predicted event in units of epidemiological weeks.
-    
-*   **Epidemiological week (MMWR week)**
-    
-    Week that starts on a Sunday. If the day on which the forecast is being made is a Sunday or Monday, the next epidemiological week is the week that starts on that Sunday (going back a day if it is Monday). If the forecast is being made on Tuesday-Saturday, the next epidemiological week is the week that starts on the subsequent Sunday, following [CDC convention](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf).
-    
-*   **Point Forecast**
-    
-  The value that each forecaster picks as their “most likely” prediction. Usually this is the median (50% quantile prediction), but forecasters can specify alternative Point Forecasts different from the median. 
+*   **Point Forecast**: The value that each forecaster picks as their “most likely” prediction. Usually this is the median (50% quantile prediction), but forecasters can specify alternative Point Forecasts different from the median. 
   
-*   **Geo Type**
-    
-    States, territories or U.S. as a nation
+*   **Geo Type**: States, territories or U.S. as a nation
 
 #### **Dashboard Inclusion Criteria**
 
@@ -88,3 +74,20 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 *   WIS is only shown for forecasts that have predictions for all intervals (11 intervals for deaths and 7 for cases)
 *   When totaling over all locations, these locations include states and territories and do not include nationwide forecasts. We only include states and territories common to the selected forecasters (over all time) that have data for at least one location.
 *   We do include revisions of observed values, meaning the scores for forecasts made in the past can change. Scores change as our understanding of the truth changes.
+
+
+#### **Accessing the Data**
+The forecasts and scores are available as RDS files and are uploaded weekly to a publicly accessible AWS bucket.  
+
+You can use the url https://forecast-eval.s3.us-east-2.amazonaws.com/ + filename to download
+any of the files from the bucket. For instance: https://forecast-eval.s3.us-east-2.amazonaws.com/score_cards_nation_cases.rds to download scores for nation level case predictions.  
+
+The available files are:
+* predictions_cards.rds (forecasts)
+* score_cards_nation_cases.rds
+* score_cards_nation_deaths.rds
+* score_cards_state_cases.rds
+* score_cards_state_deaths.rds
+  
+  
+  

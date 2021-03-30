@@ -45,36 +45,31 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 
 #### **Terms**
 
-*   **Forecaster**: A model producing quantile predictions
+*   **Forecaster**:  A named model that produces forecasts, e.g., "COVIDhub-ensemble"
     
-*   **Forecast**: A set of data that includes quantile target variable predictions for a certain horizon, epidemiological week, and location 
+*   **Forecast**: A set of quantile predictions for a specific target variable, epidemiological week, and location 
     
-*   **Target Variable**: What the forecast is predicting, ie: “weekly incident cases”
-    
-*   **Horizon**: The duration of time between when the prediction was made and the predicted event in units of epidemiological weeks.
-    
-*   **Epidemiological week (MMWR week)**: Week that starts on a Sunday. If the day on which the forecast is being made is a Sunday or Monday, the next epidemiological week is the week that starts on that Sunday (going back a day if it is Monday). If the forecast is being made on Tuesday-Saturday, the next epidemiological week is the week that starts on the subsequent Sunday, following [CDC convention](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf).
-    
-*   **Point Forecast**: The value that each forecaster picks as their “most likely” prediction. Usually this is the median (50% quantile prediction), but forecasters can specify alternative Point Forecasts different from the median. 
+*   **Target Variable**: What the forecast is predicting, e.g., “weekly incident cases”
+        
+*   **Epidemiological week (MMWR week)**: A standardized week that starts on a Sunday. See the [CDC definition](https://wwwn.cdc.gov/nndss/document/MMWR_week_overview.pdf) for additional details.
+
+*   **Horizon**: The duration of time between when a prediction was made and the end of the corresponding epidemiological week. Following the [Reich Lab definition](https://github.com/reichlab/covid19-forecast-hub/blob/master/data-processed/README.md#target), a forecast has a horizon of 1 week if it was produced no later than the Monday of the epidemiological week it forecasts. Thus, forecasts made 5-11 days before the end of the corresponding epidemiological week have a horizon of 1 week, 12-18 days before have a horizon of 2 weeks, etc. 
   
-*   **Geo Type**: States, territories or U.S. as a nation
-
 #### **Dashboard Inclusion Criteria**
+A forecast is only included if all the following criteria are met:
 
-*   Includes only weekly deaths incidence and weekly case incidence target variables
-*   Includes only horizon < 5 weeks ahead
-*   Includes only geo values that are 2 characters (states / territories / nation)
-*   Includes only non-NA target dates (if the date is not in yyyy/mm/dd, the prediction will not be included)
-*   Includes only predictions with at least 3 quantile values
-*   Includes only one file per forecaster per week (according to forecast date).
-*   Includes only forecasts that are made on or before Monday of the relevant week. If multiple versions of a forecast are submitted only the latest forecast meeting the date restriction will be included.
+*   The target variable is the weekly incidence of either cases or deaths
+*   The horizon is no more than 4 weeks ahead
+*   The location is a U.S. state, territory, or the nation as a whole
+*   All dates are parsable. If a date is not in yyyy/mm/dd format, the forecast may be dropped.
+*   The forecast was made on or before the Monday of the relevant week. If multiple versions of a forecast are submitted then only the last forecast that meets the date restriction is included.
 
 #### **Notes on the Data**
 
-*   WIS is only shown for forecasts that have predictions for all intervals (11 intervals for deaths and 7 for cases)
-*   When totaling over all locations, these locations include states and territories and do not include nationwide forecasts. We only include states and territories common to the selected forecasters (over all time) that have data for at least one location.
-*   We do include revisions of observed values, meaning the scores for forecasts made in the past can change. Scores change as our understanding of the truth changes.
-
+*   If a forecast does not include an explicit point estimate, the 0.5 quantile is taken as the point estimate for calculating absolute error.
+*   WIS is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and 15 for cases)
+*   Totaling over all states and territories does not include nationwide forecasts. To ensure that values are comparable, these totals also exclude any locations that are absent from any file that was submitted by one of the selected forecasters.
+*   We include revisions of observed values, which means that the scores for forecasts made in the past can change as our understanding of the ground truth changes.
 
 #### **Accessing the Data**
 The forecasts and scores are available as RDS files and are uploaded weekly to a publicly accessible AWS bucket.  
@@ -88,6 +83,5 @@ The available files are:
 * score_cards_nation_deaths.rds
 * score_cards_state_cases.rds
 * score_cards_state_deaths.rds
-  
   
   

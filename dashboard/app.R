@@ -22,6 +22,7 @@ scoringDisclaimer = includeMarkdown("scoring-disclaimer.md")
 # About page content
 aboutPageText = includeMarkdown("about.md")
 
+# Get css file
 cssFiles = list.files(path="www",pattern="style*")
 if(length(cssFiles)!=1){
   cat(file=stderr(),"Error: couldn't load style files\n")

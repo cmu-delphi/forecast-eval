@@ -50,6 +50,6 @@ git push origin release_v1.0
 git push origin v1.0
 ```
 
-# Note on Scoring Script
+## Note on Scoring Script
 
 When updates are made in the evalcast package that affect the scoring script, the covidcast docker image must be rebuilt by kicking off the workflow here: https://github.com/cmu-delphi/covidcast-docker/actions/workflows/main.yml.

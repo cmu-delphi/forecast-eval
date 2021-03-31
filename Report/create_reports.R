@@ -67,6 +67,9 @@ coverage_functions = sapply(central_intervals,
 names(coverage_functions) = cov_names
 
 err_measures = c(wis = weighted_interval_score,
+                 overprediction = overprediction,
+                 underprediction = underprediction,
+                 sharpness = sharpness,
                  ae = absolute_error,
                  coverage_functions)
 

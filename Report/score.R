@@ -1,116 +1,73 @@
-library("evalcast")
 library("dplyr")
-library("lubridate")
 library("assertthat")
 
-create_score_cards = function(prediction_cards_filepath, geo_type, signal_name = NULL, output_file_name = NULL, output_dir="."){
-  if (!exists("predictions_cards")){
-    predictions_cards = readRDS(prediction_cards_filepath)
-  }
-  signals = (predictions_cards %>% distinct(signal))$signal
-  if (is.null(signal_name)){
-    assert_that(length(signals) == 1,
-                msg = "If no signal is specified, prediction_cards may only have 1 signal")
-    signal_name = signals
+save_score_cards = function(score_card, geo_type = c("state", "nation"),
+                              signal_name = c("confirmed_incidence_num",
+                                              "deaths_incidence_num"),
+                              output_dir = ".") {
+  signal_name = match.arg(signal_name)
+  geo_type = match.arg(geo_type)
+  signals = score_card %>%
+              distinct(signal) %>%
+              pull(signal)
+  assert_that(signal_name %in% signals,
+                msg = "signal is not in score_card")
+  score_card = score_card %>% filter(signal == signal_name)
+  if (signal_name == "confirmed_incidence_num") {
+    sig_suffix = "cases"
   } else {
-    assert_that(signal_name %in% signals,
-                msg = "signal is not in prediction_cards")
-    predictions_cards = predictions_cards %>% filter(signal == signal_name)
+    sig_suffix = "deaths"
   }
-  if (is.null(output_file_name)){
-    cases_sig = "confirmed_incidence_num"
-    deaths_sig = "deaths_incidence_num"
-    assert_that(signal_name %in% c(cases_sig, deaths_sig),
-                msg = paste("If no output file is provided, signal must be in:",
-                            cases_sig,
-                            deaths_sig))
-    if (signal_name == cases_sig){
-      sig_suffix = "cases"
-    } else {
-      sig_suffix = "deaths"
-    }
-    output_file_name = file.path(output_dir,paste0("score_cards_", geo_type, "_", sig_suffix, ".rds"))
-  }
-  # central coverage functions named cov_10, cov_20, etc.
-  central_intervals = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)
-  cov_names = paste0("cov_", central_intervals * 100)
-  coverage_functions = sapply(central_intervals, 
-                              function(coverage) interval_coverage(coverage))
-  names(coverage_functions) = cov_names
-  
-  err_measures = c(wis = weighted_interval_score, 
-                   ae = absolute_error,
-                  coverage_functions) 
-  preds_to_eval = predictions_cards %>% 
-    filter(target_end_date < today())
-  
-  if (geo_type == "state"){
-    preds_to_eval = preds_to_eval %>% 
+  output_file_name = file.path(output_dir,
+                               paste0("score_cards_", geo_type, "_",
+                                      sig_suffix, ".rds"))
+
+  if (geo_type == "state") {
+    score_card = score_card %>%
       filter(nchar(geo_value) == 2, geo_value != "us")
-  } else if (geo_type == "county"){
-    preds_to_eval = preds_to_eval %>% 
-      filter(nchar(geo_value) == 5)
-  } else if (geo_type == "nation"){
-    preds_to_eval = preds_to_eval %>%
+  } else if (geo_type == "nation") {
+    score_card = score_card %>%
       filter(geo_value == "us")
   }
 
-  if(nrow(preds_to_eval) > 0){
-    score_cards = evaluate_covid_predictions(preds_to_eval, 
-                                           err_measures,
-                                           geo_type = geo_type)
-    # filter out scores that couldn't be evaluated to try to evaluate with
-    # covidHubUtils.
-    na_scores = score_cards %>% filter(is.na(actual))
-    score_cards = score_cards %>% filter(!is.na(actual))
-  } else {
-    score_cards = data.frame()
-  }
-  
-  if (nrow(na_scores) > 0){
-    warning(msg = 
-              paste("covidcast could not provide truth data for some",
-            "predictions. Attempting to use covidHubUtils instead."))
-    has_jhu_signal = TRUE
-    if (signal_name == "confirmed_incidence_num"){
-      jhu_signal = "inc case"
-    } else if (signal_name == "deaths_incidence_num"){
-      jhu_signal = "inc death"
-    } else if (signal_name == "deaths_cumulative_num"){
-      jhu_signal = "cum death"
-    } else {
-      has_jhu_signal == FALSE
-      warning(msg = paste("covidHubUtils cannot process provided signal:",
-                          signal_name))
-    }
-    if(has_jhu_signal){
-      na_preds = semi_join(preds_to_eval, na_scores, by = c("forecaster", "ahead", "geo_value", "forecast_date"))
-      chu_truth = covidHubUtils::load_truth("JHU", jhu_signal)
-      chu_truth = chu_truth %>%
-        rename(actual = value) %>%
-        select(-c(model,
-                  target_variable,
-                  location,
-                  location_name,
-                  population,
-                  geo_type,
-                  abbreviation))
-      chu_scores = evaluate_predictions(na_preds, 
-                                        err_measures,
-                                        backfill_buffer = 0,
-                                        geo_type = geo_type,
-                                        side_truth = chu_truth)
-      if (any(is.na(chu_scores$actual))){
-        warning(msg = 
-                  paste("covidHubUtils could not provide actual data for some",
-                        "predictions. These predictions have not been scored."))
-        chu_scores = chu_scores %>% filter(!is.na(actual))
-      }
-      score_cards = rbind(score_cards, chu_scores)
-    }
-  }
-  
-  saveRDS(score_cards, 
-       file = output_file_name, 
+  saveRDS(score_card,
+       file = output_file_name,
        compress = "xz")
+}
+
+evaluate_chu = function(predictions, signals, err_measures) {
+  allowed_signals = c("confirmed_incidence_num",
+                      "deaths_incidence_num")
+  assert_that(all(signals %in% allowed_signals),
+              msg = paste("Signal not allowed:",
+                          setdiff(signals, allowed_signals)))
+  scores = c()
+  for (signal_name in signals) {
+    preds_signal = predictions %>%
+      filter(signal == signal_name)
+    if (signal_name == "confirmed_incidence_num") {
+      jhu_signal = "inc case"
+    } else {
+      jhu_signal = "inc death"
+    }
+    chu_truth = covidHubUtils::load_truth("JHU", jhu_signal)
+    chu_truth = chu_truth %>%
+      rename(actual = value) %>%
+      select(-c(model,
+                target_variable,
+                location,
+                location_name,
+                population,
+                geo_type,
+                abbreviation))
+    signal_scores = evaluate_predictions(preds_signal,
+                                         truth_data = chu_truth,
+                                         err_measures,
+                                         grp_vars = c("target_end_date",
+                                                      "geo_value",
+                                                      "ahead",
+                                                      "forecaster"))
+    scores = rbind(scores, signal_scores)
+  }
+  return(scores)
 }

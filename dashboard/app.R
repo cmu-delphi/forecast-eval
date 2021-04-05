@@ -208,6 +208,9 @@ server <- function(input, output, session) {
   dfStateDeaths <- getData("score_cards_state_deaths.rds")
   dfNationCases = getData("score_cards_nation_cases.rds")
   dfNationDeaths = getData("score_cards_nation_deaths.rds")
+  # TODO handle this kind of error better
+  dfNationDeaths = subset(dfNationDeaths, select = -c(full_location_name))
+  dfNationCases = subset(dfNationCases, select = -c(full_location_name))
   df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
   df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
   

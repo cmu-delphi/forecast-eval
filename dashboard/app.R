@@ -215,7 +215,6 @@ server <- function(input, output, session) {
   # TODO handle this kind of error better
   dfNationDeaths = subset(dfNationDeaths, select = -c(full_location_name))
   dfNationCases = subset(dfNationCases, select = -c(full_location_name))
-
   df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
   df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
   
@@ -411,7 +410,6 @@ server <- function(input, output, session) {
   
   observeEvent(input$refreshColors, {
     colorSeed = floor(runif(1, 1, 1000))
-    print(colorSeed)
     output$summaryPlot <- renderPlotly({
       summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
                   input$aheads, input$location, input$allLocations, input$coverageInterval, colorSeed)

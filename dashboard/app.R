@@ -208,9 +208,18 @@ server <- function(input, output, session) {
   dfStateDeaths <- getData("score_cards_state_deaths.rds")
   dfNationCases = getData("score_cards_nation_cases.rds")
   dfNationDeaths = getData("score_cards_nation_deaths.rds")
-  # TODO handle this kind of error better
-  dfNationDeaths = subset(dfNationDeaths, select = -c(full_location_name))
-  dfNationCases = subset(dfNationCases, select = -c(full_location_name))
+  
+  # Pick out expected columns only
+  covCols = paste0("cov_", COVERAGE_INTERVALS)
+  expectedCols = c("ahead", "geo_value", "forecaster", "forecast_date",
+                   "data_source", "signal", "target_end_date", "incidence_period",
+                   "actual", "wis", "ae",
+                   covCols)
+  dfStateCases = dfStateCases %>% select(all_of(expectedCols))
+  dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
+  dfNationCases = dfNationCases %>% select(all_of(expectedCols))
+  dfNationDeaths = dfNationDeaths %>% select(all_of(expectedCols))
+  
   df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
   df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
   

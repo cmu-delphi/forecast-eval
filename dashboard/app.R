@@ -138,6 +138,10 @@ ui <- fluidPage(padding=0,
           tabPanel("Evaluation Plots", value = "evaluations",
             fluidRow(column(11, textOutput('renderWarningText'))),
             plotlyOutput(outputId = "summaryPlot", height="auto"),
+            fluidRow(
+              column(11, offset=1, 
+                     div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Shuffle Colors"))
+            )),
             tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
@@ -224,9 +228,7 @@ server <- function(input, output, session) {
   df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
   
   # Prepare color palette
-  set.seed(100)
-  forecaster_rand <- sample(unique(df$forecaster))
-  color_palette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecaster_rand)
+  colorSeed = 100
   
   # Prepare input choices
   forecasterChoices = sort(unique(df$forecaster))
@@ -237,7 +239,7 @@ server <- function(input, output, session) {
   # CREATE MAIN PLOT
   ##################
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
-                         horizon, loc, allLocations, coverageInterval = NULL) {
+                         horizon, loc, allLocations, coverageInterval = NULL, colorSeed) {
     signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
@@ -340,6 +342,10 @@ server <- function(input, output, session) {
     
     filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4), 
                                     labels = c("Horizon: 1 Week", "Horizon: 2 Weeks", "Horizon: 3 Weeks", "Horizon: 4 Weeks"))
+    set.seed(colorSeed)
+    forecasterRand <- sample(unique(df$forecaster))
+    colorPalette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecasterRand)
+    
     p = ggplot(
         filteredScoreDf, 
         aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster)
@@ -350,7 +356,7 @@ server <- function(input, output, session) {
       scale_x_date(date_labels = "%b %Y") +
       scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       facet_wrap(~ahead, ncol=1) +
-      scale_color_manual(values = color_palette) +
+      scale_color_manual(values = colorPalette) +
       theme_bw() + 
       theme(panel.spacing=unit(0.5, "lines"))
 
@@ -404,12 +410,20 @@ server <- function(input, output, session) {
   #############
   output$summaryPlot <- renderPlotly({
     summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
-                input$aheads, input$location, input$allLocations, input$coverageInterval)
+                input$aheads, input$location, input$allLocations, input$coverageInterval, colorSeed)
   })
 
   ###################
   # EVENT OBSERVATION
   ###################
+  
+  observeEvent(input$refreshColors, {
+    colorSeed = floor(runif(1, 1, 1000))
+    output$summaryPlot <- renderPlotly({
+      summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
+                  input$aheads, input$location, input$allLocations, input$coverageInterval, colorSeed)
+    })
+  })
   
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {

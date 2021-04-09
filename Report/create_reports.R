@@ -80,6 +80,10 @@ err_measures = c(wis = weighted_interval_score,
 nation_predictions = predictions_cards %>% filter(geo_value == "us")
 state_predictions = predictions_cards %>% filter(geo_value != "us")
 
+# predictions_cards not needed beyond this point, try free up the memory
+rm(predictions_cards)
+gc()
+
 print("Evaluating state forecasts")
 state_scores = evaluate_covid_predictions(state_predictions,
                                           err_measures,

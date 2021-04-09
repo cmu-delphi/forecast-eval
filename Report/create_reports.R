@@ -66,6 +66,10 @@ coverage_functions = sapply(central_intervals,
                             function(coverage) interval_coverage(coverage))
 names(coverage_functions) = cov_names
 
+# TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
+# Redefines overprediction, underprediction and sharpness
+source("error_measures.R")
+
 err_measures = c(wis = weighted_interval_score,
                  overprediction = overprediction,
                  underprediction = underprediction,

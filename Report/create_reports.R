@@ -37,7 +37,8 @@ signals = c("confirmed_incidence_num",
 predictions_cards = get_covidhub_predictions(forecasters,
                                              signal = signals,
                                              geo_values = state_geos,
-                                             verbose = TRUE)
+                                             verbose = TRUE,
+                                             use_disk = TRUE)
 predictions_cards = predictions_cards %>%
     filter(!is.na(predictions_cards$target_end_date))
 predictions_cards = predictions_cards %>% filter(target_end_date < today())

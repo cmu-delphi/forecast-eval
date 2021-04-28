@@ -65,7 +65,8 @@ ui <- fluidPage(padding=0,
                          
                          
             radioButtons("scoreType", "Scoring Metric",
-                                      choices = list("Weighted Interval Score" = "wis", 
+                                      choices = list("Weighted Interval Score" = "wis",
+                                                     "Sharpness" = "sharpness",
                                                      "Absolute Error" = "ae",
                                                      "Coverage" = "coverage")),
             selectInput(
@@ -217,8 +218,9 @@ server <- function(input, output, session) {
   covCols = paste0("cov_", COVERAGE_INTERVALS)
   expectedCols = c("ahead", "geo_value", "forecaster", "forecast_date",
                    "data_source", "signal", "target_end_date", "incidence_period",
-                   "actual", "wis", "ae",
+                   "actual", "wis", "sharpness", "ae",
                    covCols)
+
   dfStateCases = dfStateCases %>% select(all_of(expectedCols))
   dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
   dfNationCases = dfNationCases %>% select(all_of(expectedCols))
@@ -240,6 +242,9 @@ server <- function(input, output, session) {
   ##################
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
                          horizon, loc, allLocations, coverageInterval = NULL, colorSeed) {
+    
+    output$table <- renderDataTable(scoreDf)
+    
     signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
@@ -259,6 +264,17 @@ server <- function(input, output, session) {
       if (targetVariable == "Deaths") {
         filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
                           filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
+      }
+    }
+    if (scoreType == "sharpness") {
+      filteredScoreDf <- filteredScoreDf %>% rename(Score = sharpness)
+      title = "Weighted Interval Score: Sharpness"
+      # TODO do we also want this for sharpess?
+      # Only show WIS for forecasts that have all intervals
+      filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
+      if (targetVariable == "Deaths") {
+        filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
+          filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
       }
     }
     if (scoreType == "ae") {

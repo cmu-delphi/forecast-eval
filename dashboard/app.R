@@ -40,20 +40,21 @@ ui <- fluidPage(padding=0,
     tags$head(includeHTML(("google-analytics.html"))),
     useShinyjs(),
     div(id="header",class="row",
-      div(id="logo",class="col-sm-3",
+      div(id="logo",class="col-sm-2",
         a(href="https://delphi.cmu.edu",
           img(src="cmu_brand.png",width="220px",heigh="50px",alt="Carnegie Mellon University Delphi Group")
         )
       ),
-      div(class="col-sm-7",
-          span(id="title","FORECAST EVALUATION DASHBOARD"),
-        ),
-      div(id="github-logo-container", class="col-sm-2",
+      div(id="title", class="col-sm-6",
+        HTML("FORECAST <span id='bold-title'>EVALUATION DASHBOARD</span> <a id='back-button' href='https://delphi.cmu.edu'>", 
+             includeHTML("arrow-left.svg"), "   Back</a>"),
+      ),
+      div(id="github-logo-container", class="col-sm-1",
         a(id="github-logo",href="https://github.com/cmu-delphi/forecast-eval/",
             includeHTML("github.svg"),
-            HTML("&nbsp;GITHUB")
+            HTML("&nbsp;GitHub")
           )
-      )
+      ),
     ),
     tags$br(),
     sidebarLayout(

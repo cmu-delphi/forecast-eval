@@ -1,4 +1,4 @@
-name: Github Actions S3 Deploy
+name: Github Actions S3 Deploy (Self-hosted)
 
 env:
   AWS_REGION_NAME : "us-east-2"

@@ -15,6 +15,7 @@ CASE_FILTER = "confirmed_incidence_num"
 
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
+sharpnessExplanation = includeMarkdown("sharpness.md")
 aeExplanation = includeMarkdown("ae.md")
 coverageExplanation = includeMarkdown("coverageplot.md")
 scoringDisclaimer = includeMarkdown("scoring-disclaimer.md")
@@ -128,6 +129,8 @@ ui <- fluidPage(padding=0,
                 h3("Explanation of Scoring Methods"),
                 h4("Weighted Interval Score"),
                 wisExplanation,
+                h4("Sharpness"),
+                sharpnessExplanation,
                 h4("Absolute Error"),
                 aeExplanation,
                 h4("Coverage"),
@@ -149,6 +152,7 @@ ui <- fluidPage(padding=0,
               column(11, offset=1,
                      div(id="notes", "About the Scores"),
                      hidden(div(id = "wisExplanation", wisExplanation)),
+                     hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),
                      hidden(div(id = "aeExplanation", aeExplanation)),
                      hidden(div(id = "coverageExplanation", coverageExplanation)),
                      div(id = "scoringDisclaimer", scoringDisclaimer)
@@ -464,16 +468,25 @@ server <- function(input, output, session) {
     
     if (input$scoreType == "wis") {
       show("wisExplanation")
+      hide("sharpnessExplanation")
+      hide("aeExplanation")
+      hide("coverageExplanation")
+    }
+    if (input$scoreType == "sharpness") {
+      show("sharpnessExplanation")
+      hide("wisExplanation")
       hide("aeExplanation")
       hide("coverageExplanation")
     }
     if (input$scoreType == "ae") {
       hide("wisExplanation")
+      hide("sharpnessExplanation")
       show("aeExplanation")
       hide("coverageExplanation")
     }
     if (input$scoreType == "coverage") {
       hide("wisExplanation")
+      hide("sharpnessExplanation")
       hide("aeExplanation")
       show("coverageExplanation")
     }

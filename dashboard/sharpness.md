@@ -1,0 +1,1 @@
+**Sharpness** is a component of the weighted interval score. It is a measure of the width of the prediction intervals (the difference between the upper and lower quantiles of prediction intervals). Sharpness is described in [this article](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008618). A smaller sharpness score indicates better performance.

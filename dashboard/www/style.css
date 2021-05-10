@@ -127,7 +127,8 @@
 
 @media (min-width: 1450px) {
     #logo {
-        margin-left: 12%;
+        margin-left: 9%;
+        margin-right: 0;
     }
 }
 

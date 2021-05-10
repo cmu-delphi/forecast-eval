@@ -272,7 +272,7 @@ server <- function(input, output, session) {
     }
     if (scoreType == "sharpness") {
       filteredScoreDf <- filteredScoreDf %>% rename(Score = sharpness)
-      title = "Weighted Interval Score: Sharpness"
+      title = "Sharpness"
       # TODO do we also want this for sharpess?
       # Only show WIS for forecasts that have all intervals
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))

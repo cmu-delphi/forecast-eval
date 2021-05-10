@@ -246,9 +246,6 @@ server <- function(input, output, session) {
   ##################
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
                          horizon, loc, allLocations, coverageInterval = NULL, colorSeed) {
-    
-    output$table <- renderDataTable(scoreDf)
-    
     signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
@@ -260,25 +257,20 @@ server <- function(input, output, session) {
     
     filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Week_End_Date = target_end_date)
     
-    if (scoreType == "wis") {
-      filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
-      title = "Weighted Interval Score"
-      # Only show WIS for forecasts that have all intervals
+    if (scoreType == "wis" || scoreType == "sharpness") {
+      # Only show WIS or Sharpness for forecasts that have all intervals
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
       if (targetVariable == "Deaths") {
         filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
                           filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
       }
-    }
-    if (scoreType == "sharpness") {
-      filteredScoreDf <- filteredScoreDf %>% rename(Score = sharpness)
-      title = "Sharpness"
-      # TODO do we also want this for sharpess?
-      # Only show WIS for forecasts that have all intervals
-      filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
-      if (targetVariable == "Deaths") {
-        filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
-          filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
+      if (scoreType == "wis") {
+        filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
+        title = "Weighted Interval Score"
+      }
+      else {
+        filteredScoreDf <- filteredScoreDf %>% rename(Score = sharpness)
+        title = "Sharpness"
       }
     }
     if (scoreType == "ae") {

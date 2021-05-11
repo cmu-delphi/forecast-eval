@@ -2,7 +2,10 @@
 .shiny-output-error:before { visibility: hidden; }
 
 #logo{
-    min-width: 220px;
+    margin-left:35px;
+    margin-right:60px;
+    padding-right: 0;
+    padding-left:0;
 }
 #aboutContentArea{
     max-width: 70rem;
@@ -14,28 +17,61 @@
     padding-bottom: 5px;
     margin-top: 20px;
     box-shadow: 0 3px 5px -1px rgb(0 0 0 / 15%);
-
     font-family: "open sans", Roboto, Arial, sans-serif;
     font-size: 16px;
+    font-weight: 400;
+    color: black;
+}
+
+#title {
+    white-space: pre-wrap;
+    font-weight: 300;
+    font-size: 18px;
+    padding-left:0;
+}
+#bold-title {
     font-weight: 500;
+}
+#back-button {
     color: #505565;
+    font-size: 14px;
+    font-weight:350;
+    margin-top:10px;
+    width: 65px;
+    text-decoration:none;
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    flex-direction: row;
+}
+#back-button svg {
+    width:14px;
+    height:14px;
+    fill: #505565;
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    flex-direction: row;
+}
+#github-logo-container {
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 0;
+    padding-left:0;
+    margin-bottom:20px;
 }
 #github-logo {
+    text-decoration:none;
     color: #505565;
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
     flex-direction: row;
 }
-
 #github-logo svg {
     width:16px;
     height:16px;
     fill: #505565;
-}
-#github-logo-container {
-    display: flex;
-    justify-content: flex-end;
 }
 #notes {
     font-weight: 600;
@@ -56,3 +92,46 @@
     height: 26px;
     font-size: 12px;
 }
+
+@media (max-width: 1450px) {
+    #github-logo-container {
+       margin-left:100px;
+    }
+}
+
+@media (max-width: 1000px) {
+    #title {
+        margin-left: 35px;
+    }
+    #github-logo-container {
+       margin-left:35px;
+    }
+}
+
+@media (max-width: 767px) {
+    #title {
+        width:100%;
+        margin-top: 10px;
+    }
+    #github-logo-container {
+       justify-content: center;
+       margin-top: 10px;
+    }
+}
+
+@media (min-width: 1100px) {
+    #logo {
+        margin-left: 5%;
+    }
+}
+
+@media (min-width: 1450px) {
+    #logo {
+        margin-left: 9%;
+        margin-right: 0;
+    }
+}
+
+
+
+

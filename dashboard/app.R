@@ -15,6 +15,7 @@ CASE_FILTER = "confirmed_incidence_num"
 
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
+sharpnessExplanation = includeMarkdown("sharpness.md")
 aeExplanation = includeMarkdown("ae.md")
 coverageExplanation = includeMarkdown("coverageplot.md")
 scoringDisclaimer = includeMarkdown("scoring-disclaimer.md")
@@ -40,20 +41,21 @@ ui <- fluidPage(padding=0,
     tags$head(includeHTML(("google-analytics.html"))),
     useShinyjs(),
     div(id="header",class="row",
-      div(id="logo",class="col-sm-3",
+      div(id="logo",class="col-sm-2",
         a(href="https://delphi.cmu.edu",
           img(src="cmu_brand.png",width="220px",heigh="50px",alt="Carnegie Mellon University Delphi Group")
         )
       ),
-      div(class="col-sm-7",
-          span(id="title","FORECAST EVALUATION DASHBOARD"),
-        ),
-      div(id="github-logo-container", class="col-sm-2",
+      div(id="title", class="col-sm-6",
+        HTML("FORECAST <span id='bold-title'>EVALUATION DASHBOARD</span> <a id='back-button' href='https://delphi.cmu.edu'>", 
+             includeHTML("arrow-left.svg"), "   Back</a>"),
+      ),
+      div(id="github-logo-container", class="col-sm-1",
         a(id="github-logo",href="https://github.com/cmu-delphi/forecast-eval/",
             includeHTML("github.svg"),
-            HTML("&nbsp;GITHUB")
+            HTML("&nbsp;GitHub")
           )
-      )
+      ),
     ),
     tags$br(),
     sidebarLayout(
@@ -65,7 +67,8 @@ ui <- fluidPage(padding=0,
                          
                          
             radioButtons("scoreType", "Scoring Metric",
-                                      choices = list("Weighted Interval Score" = "wis", 
+                                      choices = list("Weighted Interval Score" = "wis",
+                                                     "Sharpness" = "sharpness",
                                                      "Absolute Error" = "ae",
                                                      "Coverage" = "coverage")),
             selectInput(
@@ -127,6 +130,8 @@ ui <- fluidPage(padding=0,
                 h3("Explanation of Scoring Methods"),
                 h4("Weighted Interval Score"),
                 wisExplanation,
+                h4("Sharpness"),
+                sharpnessExplanation,
                 h4("Absolute Error"),
                 aeExplanation,
                 h4("Coverage"),
@@ -148,6 +153,7 @@ ui <- fluidPage(padding=0,
               column(11, offset=1,
                      div(id="notes", "About the Scores"),
                      hidden(div(id = "wisExplanation", wisExplanation)),
+                     hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),
                      hidden(div(id = "aeExplanation", aeExplanation)),
                      hidden(div(id = "coverageExplanation", coverageExplanation)),
                      div(id = "scoringDisclaimer", scoringDisclaimer)
@@ -217,8 +223,9 @@ server <- function(input, output, session) {
   covCols = paste0("cov_", COVERAGE_INTERVALS)
   expectedCols = c("ahead", "geo_value", "forecaster", "forecast_date",
                    "data_source", "signal", "target_end_date", "incidence_period",
-                   "actual", "wis", "ae",
+                   "actual", "wis", "sharpness", "ae",
                    covCols)
+
   dfStateCases = dfStateCases %>% select(all_of(expectedCols))
   dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
   dfNationCases = dfNationCases %>% select(all_of(expectedCols))
@@ -251,14 +258,20 @@ server <- function(input, output, session) {
     
     filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Week_End_Date = target_end_date)
     
-    if (scoreType == "wis") {
-      filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
-      title = "Weighted Interval Score"
-      # Only show WIS for forecasts that have all intervals
+    if (scoreType == "wis" || scoreType == "sharpness") {
+      # Only show WIS or Sharpness for forecasts that have all intervals
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
       if (targetVariable == "Deaths") {
         filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
                           filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
+      }
+      if (scoreType == "wis") {
+        filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
+        title = "Weighted Interval Score"
+      }
+      else {
+        filteredScoreDf <- filteredScoreDf %>% rename(Score = sharpness)
+        title = "Sharpness"
       }
     }
     if (scoreType == "ae") {
@@ -448,16 +461,25 @@ server <- function(input, output, session) {
     
     if (input$scoreType == "wis") {
       show("wisExplanation")
+      hide("sharpnessExplanation")
+      hide("aeExplanation")
+      hide("coverageExplanation")
+    }
+    if (input$scoreType == "sharpness") {
+      show("sharpnessExplanation")
+      hide("wisExplanation")
       hide("aeExplanation")
       hide("coverageExplanation")
     }
     if (input$scoreType == "ae") {
       hide("wisExplanation")
+      hide("sharpnessExplanation")
       show("aeExplanation")
       hide("coverageExplanation")
     }
     if (input$scoreType == "coverage") {
       hide("wisExplanation")
+      hide("sharpnessExplanation")
       hide("aeExplanation")
       show("coverageExplanation")
     }

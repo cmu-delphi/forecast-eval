@@ -37,7 +37,8 @@ signals = c("confirmed_incidence_num",
 predictions_cards = get_covidhub_predictions(forecasters,
                                              signal = signals,
                                              geo_values = state_geos,
-                                             verbose = TRUE)
+                                             verbose = TRUE,
+                                             use_disk = TRUE)
 predictions_cards = predictions_cards %>%
     filter(!is.na(predictions_cards$target_end_date))
 predictions_cards = predictions_cards %>% filter(target_end_date < today())
@@ -66,12 +67,23 @@ coverage_functions = sapply(central_intervals,
                             function(coverage) interval_coverage(coverage))
 names(coverage_functions) = cov_names
 
+# TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
+# Redefines overprediction, underprediction and sharpness
+source("error_measures.R")
+
 err_measures = c(wis = weighted_interval_score,
+                 overprediction = overprediction,
+                 underprediction = underprediction,
+                 sharpness = sharpness,
                  ae = absolute_error,
                  coverage_functions)
 
 nation_predictions = predictions_cards %>% filter(geo_value == "us")
 state_predictions = predictions_cards %>% filter(geo_value != "us")
+
+# predictions_cards not needed beyond this point, try free up the memory
+rm(predictions_cards)
+gc()
 
 print("Evaluating state forecasts")
 state_scores = evaluate_covid_predictions(state_predictions,

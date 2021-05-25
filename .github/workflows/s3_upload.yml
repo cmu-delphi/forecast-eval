@@ -1,3 +1,5 @@
+# This workflow is no longer in use in favor of the self-hosted version (s3_upload_ec2.yml)
+
 name: Github Actions S3 Deploy
 
 env:
@@ -6,7 +8,6 @@ env:
 # Controls when the action will run. 
 on:
   schedule:
-    - cron: '0 14 * * MON-TUE'  # every Monday and Tuesday  at 9amET
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:

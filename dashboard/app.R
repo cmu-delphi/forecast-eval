@@ -327,6 +327,7 @@ server <- function(input, output, session) {
         output$renderLocations <- renderText("")
         output$renderAggregateText = renderText("")
         hideElement("truthPlot")
+        hideElement("refresh-colors")
         return()
       }
       else {
@@ -347,6 +348,7 @@ server <- function(input, output, session) {
     
     # Render truth plot with observed values
     showElement("truthPlot")
+    showElement("refresh-colors")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, targetVariable, locationsIntersect, allLocations || scoreType == "coverage")

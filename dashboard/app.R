@@ -538,7 +538,7 @@ server <- function(input, output, session) {
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
   
-  # Ensure the minimum necessary selections
+  # Ensure the minimum necessary input selections
   observe({
     # Ensure there is always one ahead selected
     if(length(input$aheads) < 1) {

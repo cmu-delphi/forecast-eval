@@ -73,10 +73,15 @@ ui <- fluidPage(padding=0,
                                                      "Absolute Error" = "ae",
                                                      "Coverage" = "coverage")),
             conditionalPanel(condition = "input.scoreType != 'coverage'",
-                             tags$p(id="scale-score", "Y-Axis Scale"),
+                             tags$p(id="scale-score", "Y-Axis Score Scale"),
                              checkboxInput(
                                "logScale",
                                "Log Scale",
+                               value = FALSE,
+                             ),
+                             checkboxInput(
+                               "scaleByBaseline",
+                               "Scale by Baseline Forecaster",
                                value = FALSE,
                              )
             ),
@@ -248,7 +253,7 @@ server <- function(input, output, session) {
   # CREATE MAIN PLOT
   ##################
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
-                         horizon, loc, coverageInterval = NULL, colorSeed, logScale) {
+                         horizon, loc, coverageInterval = NULL, colorSeed, logScale, scaleByBaseline) {
     allLocations = FALSE
     if (loc == TOTAL_LOCATIONS) {
       allLocations = TRUE
@@ -288,6 +293,8 @@ server <- function(input, output, session) {
       filteredScoreDf <- filteredScoreDf %>% rename(Score = !!coverageInterval)
       title = "Coverage"
     }
+
+    # Totaling over all locations
     locationsIntersect = list()
     if (allLocations || scoreType == "coverage") {
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
@@ -315,12 +322,12 @@ server <- function(input, output, session) {
           summarize(Score = sum(Score), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
-
       if (length(locationsIntersect) == 0) {
         output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common.")
         output$renderLocations <- renderText("")
         output$renderAggregateText = renderText("")
         hideElement("truthPlot")
+        hideElement("refresh-colors")
         return()
       }
       else {
@@ -341,6 +348,7 @@ server <- function(input, output, session) {
     
     # Render truth plot with observed values
     showElement("truthPlot")
+    showElement("refresh-colors")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, targetVariable, locationsIntersect, allLocations || scoreType == "coverage")
@@ -349,8 +357,19 @@ server <- function(input, output, session) {
     # Format and transform data
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
-    if (logScale && scoreType != 'coverage') {
-      filteredScoreDf$Score = log10(filteredScoreDf$Score)
+    if (scoreType != 'coverage') {
+      if (scaleByBaseline) {
+        baselineDf = filteredScoreDf %>% filter(Forecaster %in% 'COVIDhub-baseline')
+        filteredScoreDfMerged = merge(filteredScoreDf, baselineDf, by=c("Week_End_Date","ahead"))
+        # Scaling score by baseline forecaster
+        filteredScoreDfMerged$Score.x = filteredScoreDfMerged$Score.x / filteredScoreDfMerged$Score.y
+        filteredScoreDf = filteredScoreDfMerged %>%
+          rename(Forecaster = Forecaster.x, Score = Score.x) %>%
+          select(Forecaster, Week_End_Date, ahead, Score)
+      }
+      if (logScale) {
+        filteredScoreDf$Score = log10(filteredScoreDf$Score)
+      }
     }
 
     titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
@@ -386,7 +405,9 @@ server <- function(input, output, session) {
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
-    if (!logScale) {
+    if (logScale) {
+      p = p + scale_y_continuous(label = function(x) paste0("10^", x))
+    } else {
       p = p + scale_y_continuous(limits = c(0,NA), labels = scales::comma)
     }
     plotHeight = 550 + (length(horizon)-1)*100
@@ -406,7 +427,6 @@ server <- function(input, output, session) {
       
     return(finalPlot)
   }
-  
   
   ###################
   # CREATE TRUTH PLOT
@@ -435,7 +455,7 @@ server <- function(input, output, session) {
   #############
   output$summaryPlot <- renderPlotly({
     summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
-                input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale)
+                input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
   })
 
   ###################
@@ -446,7 +466,7 @@ server <- function(input, output, session) {
     colorSeed = floor(runif(1, 1, 1000))
     output$summaryPlot <- renderPlotly({
       summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
-                  input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale)
+                  input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
     })
   })
   
@@ -520,15 +540,21 @@ server <- function(input, output, session) {
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
   
-  # Ensure there is always one ahead value selected and one forecaster selected
+  # Ensure the minimum necessary input selections
   observe({
+    # Ensure there is always one ahead selected
     if(length(input$aheads) < 1) {
       updateCheckboxGroupInput(session, "aheads",
                                selected = 1)
     }
+    # Ensure there is always one forecaster selected
     if(length(input$forecasters) < 1) {
       updateSelectInput(session, "forecasters",
-                        selected = c("COVIDhub-ensemble"))
+                        selected = c("COVIDhub-baseline"))
+    }
+    # Ensure COVIDhub-baseline is selected when scaling by baseline
+    if(input$scaleByBaseline && !("COVIDhub-baseline" %in% input$forecasters)) {
+      updateSelectInput(session, "forecasters", selected = c(input$forecasters, "COVIDhub-baseline"))
     }
   }) 
 }

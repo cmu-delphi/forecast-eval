@@ -400,7 +400,8 @@ server <- function(input, output, session) {
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = colorPalette) +
       theme_bw() + 
-      theme(panel.spacing=unit(0.5, "lines"))
+      theme(panel.spacing=unit(0.5, "lines")) +
+      theme(legend.title = element_blank())
 
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))

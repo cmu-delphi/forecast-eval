@@ -12,6 +12,7 @@ library(aws.s3)
 COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 DEATH_FILTER = "deaths_incidence_num"
 CASE_FILTER = "confirmed_incidence_num"
+TOTAL_LOCATIONS = "Totaled Over States*"
 
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
@@ -68,9 +69,22 @@ ui <- fluidPage(padding=0,
                          
             radioButtons("scoreType", "Scoring Metric",
                                       choices = list("Weighted Interval Score" = "wis",
-                                                     "Sharpness" = "sharpness",
+                                                     "Spread" = "sharpness",
                                                      "Absolute Error" = "ae",
                                                      "Coverage" = "coverage")),
+            conditionalPanel(condition = "input.scoreType != 'coverage'",
+                             tags$p(id="scale-score", "Y-Axis Score Scale"),
+                             checkboxInput(
+                               "logScale",
+                               "Log Scale",
+                               value = FALSE,
+                             ),
+                             checkboxInput(
+                               "scaleByBaseline",
+                               "Scale by Baseline Forecaster",
+                               value = FALSE,
+                             )
+            ),
             selectInput(
               "forecasters",
               p("Forecasters", tags$br(), tags$span(id="forecaster-input", "Type a name or select from dropdown")),
@@ -95,20 +109,13 @@ ui <- fluidPage(padding=0,
                                selected = "95"
                              ),
             ),
-            conditionalPanel(condition = "!input.allLocations && input.scoreType != 'coverage'",
+            conditionalPanel(condition = "input.scoreType != 'coverage'",
                              selectInput(
                                "location",
                                "Location",
                                choices = '',
                                multiple = FALSE,
                                selected = "US"
-                             )
-            ),
-            conditionalPanel(condition = "input.scoreType != 'coverage'",
-                             checkboxInput(
-                               "allLocations",
-                               "Totals Over All States and Territories (common to selected forecasters)*",
-                               value = FALSE,
                              )
             ),
             tags$hr(),
@@ -130,7 +137,7 @@ ui <- fluidPage(padding=0,
                 h3("Explanation of Scoring Methods"),
                 h4("Weighted Interval Score"),
                 wisExplanation,
-                h4("Sharpness"),
+                h4("Spread"),
                 sharpnessExplanation,
                 h4("Absolute Error"),
                 aeExplanation,
@@ -145,7 +152,7 @@ ui <- fluidPage(padding=0,
             plotlyOutput(outputId = "summaryPlot", height="auto"),
             fluidRow(
               column(11, offset=1, 
-                     div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Shuffle Colors"))
+                     div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Recolor"))
             )),
             tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
@@ -246,7 +253,11 @@ server <- function(input, output, session) {
   # CREATE MAIN PLOT
   ##################
   summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
-                         horizon, loc, allLocations, coverageInterval = NULL, colorSeed) {
+                         horizon, loc, coverageInterval = NULL, colorSeed, logScale, scaleByBaseline) {
+    allLocations = FALSE
+    if (loc == TOTAL_LOCATIONS) {
+      allLocations = TRUE
+    }
     signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
@@ -271,7 +282,7 @@ server <- function(input, output, session) {
       }
       else {
         filteredScoreDf <- filteredScoreDf %>% rename(Score = sharpness)
-        title = "Sharpness"
+        title = "Spread"
       }
     }
     if (scoreType == "ae") {
@@ -282,6 +293,8 @@ server <- function(input, output, session) {
       filteredScoreDf <- filteredScoreDf %>% rename(Score = !!coverageInterval)
       title = "Coverage"
     }
+
+    # Totaling over all locations
     locationsIntersect = list()
     if (allLocations || scoreType == "coverage") {
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
@@ -309,12 +322,12 @@ server <- function(input, output, session) {
           summarize(Score = sum(Score), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
-
       if (length(locationsIntersect) == 0) {
         output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common.")
         output$renderLocations <- renderText("")
         output$renderAggregateText = renderText("")
         hideElement("truthPlot")
+        hideElement("refresh-colors")
         return()
       }
       else {
@@ -335,13 +348,30 @@ server <- function(input, output, session) {
     
     # Render truth plot with observed values
     showElement("truthPlot")
+    showElement("refresh-colors")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, targetVariable, locationsIntersect, allLocations || scoreType == "coverage")
     })
     
+    # Format and transform data
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
+    if (scoreType != 'coverage') {
+      if (scaleByBaseline) {
+        baselineDf = filteredScoreDf %>% filter(Forecaster %in% 'COVIDhub-baseline')
+        filteredScoreDfMerged = merge(filteredScoreDf, baselineDf, by=c("Week_End_Date","ahead"))
+        # Scaling score by baseline forecaster
+        filteredScoreDfMerged$Score.x = filteredScoreDfMerged$Score.x / filteredScoreDfMerged$Score.y
+        filteredScoreDf = filteredScoreDfMerged %>%
+          rename(Forecaster = Forecaster.x, Score = Score.x) %>%
+          select(Forecaster, Week_End_Date, ahead, Score)
+      }
+      if (logScale) {
+        filteredScoreDf$Score = log10(filteredScoreDf$Score)
+      }
+    }
+
     titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
                        'Target Variable: ', targetVariable,
                        locationSubtitleText, '<br>',
@@ -367,17 +397,21 @@ server <- function(input, output, session) {
       geom_point(size=2) +
       labs(x = "", y = "", title=titleText) +
       scale_x_date(date_labels = "%b %Y") +
-      scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = colorPalette) +
       theme_bw() + 
-      theme(panel.spacing=unit(0.5, "lines"))
+      theme(panel.spacing=unit(0.5, "lines")) +
+      theme(legend.title = element_blank())
 
     if (scoreType == "coverage") {
       p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
     }
+    if (logScale) {
+      p = p + scale_y_continuous(label = function(x) paste0("10^", x))
+    } else {
+      p = p + scale_y_continuous(limits = c(0,NA), labels = scales::comma)
+    }
     plotHeight = 550 + (length(horizon)-1)*100
-    
     finalPlot <- 
       ggplotly(p,tooltip = c("x", "y", "shape")) %>% 
       layout(
@@ -394,7 +428,6 @@ server <- function(input, output, session) {
       
     return(finalPlot)
   }
-  
   
   ###################
   # CREATE TRUTH PLOT
@@ -423,7 +456,7 @@ server <- function(input, output, session) {
   #############
   output$summaryPlot <- renderPlotly({
     summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
-                input$aheads, input$location, input$allLocations, input$coverageInterval, colorSeed)
+                input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
   })
 
   ###################
@@ -434,7 +467,7 @@ server <- function(input, output, session) {
     colorSeed = floor(runif(1, 1, 1000))
     output$summaryPlot <- renderPlotly({
       summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
-                  input$aheads, input$location, input$allLocations, input$coverageInterval, colorSeed)
+                  input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
     })
   })
   
@@ -508,15 +541,21 @@ server <- function(input, output, session) {
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
   
-  # Ensure there is always one ahead value selected and one forecaster selected
+  # Ensure the minimum necessary input selections
   observe({
+    # Ensure there is always one ahead selected
     if(length(input$aheads) < 1) {
       updateCheckboxGroupInput(session, "aheads",
                                selected = 1)
     }
+    # Ensure there is always one forecaster selected
     if(length(input$forecasters) < 1) {
       updateSelectInput(session, "forecasters",
-                        selected = c("COVIDhub-ensemble"))
+                        selected = c("COVIDhub-baseline"))
+    }
+    # Ensure COVIDhub-baseline is selected when scaling by baseline
+    if(input$scaleByBaseline && !("COVIDhub-baseline" %in% input$forecasters)) {
+      updateSelectInput(session, "forecasters", selected = c(input$forecasters, "COVIDhub-baseline"))
     }
   }) 
 }
@@ -545,6 +584,8 @@ updateCoverageChoices = function(session, df, targetVariable, forecasterChoices,
   # Ensure previsouly selected options are still allowed
   if (coverageInput %in% coverageChoices) {
     selectedCoverage = coverageInput
+  } else if ("95" %in% coverageChoices) {
+    selectedCoverage = "95"
   } else {
     selectedCoverage = coverageChoices[1]
   }
@@ -558,6 +599,7 @@ updateLocationChoices = function(session, df, targetVariable, forecasterChoices,
   df = df %>% filter(forecaster %in% forecasterChoices)
   locationChoices = unique(toupper(df$geo_value))
   locationChoices = locationChoices[c(length(locationChoices), (1:length(locationChoices)-1))] # Move US to front of list
+  locationChoices = c(TOTAL_LOCATIONS, locationChoices)
   # Ensure previsouly selected options are still allowed
   if (locationInput %in% locationChoices) {
     selectedLocation = locationInput

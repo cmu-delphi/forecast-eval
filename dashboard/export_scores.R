@@ -17,8 +17,7 @@ create_export_df = function(scoreDf, targetVariable, forecasters, horizon, loc) 
 }
 
 export_scores_ui = div(
-  downloadButton("exportScores", "Download CSV"),
-  actionButton("exportR", "Show Download R Script")
+  downloadButton("exportScores", "Download CSV")
 )
 
 export_scores_server = function(input, output, df) {
@@ -37,11 +36,4 @@ export_scores_server = function(input, output, df) {
       })
     }
   )
-
-  observeEvent(input$exportR, {
-    showModal(modalDialog(
-      title='Export R', size='l',
-      "This is s test",
-    ))
-  })
 }

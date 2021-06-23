@@ -1,10 +1,6 @@
 source('./common.R')
 
 create_export_df = function(scoreDf, targetVariable, forecasters, horizon, loc) {
-    allLocations = FALSE
-    if (loc == TOTAL_LOCATIONS) {
-      allLocations = TRUE
-    }
     signalFilter = CASE_FILTER
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
@@ -13,6 +9,9 @@ create_export_df = function(scoreDf, targetVariable, forecasters, horizon, loc) 
       filter(signal == signalFilter) %>%
       filter(ahead %in% horizon) %>%
       filter(forecaster %in% forecasters)
+    if (loc != TOTAL_LOCATIONS) {
+      scoreDf = scoreDf %>% filter(geo_value == tolower(loc))
+    }
     return(scoreDf)
 }
 
@@ -23,7 +22,11 @@ export_scores_ui = div(
 export_scores_server = function(input, output, df) {
   output$exportScores <- downloadHandler(
     filename = function() {
-      paste0("forecast-eval-scores-", Sys.Date(), ".csv")
+      filename = paste0("forecast-eval-scores-", input$targetVariable)
+      if (input$location != TOTAL_LOCATIONS) {
+        filename = paste0(filename, '-', input$location)
+      }
+      paste0(filename,'-', Sys.Date(), ".csv")
     },
     contentType = 'text/csv',
     content = function(file) {

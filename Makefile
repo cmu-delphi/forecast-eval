@@ -5,7 +5,7 @@ S3_BUCKET=s3://forecast-eval
 build: build_dashboard
 
 r_build:
-	docker build -t forecast-eval-build docker_build
+	docker build --no-cache --pull -t forecast-eval-build docker_build
 
 predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds: dist
 	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@ 
@@ -32,7 +32,7 @@ deploy: score_forecast
 
 # Starts a docker image with a full preconfigured R environment
 start_dev: r_build
-	docker run -ti --rm \
+	docker run --pull=always -ti --rm \
 		-v ${PWD}/Report:/var/forecast-eval \
 		-v ${PWD}/dashboard:/var/forecast-eval-dashboard \
 		-v ${PWD}/dist:/var/dist \
@@ -40,13 +40,13 @@ start_dev: r_build
 		ghcr.io/cmu-delphi/forecast-eval:latest bash
 
 build_dashboard_dev: pull_data
-	docker build -t ghcr.io/cmu-delphi/forecast-eval:latest -f docker_dashboard/Dockerfile .
+	docker build --no-cache --pull -t ghcr.io/cmu-delphi/forecast-eval:latest -f docker_dashboard/Dockerfile .
 
 build_dashboard: pull_data
-	docker build --no-cache=true -t ghcr.io/cmu-delphi/forecast-eval:$(imageTag) -f docker_dashboard/Dockerfile .
+	docker build --no-cache=true --pull -t ghcr.io/cmu-delphi/forecast-eval:$(imageTag) -f docker_dashboard/Dockerfile .
 
 deploy_dashboard: build_dashboard
 	docker push ghcr.io/cmu-delphi/forecast-eval:$(imageTag)
 
 start_dashboard: build_dashboard_dev
-	docker run --rm -p 3838:3838 ghcr.io/cmu-delphi/forecast-eval:latest
+	docker run --pull=always --rm -p 3838:3838 ghcr.io/cmu-delphi/forecast-eval:latest

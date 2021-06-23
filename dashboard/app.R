@@ -32,9 +32,12 @@ if(length(cssFiles)!=1){
 cssFile = cssFiles[1]
 cat(file=stderr(),"Loaded css file:",cssFile,"\n")
 
+source('./export_scores.R')
+
 ########
 # Layout
 ########
+
 ui <- fluidPage(padding=0,
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = cssFile)
@@ -48,7 +51,7 @@ ui <- fluidPage(padding=0,
         )
       ),
       div(id="title", class="col-sm-6",
-        HTML("FORECAST <span id='bold-title'>EVALUATION DASHBOARD</span> <a id='back-button' href='https://delphi.cmu.edu'>", 
+        HTML("FORECAST <span id='bold-title'>EVALUATION DASHBOARD</span> <a id='back-button' href='https://delphi.cmu.edu'>",
              includeHTML("arrow-left.svg"), "   Back</a>"),
       ),
       div(id="github-logo-container", class="col-sm-1",
@@ -63,10 +66,10 @@ ui <- fluidPage(padding=0,
       sidebarPanel(id = "inputOptions",
         conditionalPanel(condition = "input.tabset == 'evaluations'",
             radioButtons("targetVariable", "Target Variable",
-                                      choices = list("Incident Deaths" = "Deaths", 
+                                      choices = list("Incident Deaths" = "Deaths",
                                                      "Incident Cases" = "Cases")),
-                         
-                         
+
+
             radioButtons("scoreType", "Scoring Metric",
                                       choices = list("Weighted Interval Score" = "wis",
                                                      "Spread" = "sharpness",
@@ -94,7 +97,7 @@ ui <- fluidPage(padding=0,
             ),
             tags$p(id="forecaster-disclaimer", "Some forecasters may not have data for the chosen location or scoring metric"),
             checkboxGroupInput(
-              "aheads", 
+              "aheads",
               "Forecast Horizon (Weeks)",
               choices = c(1,2,3,4),
               selected = 1,
@@ -119,11 +122,13 @@ ui <- fluidPage(padding=0,
                              )
             ),
             tags$hr(),
+            export_scores_ui,
+            tags$hr(),
         ),
         includeMarkdown("about-dashboard.md"),
         width=3,
       ),
-      
+
       mainPanel(
         width=9,
         tabsetPanel(id = "tabset",
@@ -151,7 +156,7 @@ ui <- fluidPage(padding=0,
             fluidRow(column(11, textOutput('renderWarningText'))),
             plotlyOutput(outputId = "summaryPlot", height="auto"),
             fluidRow(
-              column(11, offset=1, 
+              column(11, offset=1,
                      div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Recolor"))
             )),
             tags$br(),
@@ -174,7 +179,6 @@ ui <- fluidPage(padding=0,
                 tags$br()
               )
             )
-            
           )
         ),
       ),
@@ -194,7 +198,7 @@ server <- function(input, output, session) {
       return(NULL)
     }
   )
-  
+
   # Get and prepare data
   getData <- function(filename){
     if(!is.null(s3bucket)) {
@@ -211,7 +215,7 @@ server <- function(input, output, session) {
       getFallbackData(filename)
     }
   }
-  
+
   getFallbackData = function(filename) {
     path = ifelse(
       file.exists(filename),
@@ -220,12 +224,12 @@ server <- function(input, output, session) {
     )
     readRDS(path)
   }
-  
+
   dfStateCases <- getData("score_cards_state_cases.rds")
   dfStateDeaths <- getData("score_cards_state_deaths.rds")
   dfNationCases = getData("score_cards_nation_cases.rds")
   dfNationDeaths = getData("score_cards_nation_deaths.rds")
-  
+
   # Pick out expected columns only
   covCols = paste0("cov_", COVERAGE_INTERVALS)
   expectedCols = c("ahead", "geo_value", "forecaster", "forecast_date",
@@ -237,18 +241,19 @@ server <- function(input, output, session) {
   dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
   dfNationCases = dfNationCases %>% select(all_of(expectedCols))
   dfNationDeaths = dfNationDeaths %>% select(all_of(expectedCols))
-  
+
   df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
   df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
-  
+
+  cat(file=stderr(), 'here')
   # Prepare color palette
   colorSeed = 100
-  
+
   # Prepare input choices
   forecasterChoices = sort(unique(df$forecaster))
   updateForecasterChoices(session, df, forecasterChoices, 'wis')
-    
-  
+
+
   ##################
   # CREATE MAIN PLOT
   ##################
@@ -262,13 +267,13 @@ server <- function(input, output, session) {
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
     }
-    scoreDf = scoreDf %>% 
+    scoreDf = scoreDf %>%
       filter(signal == signalFilter) %>%
       filter(ahead %in% horizon) %>%
       filter(forecaster %in% forecasters)
-    
+
     filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Week_End_Date = target_end_date)
-    
+
     if (scoreType == "wis" || scoreType == "sharpness") {
       # Only show WIS or Sharpness for forecasts that have all intervals
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
@@ -299,7 +304,7 @@ server <- function(input, output, session) {
     if (allLocations || scoreType == "coverage") {
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
       # Create df with col for all locations across each unique date, ahead and forecaster combo
-      locationDf = filteredScoreDf %>% group_by(Forecaster, Week_End_Date, ahead) %>% 
+      locationDf = filteredScoreDf %>% group_by(Forecaster, Week_End_Date, ahead) %>%
         summarize(location_list = paste(sort(unique(geo_value)),collapse=","))
       # Create a list containing each row's location list
       locationList = sapply(locationDf$location_list, function(x) strsplit(x, ","))
@@ -345,7 +350,7 @@ server <- function(input, output, session) {
       output$renderLocations <- renderText("")
       output$renderWarningText <- renderText("")
     }
-    
+
     # Render truth plot with observed values
     showElement("truthPlot")
     showElement("refresh-colors")
@@ -353,7 +358,7 @@ server <- function(input, output, session) {
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, targetVariable, locationsIntersect, allLocations || scoreType == "coverage")
     })
-    
+
     # Format and transform data
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
@@ -382,15 +387,15 @@ server <- function(input, output, session) {
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, ahead) %>%
       fill_gaps(.full = TRUE)
-    
-    filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4), 
+
+    filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4),
                                     labels = c("Horizon: 1 Week", "Horizon: 2 Weeks", "Horizon: 3 Weeks", "Horizon: 4 Weeks"))
     set.seed(colorSeed)
     forecasterRand <- sample(unique(df$forecaster))
     colorPalette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecasterRand)
-    
+
     p = ggplot(
-        filteredScoreDf, 
+        filteredScoreDf,
         aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster)
       ) +
       geom_line() +
@@ -399,7 +404,7 @@ server <- function(input, output, session) {
       scale_x_date(date_labels = "%b %Y") +
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = colorPalette) +
-      theme_bw() + 
+      theme_bw() +
       theme(panel.spacing=unit(0.5, "lines")) +
       theme(legend.title = element_blank())
 
@@ -412,23 +417,23 @@ server <- function(input, output, session) {
       p = p + scale_y_continuous(limits = c(0,NA), labels = scales::comma)
     }
     plotHeight = 550 + (length(horizon)-1)*100
-    finalPlot <- 
-      ggplotly(p,tooltip = c("x", "y", "shape")) %>% 
+    finalPlot <-
+      ggplotly(p,tooltip = c("x", "y", "shape")) %>%
       layout(
-        height = plotHeight, 
-        legend = list(orientation = "h", y = -0.1), 
-        margin = list(t=90), 
-        height=500, 
-        hovermode = 'x unified', 
+        height = plotHeight,
+        legend = list(orientation = "h", y = -0.1),
+        margin = list(t=90),
+        height=500,
+        hovermode = 'x unified',
         xaxis = list(
-          title = list(text = "Target Date",standoff = 8L), 
+          title = list(text = "Target Date",standoff = 8L),
           titlefont = list(size = 12))
       ) %>%
       config(displayModeBar = F)
-      
+
     return(finalPlot)
   }
-  
+
   ###################
   # CREATE TRUTH PLOT
   ###################
@@ -437,16 +442,16 @@ server <- function(input, output, session) {
     titleText = paste0('<b>Observed Incident ', targetVariable, '</b>')
     if (allLocations) {
       titleText = paste0('<b>Observed Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all states and territories common to selected forecasters*</sup>')
-    } 
+    }
     scoreDf <- scoreDf %>%
       group_by(Week_End_Date) %>% summarize(Reported_Incidence = actual)
-    
+
     return (ggplotly(ggplot(scoreDf, aes(x = Week_End_Date, y = Reported_Incidence)) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title = titleText) +
       scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
-      scale_x_date(date_labels = "%b %Y") + theme_bw()) 
+      scale_x_date(date_labels = "%b %Y") + theme_bw())
       %>% layout(hovermode = 'x unified')
       %>% config(displayModeBar = F))
   }
@@ -455,22 +460,22 @@ server <- function(input, output, session) {
   # PLOT OUTPUT
   #############
   output$summaryPlot <- renderPlotly({
-    summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
+    summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters,
                 input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
   })
 
   ###################
   # EVENT OBSERVATION
   ###################
-  
+
   observeEvent(input$refreshColors, {
     colorSeed = floor(runif(1, 1, 1000))
     output$summaryPlot <- renderPlotly({
-      summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
+      summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters,
                   input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
     })
   })
-  
+
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
     if (input$targetVariable == 'Deaths') {
@@ -482,16 +487,16 @@ server <- function(input, output, session) {
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
-  
+
   observeEvent(input$scoreType, {
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
     } else {
       df = df %>% filter(signal == CASE_FILTER)
     }
-    # Only show forecasters that have data for the score chosen 
+    # Only show forecasters that have data for the score chosen
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
-    
+
     if (input$scoreType == "wis") {
       show("wisExplanation")
       hide("sharpnessExplanation")
@@ -540,7 +545,7 @@ server <- function(input, output, session) {
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
-  
+
   # Ensure the minimum necessary input selections
   observe({
     # Ensure there is always one ahead selected
@@ -557,7 +562,9 @@ server <- function(input, output, session) {
     if(input$scaleByBaseline && !("COVIDhub-baseline" %in% input$forecasters)) {
       updateSelectInput(session, "forecasters", selected = c(input$forecasters, "COVIDhub-baseline"))
     }
-  }) 
+  })
+
+  export_scores_server(output, input, df)
 }
 
 ################

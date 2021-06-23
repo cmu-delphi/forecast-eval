@@ -1,3 +1,4 @@
+source('./common.R')
 
 create_export_df = function(scoreDf, targetVariable, forecasters, horizon, loc) {
     allLocations = FALSE
@@ -15,18 +16,32 @@ create_export_df = function(scoreDf, targetVariable, forecasters, horizon, loc) 
     return(scoreDf)
 }
 
-export_scores_ui = downloadButton(id="exportScores", "Download CSV")
+export_scores_ui = div(
+  downloadButton("exportScores", "Download CSV"),
+  actionButton("exportR", "Show Download R Script")
+)
 
-export_scores_server = function(output, input, df) {
+export_scores_server = function(input, output, df) {
   output$exportScores <- downloadHandler(
     filename = function() {
       paste0("forecast-eval-scores-", Sys.Date(), ".csv")
     },
     contentType = 'text/csv',
     content = function(file) {
-      out_df = create_export_df(df, input$targetVariable, input$forecasters,
-                input$aheads, input$location)
-      write.csv(out_df, file)
+      withProgress(message = 'Preparing export',
+                   detail = 'This may take a while...', value = 0, max = 2, {
+        out_df = create_export_df(df, input$targetVariable, input$forecasters, input$aheads, input$location)
+        incProgress(1)
+        write.csv(out_df, file, row.names=FALSE)
+        incProgress(2)
+      })
     }
   )
+
+  observeEvent(input$exportR, {
+    showModal(modalDialog(
+      title='Export R', size='l',
+      "This is s test",
+    ))
+  })
 }

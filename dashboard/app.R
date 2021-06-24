@@ -242,7 +242,6 @@ server <- function(input, output, session) {
   df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
   df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
 
-  cat(file=stderr(), 'here')
   # Prepare color palette
   colorSeed = 100
 

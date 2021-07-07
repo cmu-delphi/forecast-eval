@@ -49,6 +49,8 @@ git tag -a v1.0 -m "Version 1.0"
 git push origin release_v1.0
 git push origin v1.0
 ```
+Create a PR into `main`
+After code is merged to `main`, perform cleanup by merging `main` into `dev` so that `dev` stays up to date.
 
 ## Note on Scoring Script
 

@@ -12,7 +12,10 @@ library(aws.s3)
 COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 DEATH_FILTER = "deaths_incidence_num"
 CASE_FILTER = "confirmed_incidence_num"
+HOSPITALIZATIONS_FILTER = "confirmed_admissions_covid_1d"
+HOSPITALIZATIONS_AHEAD_DAY = "Saturday"
 TOTAL_LOCATIONS = "Totaled Over States*"
+MAX_AHEAD_CHOICES = c(1,2,3,4)
 
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
@@ -64,9 +67,8 @@ ui <- fluidPage(padding=0,
         conditionalPanel(condition = "input.tabset == 'evaluations'",
             radioButtons("targetVariable", "Target Variable",
                                       choices = list("Incident Deaths" = "Deaths", 
-                                                     "Incident Cases" = "Cases")),
-                         
-                         
+                                                     "Incident Cases" = "Cases",
+                                                     "Incident Hospitalizations" = "Hospitalizations")),
             radioButtons("scoreType", "Scoring Metric",
                                       choices = list("Weighted Interval Score" = "wis",
                                                      "Spread" = "sharpness",
@@ -78,13 +80,13 @@ ui <- fluidPage(padding=0,
                                "logScale",
                                "Log Scale",
                                value = FALSE,
-                             ),
+                             )),
+            conditionalPanel(condition = "input.scoreType != 'coverage' && input.targetVariable != 'Hospitalizations'",
                              checkboxInput(
                                "scaleByBaseline",
                                "Scale by Baseline Forecaster",
                                value = FALSE,
-                             )
-            ),
+                             )),
             selectInput(
               "forecasters",
               p("Forecasters", tags$br(), tags$span(id="forecaster-input", "Type a name or select from dropdown")),
@@ -96,7 +98,7 @@ ui <- fluidPage(padding=0,
             checkboxGroupInput(
               "aheads", 
               "Forecast Horizon (Weeks)",
-              choices = c(1,2,3,4),
+              choices = MAX_AHEAD_CHOICES,
               selected = 1,
               inline = TRUE
             ),
@@ -225,7 +227,9 @@ server <- function(input, output, session) {
   dfStateDeaths <- getData("score_cards_state_deaths.rds")
   dfNationCases = getData("score_cards_nation_cases.rds")
   dfNationDeaths = getData("score_cards_nation_deaths.rds")
-  
+  dfStateHospitalizations = getData("score_cards_state_hospitalizations.rds")
+  dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds")
+
   # Pick out expected columns only
   covCols = paste0("cov_", COVERAGE_INTERVALS)
   expectedCols = c("ahead", "geo_value", "forecaster", "forecast_date",
@@ -237,8 +241,10 @@ server <- function(input, output, session) {
   dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
   dfNationCases = dfNationCases %>% select(all_of(expectedCols))
   dfNationDeaths = dfNationDeaths %>% select(all_of(expectedCols))
+  dfStateHospitalizations = dfStateHospitalizations %>% select(all_of(expectedCols))
+  dfNationHospitalizations = dfNationHospitalizations %>% select(all_of(expectedCols))
   
-  df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
+  df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations)
   df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
   
   # Prepare color palette
@@ -262,11 +268,16 @@ server <- function(input, output, session) {
     if (targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
     }
+    if (targetVariable == "Hospitalizations") {
+      signalFilter = HOSPITALIZATIONS_FILTER
+    }
     scoreDf = scoreDf %>% 
       filter(signal == signalFilter) %>%
-      filter(ahead %in% horizon) %>%
       filter(forecaster %in% forecasters)
-    
+    if (signalFilter == HOSPITALIZATIONS_FILTER) {
+      scoreDf = filterHospitalizationsAheads(scoreDf)
+    }
+    scoreDf = scoreDf %>% filter(ahead %in% horizon)
     filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Week_End_Date = target_end_date)
     
     if (scoreType == "wis" || scoreType == "sharpness") {
@@ -475,8 +486,10 @@ server <- function(input, output, session) {
   observeEvent(input$targetVariable, {
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
-    } else {
+    } else if (input$targetVariable == 'Cases') {
       df = df %>% filter(signal == CASE_FILTER)
+    } else {
+      df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
     }
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
@@ -486,8 +499,10 @@ server <- function(input, output, session) {
   observeEvent(input$scoreType, {
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
-    } else {
+    } else if (input$targetVariable == 'Cases') {
       df = df %>% filter(signal == CASE_FILTER)
+    } else {
+      df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
     }
     # Only show forecasters that have data for the score chosen 
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
@@ -522,11 +537,14 @@ server <- function(input, output, session) {
   observeEvent(input$forecasters, {
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
-    } else {
+    } else if (input$targetVariable == 'Cases') {
       df = df %>% filter(signal == CASE_FILTER)
+    } else {
+      df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
     }
     df = df %>% filter(forecaster %in% input$forecasters)
-    aheadChoices = unique(df$ahead)
+    aheadChoices = Filter(function(x) any(unique(df$ahead) %in% x), MAX_AHEAD_CHOICES)
+    aheadChoices = aheadChoices
     # Ensure previsouly selected options are still allowed
     if (input$aheads %in% aheadChoices) {
       selectedAheads = input$aheads
@@ -551,7 +569,7 @@ server <- function(input, output, session) {
     # Ensure there is always one forecaster selected
     if(length(input$forecasters) < 1) {
       updateSelectInput(session, "forecasters",
-                        selected = c("COVIDhub-baseline"))
+                        selected = c("COVIDhub-ensemble")) # Use ensemble rather than baseline bc it has hospitalization scores
     }
     # Ensure COVIDhub-baseline is selected when scaling by baseline
     if(input$scaleByBaseline && !("COVIDhub-baseline" %in% input$forecasters)) {
@@ -609,6 +627,28 @@ updateLocationChoices = function(session, df, targetVariable, forecasterChoices,
   updateSelectInput(session, "location",
                     choices = locationChoices,
                     selected = selectedLocation)
+}
+
+filterHospitalizationsAheads = function(scoreDf) {
+  scoreDf['weekday'] = weekdays(as.Date(scoreDf$target_end_date))
+  scoreDf = scoreDf %>% filter(weekday == HOSPITALIZATIONS_AHEAD_DAY)
+
+  # Only use weekly aheads for hospitalizations
+  # May change in the future
+  oneAheadDf = scoreDf %>% filter(ahead >= 5) %>% filter(ahead < 12)  %>%
+    group_by(target_end_date) %>% group_by(forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = 1)
+  twoAheadDf = scoreDf %>% filter(ahead >= 12) %>% filter(ahead < 19) %>%
+    group_by(target_end_date) %>% group_by(forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = 2)
+  threeAheadDf = scoreDf %>% filter(ahead >= 19) %>% filter(ahead < 26) %>%
+    group_by(target_end_date) %>% group_by(forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = 3)
+  fourAheadDf = scoreDf %>% filter(ahead >= 26) %>%
+    group_by(target_end_date) %>% group_by(forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = 4)
+
+  return(rbind(oneAheadDf, twoAheadDf, threeAheadDf, fourAheadDf))
 }
 
 shinyApp(ui = ui, server = server)

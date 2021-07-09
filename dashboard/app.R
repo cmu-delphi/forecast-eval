@@ -276,6 +276,10 @@ server <- function(input, output, session) {
         filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
                           filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
       }
+      if (dim(filteredScoreDf)[1] == 0) {
+        output$renderWarningText <- renderText("The selected forecasters do not have enough data to display the selected scoring metric.")
+        return()
+      }
       if (scoreType == "wis") {
         filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
         title = "Weighted Interval Score"

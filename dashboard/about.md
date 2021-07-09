@@ -37,7 +37,7 @@ The Forecaster Evaluation Dashboard is a collaborative project, which has been m
 
 #### **Sources**
 
-**Observed case and death** are from the [COVID-19 Data Repository](https://github.com/CSSEGISandData/COVID-19) by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University.
+**Observed cases and deaths** are from the [COVID-19 Data Repository](https://github.com/CSSEGISandData/COVID-19) by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University.
 
 **Observed hospitalizations** are from the U.S. Department of Health & Human Services and is the sum of all adult and pediatric COVID-19 hospital admissions.
   

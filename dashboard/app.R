@@ -13,9 +13,16 @@ COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95
 DEATH_FILTER = "deaths_incidence_num"
 CASE_FILTER = "confirmed_incidence_num"
 HOSPITALIZATIONS_FILTER = "confirmed_admissions_covid_1d"
-HOSPITALIZATIONS_AHEAD_DAY = "Saturday"
+HOSPITALIZATIONS_TARGET_DAY = "Wednesday"
 TOTAL_LOCATIONS = "Totaled Over States*"
-MAX_AHEAD_CHOICES = c(1,2,3,4)
+AHEAD_OPTIONS = c(1,2,3,4)
+
+# Num days to offset the forecast week by
+# Example: if HOSPITALIZATIONS_TARGET_DAY is Wednesday and HOSPITALIZATIONS_OFFSET is 2,
+# ahead 1 has to have forecast date of Monday or earlier,
+# ahead 2 has to have forecast date of Monday + 7 days or earlier (offset + 7 days or more), etc
+HOSPITALIZATIONS_OFFSET = 2
+HOSPITALIZATIONS_AHEAD_OPTIONS = c(HOSPITALIZATIONS_OFFSET, HOSPITALIZATIONS_OFFSET + 7, HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21)
 
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
@@ -68,7 +75,7 @@ ui <- fluidPage(padding=0,
             radioButtons("targetVariable", "Target Variable",
                                       choices = list("Incident Deaths" = "Deaths", 
                                                      "Incident Cases" = "Cases",
-                                                     "Incident Hospitalizations" = "Hospitalizations")),
+                                                     "Hospital Admissions" = "Hospitalizations")),
             radioButtons("scoreType", "Scoring Metric",
                                       choices = list("Weighted Interval Score" = "wis",
                                                      "Spread" = "sharpness",
@@ -98,8 +105,8 @@ ui <- fluidPage(padding=0,
             checkboxGroupInput(
               "aheads", 
               "Forecast Horizon (Weeks)",
-              choices = MAX_AHEAD_CHOICES,
-              selected = 1,
+              choices = AHEAD_OPTIONS,
+              selected = AHEAD_OPTIONS[1],
               inline = TRUE
             ),
             conditionalPanel(condition = "input.scoreType == 'coverage'",
@@ -393,9 +400,16 @@ server <- function(input, output, session) {
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, ahead) %>%
       fill_gaps(.full = TRUE)
-    
-    filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4), 
-                                    labels = c("Horizon: 1 Week", "Horizon: 2 Weeks", "Horizon: 3 Weeks", "Horizon: 4 Weeks"))
+    # Set labels for faceted horizon plots
+    horizonOptions = AHEAD_OPTIONS
+    horizonLabels = lapply(AHEAD_OPTIONS, function (x) paste0("Horizon: ", x, " Week(s)"))
+    if (targetVariable == 'Hospitalizations') {
+      horizonOptions = HOSPITALIZATIONS_AHEAD_OPTIONS
+      horizonLabels = lapply(HOSPITALIZATIONS_AHEAD_OPTIONS, function (x) paste0("Horizon: ", x, " Days"))
+    }
+    filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = horizonOptions,
+                                   labels = horizonLabels)
+    # Set forecaster colors for plot
     set.seed(colorSeed)
     forecasterRand <- sample(unique(df$forecaster))
     colorPalette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecasterRand)
@@ -445,10 +459,14 @@ server <- function(input, output, session) {
   ###################
   # Create the plot for target variable ground truth
   truthPlot = function(scoreDf = NULL, targetVariable = NULL, locationsIntersect = NULL, allLocations = FALSE) {
-    titleText = paste0('<b>Observed Incident ', targetVariable, '</b>')
+    observation = paste0('Incident ', targetVariable)
+    if (targetVariable == "Hospitalizations") {
+      observation = paste0('Hospital Admissions')
+    }
+    titleText = paste0('<b>Observed ', observation, '</b>')
     if (allLocations) {
-      titleText = paste0('<b>Observed Incident ', targetVariable, '</b>', ' <br><sup>Totaled over all states and territories common to selected forecasters*</sup>')
-    } 
+      titleText = paste0('<b>Observed ', observation, '</b>', ' <br><sup>Totaled over all states and territories common to selected forecasters*</sup>')
+    }
     scoreDf <- scoreDf %>%
       group_by(Week_End_Date) %>% summarize(Reported_Incidence = actual)
     
@@ -491,6 +509,8 @@ server <- function(input, output, session) {
     } else {
       df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
     }
+
+    updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
@@ -543,18 +563,8 @@ server <- function(input, output, session) {
       df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
     }
     df = df %>% filter(forecaster %in% input$forecasters)
-    aheadChoices = Filter(function(x) any(unique(df$ahead) %in% x), MAX_AHEAD_CHOICES)
-    aheadChoices = aheadChoices
-    # Ensure previsouly selected options are still allowed
-    if (input$aheads %in% aheadChoices) {
-      selectedAheads = input$aheads
-    } else {
-      selectedAheads = 1
-    }
-    updateCheckboxGroupInput(session, "aheads",
-                      choices = aheadChoices,
-                      selected = selectedAheads,
-                      inline = TRUE)
+
+    updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, FALSE)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
@@ -563,8 +573,13 @@ server <- function(input, output, session) {
   observe({
     # Ensure there is always one ahead selected
     if(length(input$aheads) < 1) {
-      updateCheckboxGroupInput(session, "aheads",
-                               selected = 1)
+      if (input$targetVariable == 'Hospitalizations') {
+        updateCheckboxGroupInput(session, "aheads",
+                                 selected = HOSPITALIZATIONS_AHEAD_OPTIONS[1])
+      } else {
+        updateCheckboxGroupInput(session, "aheads",
+                                 selected = AHEAD_OPTIONS[1])
+      }
     }
     # Ensure there is always one forecaster selected
     if(length(input$forecasters) < 1) {
@@ -629,24 +644,50 @@ updateLocationChoices = function(session, df, targetVariable, forecasterChoices,
                     selected = selectedLocation)
 }
 
+updateAheadChoices = function(session, df, targetVariable, forecasterChoices, aheads, targetVariableChange) {
+  df = df %>% filter(forecaster %in% forecasterChoices)
+  aheadOptions = AHEAD_OPTIONS
+  title = "Forecast Horizon (Weeks)"
+  if (targetVariable == 'Hospitalizations') {
+    aheadOptions = HOSPITALIZATIONS_AHEAD_OPTIONS
+    title = "Forecast Horizon (Days)"
+  }
+  aheadChoices = Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
+  # Ensure previsouly selected options are still allowed
+  if (!is.null(aheads) && aheads %in% aheadChoices) {
+    selectedAheads = aheads
+  } else {
+    selectedAheads = aheadOptions[1]
+  }
+  # If we are changing target variable, always reset ahead selection to first option
+  if (targetVariableChange) {
+    selectedAheads = aheadOptions[1]
+  }
+  updateCheckboxGroupInput(session, "aheads",
+                           title,
+                           choices = aheadChoices,
+                           selected = selectedAheads,
+                           inline = TRUE)
+}
+
+# Only use weekly aheads for hospitalizations
+# May change in the future
 filterHospitalizationsAheads = function(scoreDf) {
   scoreDf['weekday'] = weekdays(as.Date(scoreDf$target_end_date))
-  scoreDf = scoreDf %>% filter(weekday == HOSPITALIZATIONS_AHEAD_DAY)
+  scoreDf = scoreDf %>% filter(weekday == HOSPITALIZATIONS_TARGET_DAY)
 
-  # Only use weekly aheads for hospitalizations
-  # May change in the future
-  oneAheadDf = scoreDf %>% filter(ahead >= 5) %>% filter(ahead < 12)  %>%
-    group_by(target_end_date) %>% group_by(forecaster) %>% filter(ahead == min(ahead)) %>%
-    mutate(ahead = 1)
-  twoAheadDf = scoreDf %>% filter(ahead >= 12) %>% filter(ahead < 19) %>%
-    group_by(target_end_date) %>% group_by(forecaster) %>% filter(ahead == min(ahead)) %>%
-    mutate(ahead = 2)
-  threeAheadDf = scoreDf %>% filter(ahead >= 19) %>% filter(ahead < 26) %>%
-    group_by(target_end_date) %>% group_by(forecaster) %>% filter(ahead == min(ahead)) %>%
-    mutate(ahead = 3)
-  fourAheadDf = scoreDf %>% filter(ahead >= 26) %>%
-    group_by(target_end_date) %>% group_by(forecaster) %>% filter(ahead == min(ahead)) %>%
-    mutate(ahead = 4)
+  oneAheadDf = scoreDf %>% filter(ahead >= HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 7 + HOSPITALIZATIONS_OFFSET)  %>%
+    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[1])
+  twoAheadDf = scoreDf %>% filter(ahead >= 7 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 14 + HOSPITALIZATIONS_OFFSET) %>%
+    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[2])
+  threeAheadDf = scoreDf %>% filter(ahead >= 14 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 21 + HOSPITALIZATIONS_OFFSET) %>%
+    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[3])
+  fourAheadDf = scoreDf %>% filter(ahead >= 21 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 28 + HOSPITALIZATIONS_OFFSET) %>%
+    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[4])
 
   return(rbind(oneAheadDf, twoAheadDf, threeAheadDf, fourAheadDf))
 }

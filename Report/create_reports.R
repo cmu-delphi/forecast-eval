@@ -23,7 +23,7 @@ prediction_cards_filepath = case_when(
     TRUE~prediction_cards_filename
 )
 
-forecasters = c(get_covidhub_forecaster_names(unique(designations = c("primary", "secondary")),
+forecasters = unique(c(get_covidhub_forecaster_names(designations = c("primary", "secondary")),
                 "COVIDhub-baseline", "COVIDhub-trained_ensemble"))
 locations = covidHubUtils::hub_locations
 

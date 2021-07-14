@@ -2,17 +2,20 @@
 
 This dashboard was developed by:
 
-* Jed Grabman (Delphi Group, Google Fellow)
-* Kate Harwood (Delphi Group, Google Fellow)
 * Chris Scott (Delphi Group, Google Fellow)
+* Kate Harwood (Delphi Group, Google Fellow)
+* Jed Grabman (Delphi Group, Google Fellow)
 
 with the Forecast Evaluation Research Collaborative:
 
+* Ryan Tibshirani (Delphi Group)
 * Nicholas Reich (Reich Lab)
-* Jacob Bien (Delphi Group)
-* Logan Brooks (Delphi Group)
-* Estee Cramer (Reich Lab)
+* Evan Ray (Reich Lab)
 * Daniel McDonald (Delphi Group)
+* Estee Cramer (Reich Lab)
+* Logan Brooks (Delphi Group)
+* Johannes Bracher (Karlsruhe Institute)
+* Jacob Bien (Delphi Group)
 
 Forecast data in all states and U.S. territories are supplied by:
 
@@ -29,7 +32,7 @@ Both groups are funded by the CDC as Centers of Excellence for Influenza and COV
   
 The collaborative’s mission is to help epidemiological researchers gain insights into the performance of their forecasts and lead to more accurate forecasting of epidemics.  
   
-Both groups lead initiatives related to COVID-19 data and forecast curation. The Reich Lab created and maintains the [COVID-19 Forecast Hub](https://covid19forecasthub.org/), a collaborative effort with over 80 groups submitting forecasts to be part of the official [CDC COVID-19 ensemble forecast](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html). The Delphi Group created and maintains COVIDcast, a platform for [epidemiological surveillance data](https://delphi.cmu.edu/covidcast/), and runs the [Delphi Pandemic Survey via Facebook](https://delphi.cmu.edu/covidcast/surveys/).
+Both groups lead initiatives related to COVID-19 data and forecast curation. The Reich Lab created and maintains the [COVID-19 Forecast Hub](https://covid19forecasthub.org/), a collaborative effort with over 80 groups submitting forecasts to be part of the official [CDC COVID-19 ensemble forecast](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html). The Delphi Group created and maintains COVIDcast, a platform for [epidemiological surveillance data](https://delphi.cmu.edu/covidcast/), and runs the [U.S. COVID-19 Trends and Impact Survey in partnership with Facebook](https://delphi.cmu.edu/covidcast/surveys/).
   
 The Forecaster Evaluation Dashboard is a collaborative project, which has been made possible by the 13 pro bono Google.org Fellows who have spent 6 months working full-time with the Delphi Group. Google.org is [committed](https://www.google.org/covid-19/) to the recovery of lives and communities that have been impacted by COVID-19 and investing in developing the science to mitigate the damage of future pandemics.  
   

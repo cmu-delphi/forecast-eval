@@ -86,7 +86,10 @@ err_measures = c(wis = weighted_interval_score,
                  underprediction = underprediction,
                  sharpness = sharpness,
                  ae = absolute_error,
-                 coverage_functions)
+                 coverage_functions,
+                 value_20 = get_quantile_prediction_factory(0.2),
+                 value_50 = get_quantile_prediction_factory(0.5),
+                 value_80 = get_quantile_prediction_factory(0.8))
 
 nation_predictions = predictions_cards %>% filter(geo_value == "us")
 state_predictions = predictions_cards %>% filter(geo_value != "us")
@@ -123,8 +126,10 @@ if ( "confirmed_admissions_covid_1d" %in% unique(state_scores$signal)) {
                      output_dir = opt$dir)
 }
 
+
 print("Evaluating national forecasts")
 # COVIDcast does not return national level data, using CovidHubUtils instead
+
 nation_scores = evaluate_chu(nation_predictions, signals, err_measures)
 
 if ( "confirmed_incidence_num" %in% unique(state_scores$signal)) {

@@ -319,6 +319,7 @@ server <- function(input, output, session) {
       # Create df with col for all locations across each unique date, ahead and forecaster combo
       locationDf = filteredScoreDf %>% group_by(Forecaster, Week_End_Date, ahead) %>% 
         summarize(location_list = paste(sort(unique(geo_value)),collapse=","))
+      locationDf = locationDf %>% filter(location_list != c('us'))
       # Create a list containing each row's location list
       locationList = sapply(locationDf$location_list, function(x) strsplit(x, ","))
       locationList = lapply(locationList, function(x) x[x != 'us'])
@@ -341,7 +342,7 @@ server <- function(input, output, session) {
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
       if (length(locationsIntersect) == 0) {
-        output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common.")
+        output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common on all dates.")
         output$renderLocations <- renderText("")
         output$renderAggregateText = renderText("")
         hideElement("truthPlot")

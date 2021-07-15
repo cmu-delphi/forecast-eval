@@ -63,7 +63,7 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 #### **Dashboard Inclusion Criteria**
 A forecast is only included if all the following criteria are met:
 
-*   The target variable is the weekly incidence of either cases or deaths, or incidence of hospitalizations
+*   The target variable is the weekly incidence of either cases or deaths, or the daily incidence of hospitalizations
 *   The horizon is no more than 4 weeks ahead
 *   The location is a U.S. state, territory, or the nation as a whole
 *   All dates are parsable. If a date is not in yyyy/mm/dd format, the forecast may be dropped.

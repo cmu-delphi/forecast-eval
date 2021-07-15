@@ -66,7 +66,7 @@ class(predictions_cards) = c("predictions_cards", class(predictions_cards))
 
 print("Saving predictions...")
 saveRDS(predictions_cards,
-        file = "predictions_cards.rds",
+        file = prediction_cards_filepath,
         compress = "xz")
 print("Predictions saved")
 

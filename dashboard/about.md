@@ -40,7 +40,9 @@ The Forecaster Evaluation Dashboard is a collaborative project, which has been m
 
 #### **Sources**
 
-**Observed values** are from the [COVID-19 Data Repository](https://github.com/CSSEGISandData/COVID-19) by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University.  
+**Observed cases and deaths** are from the [COVID-19 Data Repository](https://github.com/CSSEGISandData/COVID-19) by the Center for Systems Science and Engineering (CSSE) at Johns Hopkins University.
+
+**Observed hospitalizations** are from the U.S. Department of Health & Human Services and is the sum of all adult and pediatric COVID-19 hospital admissions.
   
 **Forecaster predictions** are drawn from the [COVID-19 Forecast Hub GitHub repository](https://github.com/reichlab/covid19-forecast-hub/)  
   
@@ -61,16 +63,23 @@ Data for the dashboard is pulled from these sources on Mondays and Tuesdays.
 #### **Dashboard Inclusion Criteria**
 A forecast is only included if all the following criteria are met:
 
-*   The target variable is the weekly incidence of either cases or deaths
+*   The target variable is the weekly incidence of either cases or deaths, or the daily incidence of hospitalizations
 *   The horizon is no more than 4 weeks ahead
 *   The location is a U.S. state, territory, or the nation as a whole
 *   All dates are parsable. If a date is not in yyyy/mm/dd format, the forecast may be dropped.
 *   The forecast was made on or before the Monday of the relevant week. If multiple versions of a forecast are submitted then only the last forecast that meets the date restriction is included.
 
+#### **How Hospitalization Forecasts are Processed**
+Though hospitalizations are forecasted on a daily basis, in keeping with the cases and death scoring and plotting, we show the hospitalization scores on a weekly basis in the dashboard. We only look at forecasts for one target day a week (currently Wednesdays), and calculate the weekly horizons accordingly. Hospitalization horizons are calculated in the following manner:
+* 2 days ahead: Forecast date is on or before the Monday preceeding the target date (Wednesday)
+* 9 days ahead: Forecast date equal to or before 7 days before the Monday preceeding the target date
+* 16 days ahead: Forecast date is equal to or before 14 days before the Monday preceeding the target date
+* 23 days ahead: Forecast date equal to or before 21 days before the Monday preceeding the target date
+
 #### **Notes on the Data**
 
 *   If a forecast does not include an explicit point estimate, the 0.5 quantile is taken as the point estimate for calculating absolute error.
-*   WIS is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and 15 for cases)
+*   WIS is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and hospitalizations and 7 for cases)
 *   Totaling over all states and territories does not include nationwide forecasts. To ensure that values are comparable, these totals also exclude any locations that are absent from any file that was submitted by one of the selected forecasters.
 *   We include revisions of observed values, which means that the scores for forecasts made in the past can change as our understanding of the ground truth changes.
 
@@ -86,5 +95,7 @@ The available files are:
 * score_cards_nation_deaths.rds
 * score_cards_state_cases.rds
 * score_cards_state_deaths.rds
+* score_cards_state_hospitalizations.rds
+* score_cards_nation_hospitalizations.rds
   
   

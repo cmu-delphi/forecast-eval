@@ -79,7 +79,7 @@ Though hospitalizations are forecasted on a daily basis, in keeping with the cas
 #### **Notes on the Data**
 
 *   If a forecast does not include an explicit point estimate, the 0.5 quantile is taken as the point estimate for calculating absolute error.
-*   WIS is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and 7 for cases)
+*   WIS is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and hospitalizations and 7 for cases)
 *   Totaling over all states and territories does not include nationwide forecasts. To ensure that values are comparable, these totals also exclude any locations that are absent from any file that was submitted by one of the selected forecasters.
 *   We include revisions of observed values, which means that the scores for forecasts made in the past can change as our understanding of the ground truth changes.
 

@@ -268,14 +268,19 @@ server <- function(input, output, session) {
       filter(ahead %in% horizon) %>%
       filter(forecaster %in% forecasters)
 
-    filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Week_End_Date = target_end_date)
-
+    filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Forecast_Date = forecast_date,
+                                          Week_End_Date = target_end_date)
+    
     if (scoreType == "wis" || scoreType == "sharpness") {
       # Only show WIS or Sharpness for forecasts that have all intervals
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
       if (targetVariable == "Deaths") {
         filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
                           filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
+      }
+      if (dim(filteredScoreDf)[1] == 0) {
+        output$renderWarningText <- renderText("The selected forecasters do not have enough data to display the selected scoring metric.")
+        return()
       }
       if (scoreType == "wis") {
         filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
@@ -312,14 +317,14 @@ server <- function(input, output, session) {
       if (scoreType == "coverage") {
         aggregate = "Averaged"
         filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Week_End_Date, ahead) %>%
+          group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
           summarize(Score = sum(Score)/length(locationsIntersect), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText," Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "))
       }
       else {
         aggregate = "Totaled"
         filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Week_End_Date, ahead) %>%
+          group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
           summarize(Score = sum(Score), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
@@ -339,7 +344,7 @@ server <- function(input, output, session) {
     # Not totaling over all locations
     } else {
       filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(loc)) %>%
-        group_by(Forecaster, Week_End_Date, ahead) %>%
+        group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
         summarize(Score = Score, actual = actual)
       locationSubtitleText = paste0(', Location: ', input$location)
       output$renderAggregateText = renderText("")
@@ -356,7 +361,7 @@ server <- function(input, output, session) {
     })
 
     # Format and transform data
-    filteredScoreDf = filteredScoreDf[c("Forecaster", "Week_End_Date", "Score", "ahead")]
+    filteredScoreDf = filteredScoreDf[c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     if (scoreType != 'coverage') {
       if (scaleByBaseline) {
@@ -365,8 +370,8 @@ server <- function(input, output, session) {
         # Scaling score by baseline forecaster
         filteredScoreDfMerged$Score.x = filteredScoreDfMerged$Score.x / filteredScoreDfMerged$Score.y
         filteredScoreDf = filteredScoreDfMerged %>%
-          rename(Forecaster = Forecaster.x, Score = Score.x) %>%
-          select(Forecaster, Week_End_Date, ahead, Score)
+          rename(Forecaster = Forecaster.x, Score = Score.x, Forecast_Date = Forecast_Date.x) %>%
+          select(Forecaster, Forecast_Date, Week_End_Date, ahead, Score)
       }
       if (logScale) {
         filteredScoreDf$Score = log10(filteredScoreDf$Score)
@@ -381,7 +386,7 @@ server <- function(input, output, session) {
     # Fill gaps so there are line breaks on weeks without data
     filteredScoreDf = filteredScoreDf %>%
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
-      group_by(Forecaster, ahead) %>%
+      group_by(Forecaster, Forecast_Date, ahead) %>%
       fill_gaps(.full = TRUE)
 
     filteredScoreDf$ahead = factor(filteredScoreDf$ahead, levels = c(1, 2, 3, 4),
@@ -391,8 +396,8 @@ server <- function(input, output, session) {
     colorPalette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecasterRand)
 
     p = ggplot(
-        filteredScoreDf,
-        aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster)
+        filteredScoreDf, 
+        aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster, label = Forecast_Date)
       ) +
       geom_line() +
       geom_point(size=2) +
@@ -413,8 +418,8 @@ server <- function(input, output, session) {
       p = p + scale_y_continuous(limits = c(0,NA), labels = scales::comma)
     }
     plotHeight = 550 + (length(horizon)-1)*100
-    finalPlot <-
-      ggplotly(p,tooltip = c("x", "y", "shape")) %>%
+    finalPlot <- 
+      ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
       layout(
         height = plotHeight,
         legend = list(orientation = "h", y = -0.1),

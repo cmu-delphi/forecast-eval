@@ -72,6 +72,23 @@ find_quantile_match <- function(quantiles, val_to_match, tol=1e-8){
   return(abs(quantiles - val_to_match) < tol  & !is.na(quantiles))
 }
 
+get_quantile_prediction_factory <- function(val_to_match, tol=1e-8) {
+  get_quantile_prediction <- function(quantile, value, actual_value) {
+    if (all(is.na(quantile))) return(NA)
+
+    value <- value[!is.na(quantile)]
+    quantile <- quantile[!is.na(quantile)]
+    
+    val <- value[find_quantile_match(quantile, val_to_match, tol)]
+    
+    if (length(val) != 1L) return(NA)
+    
+    return(val)
+  }
+  
+  return(get_quantile_prediction)
+}
+
 score_func_param_checker <- function(quantiles, values, actual_value, id = ""){
   id_str = paste0(id, ": ")
   if (length(actual_value) > 1) {

@@ -11,8 +11,11 @@ create_export_df = function(scoreDf, targetVariable, scoreType, forecasters, loc
     scoreDf = scoreDf %>%
       filter(signal == signalFilter) %>%
       filter(forecaster %in% forecasters)
-    if (loc == TOTAL_LOCATIONS || input$scoreType == "coverage") {
-      scoreDf = filterOverAllLocations(scoreDf, scoreType, coverageInterval)
+    if (loc == TOTAL_LOCATIONS || scoreType == "coverage") {
+      if (signalFilter == HOSPITALIZATIONS_FILTER) {
+        scoreDf = filterHospitalizationsAheads(scoreDf)
+      }
+      scoreDf = filterOverAllLocations(scoreDf, scoreType)
       return(scoreDf[[1]])
     } else {
       scoreDf = scoreDf %>% filter(geo_value == tolower(loc))
@@ -36,9 +39,9 @@ export_scores_server = function(input, output, df) {
       if (input$location != TOTAL_LOCATIONS) {
         filename = paste0(filename, '-', input$location)
       } else if (input$scoreType == 'coverage') {
-        filename = paste0(filename, '-', 'average-over-common-locations-coverage-interval-', input$coverageInterval)
+        filename = paste0(filename, '-', 'averaged-over-common-locations-Coverage-interval-', input$coverageInterval)
       } else {
-        filename = paste0(filename, '-total-over-common-locations-')
+        filename = paste0(filename, '-totaled-over-common-locations')
       }
       paste0(filename,'-', Sys.Date(), ".csv")
     },

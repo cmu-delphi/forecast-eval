@@ -32,7 +32,7 @@ renameScoreCol = function(filteredScoreDf, scoreType, coverageInterval) {
 }
 
 
-filterOverAllLocations = function(filteredScoreDf, scoreType, coverageInterval) {
+filterOverAllLocations = function(filteredScoreDf, scoreType) {
     locationsIntersect = list()
     filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
     # Create df with col for all locations across each unique date, ahead and forecaster combo
@@ -56,4 +56,26 @@ filterOverAllLocations = function(filteredScoreDf, scoreType, coverageInterval) 
         summarize(Score = sum(Score), actual = sum(actual))
     }
     return (list(filteredScoreDf, locationsIntersect))
+}
+
+# Only use weekly aheads for hospitalizations
+# May change in the future
+filterHospitalizationsAheads = function(scoreDf) {
+  scoreDf['weekday'] = weekdays(as.Date(scoreDf$target_end_date))
+  scoreDf = scoreDf %>% filter(weekday == HOSPITALIZATIONS_TARGET_DAY)
+  
+  oneAheadDf = scoreDf %>% filter(ahead >= HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 7 + HOSPITALIZATIONS_OFFSET)  %>%
+    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[1])
+  twoAheadDf = scoreDf %>% filter(ahead >= 7 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 14 + HOSPITALIZATIONS_OFFSET) %>%
+    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[2])
+  threeAheadDf = scoreDf %>% filter(ahead >= 14 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 21 + HOSPITALIZATIONS_OFFSET) %>%
+    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[3])
+  fourAheadDf = scoreDf %>% filter(ahead >= 21 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 28 + HOSPITALIZATIONS_OFFSET) %>%
+    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
+    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[4])
+  
+  return(rbind(oneAheadDf, twoAheadDf, threeAheadDf, fourAheadDf))
 }

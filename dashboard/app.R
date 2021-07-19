@@ -256,34 +256,30 @@ server <- function(input, output, session) {
   ##################
   # CREATE MAIN PLOT
   ##################
-  summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
-                         horizon, loc, coverageInterval = NULL, colorSeed, logScale, scaleByBaseline) {
+  summaryPlot = function(scoreDf, colorSeed) {
     allLocations = FALSE
-    if (loc == TOTAL_LOCATIONS) {
+    if (input$location == TOTAL_LOCATIONS) {
       allLocations = TRUE
     }
     signalFilter = CASE_FILTER
-    if (targetVariable == "Deaths") {
+    if (input$targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
     }
-    if (targetVariable == "Hospitalizations") {
+    if (input$targetVariable == "Hospitalizations") {
       signalFilter = HOSPITALIZATIONS_FILTER
     }
-    scoreDf = scoreDf %>% 
+    filteredScoreDf = scoreDf %>%
       filter(signal == signalFilter) %>%
-      filter(forecaster %in% forecasters)
+      filter(forecaster %in% input$forecasters)
 
     if (signalFilter == HOSPITALIZATIONS_FILTER) {
-      scoreDf = filterHospitalizationsAheads(scoreDf)
+      filteredScoreDf = filterHospitalizationsAheads(filteredScoreDf)
     }
-    scoreDf = scoreDf %>% filter(ahead %in% horizon)
-    filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Forecast_Date = forecast_date,
-                                          Week_End_Date = target_end_date)
-
-    if (scoreType == "wis" || scoreType == "sharpness") {
+    filteredScoreDf = filteredScoreDf %>% filter(ahead %in% input$aheads)
+    if (input$scoreType == "wis" || input$scoreType == "sharpness") {
       # Only show WIS or Sharpness for forecasts that have all intervals
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
-      if (targetVariable == "Deaths") {
+      if (input$targetVariable == "Deaths") {
         filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
                           filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
       }
@@ -291,51 +287,33 @@ server <- function(input, output, session) {
         output$renderWarningText <- renderText("The selected forecasters do not have enough data to display the selected scoring metric.")
         return()
       }
-      if (scoreType == "wis") {
-        filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
-        title = "Weighted Interval Score"
+      if (input$scoreType == "wis") {
+        plotTitle = "Weighted Interval Score"
       }
       else {
-        filteredScoreDf <- filteredScoreDf %>% rename(Score = sharpness)
-        title = "Spread"
+        plotTitle = "Spread"
       }
     }
-    if (scoreType == "ae") {
-      filteredScoreDf <- filteredScoreDf %>% rename(Score = ae)
-      title = "Absolute Error"
+    if (input$scoreType == "ae") {
+      plotTitle = "Absolute Error"
     }
-    if (scoreType == "coverage") {
-      filteredScoreDf <- filteredScoreDf %>% rename(Score = !!coverageInterval)
-      title = "Coverage"
+    if (input$scoreType == "coverage") {
+      plotTitle = "Coverage"
     }
+    filteredScoreDf = renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)
 
     # Totaling over all locations
-    locationsIntersect = list()
-    if (allLocations || scoreType == "coverage") {
-      filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
-      # Create df with col for all locations across each unique date, ahead and forecaster combo
-      locationDf = filteredScoreDf %>% group_by(Forecaster, Week_End_Date, ahead) %>%
-        summarize(location_list = paste(sort(unique(geo_value)),collapse=","))
-      locationDf = locationDf %>% filter(location_list != c('us'))
-      # Create a list containing each row's location list
-      locationList = sapply(locationDf$location_list, function(x) strsplit(x, ","))
-      locationList = lapply(locationList, function(x) x[x != 'us'])
-      # Get the intersection of all the locations in these lists
-      locationsIntersect = unique(Reduce(intersect, locationList))
-      filteredScoreDf = filteredScoreDf %>% filter(geo_value %in% locationsIntersect)
+    if (allLocations || input$scoreType == "coverage") {
+      filteredScoreDfAndIntersections = filterOverAllLocations(filteredScoreDf, input$scoreType, input$coverageInterval)
+      filteredScoreDf = filteredScoreDfAndIntersections[[1]]
+      locationsIntersect = filteredScoreDfAndIntersections[[2]]
       aggregateText = "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
-      if (scoreType == "coverage") {
+      if (input$scoreType == "coverage") {
         aggregate = "Averaged"
-        filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
-          summarize(Score = sum(Score)/length(locationsIntersect), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText," Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "))
       }
       else {
         aggregate = "Totaled"
-        filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
-          summarize(Score = sum(Score), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
       if (length(locationsIntersect) == 0) {
@@ -353,8 +331,8 @@ server <- function(input, output, session) {
       }
     # Not totaling over all locations
     } else {
-      filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(loc)) %>%
-        group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
+      filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(input$location)) %>%
+        group_by(forecaster, forecast_date, target_end_date, ahead) %>%
         summarize(Score = Score, actual = actual)
       locationSubtitleText = paste0(', Location: ', input$location)
       output$renderAggregateText = renderText("")
@@ -362,19 +340,22 @@ server <- function(input, output, session) {
       output$renderWarningText <- renderText("")
     }
 
+    # Rename columns that will be used as labels
+    filteredScoreDf = filteredScoreDf %>% rename(Forecaster = forecaster, Forecast_Date = forecast_date,
+                                                 Week_End_Date = target_end_date)
     # Render truth plot with observed values
     showElement("truthPlot")
     showElement("refresh-colors")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
-      truthPlot(truthDf, targetVariable, locationsIntersect, allLocations || scoreType == "coverage")
+      truthPlot(truthDf, locationsIntersect, allLocations || input$scoreType == "coverage")
     })
 
     # Format and transform data
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
-    if (scoreType != 'coverage') {
-      if (scaleByBaseline) {
+    if (input$scoreType != 'coverage') {
+      if (input$scaleByBaseline) {
         baselineDf = filteredScoreDf %>% filter(Forecaster %in% 'COVIDhub-baseline')
         filteredScoreDfMerged = merge(filteredScoreDf, baselineDf, by=c("Week_End_Date","ahead"))
         # Scaling score by baseline forecaster
@@ -383,13 +364,13 @@ server <- function(input, output, session) {
           rename(Forecaster = Forecaster.x, Score = Score.x, Forecast_Date = Forecast_Date.x) %>%
           select(Forecaster, Forecast_Date, Week_End_Date, ahead, Score)
       }
-      if (logScale) {
+      if (input$logScale) {
         filteredScoreDf$Score = log10(filteredScoreDf$Score)
       }
     }
 
-    titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
-                       'Target Variable: ', targetVariable,
+    titleText = paste0('<b>', plotTitle,'</b>','<br>', '<sup>',
+                       'Target Variable: ', input$targetVariable,
                        locationSubtitleText, '<br>',
                        tags$span(id="drag-to-zoom", " Drag to zoom"),
                        '</sup>')
@@ -401,7 +382,7 @@ server <- function(input, output, session) {
     # Set labels for faceted horizon plots
     horizonOptions = AHEAD_OPTIONS
     horizonLabels = lapply(AHEAD_OPTIONS, function (x) paste0("Horizon: ", x, " Week(s)"))
-    if (targetVariable == 'Hospitalizations') {
+    if (input$targetVariable == 'Hospitalizations') {
       horizonOptions = HOSPITALIZATIONS_AHEAD_OPTIONS
       horizonLabels = lapply(HOSPITALIZATIONS_AHEAD_OPTIONS, function (x) paste0("Horizon: ", x, " Days"))
     }
@@ -426,15 +407,15 @@ server <- function(input, output, session) {
       theme(panel.spacing=unit(0.5, "lines")) +
       theme(legend.title = element_blank())
 
-    if (scoreType == "coverage") {
-      p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
+    if (input$scoreType == "coverage") {
+      p = p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
     }
-    if (logScale) {
+    if (input$logScale) {
       p = p + scale_y_continuous(label = function(x) paste0("10^", x))
     } else {
       p = p + scale_y_continuous(limits = c(0,NA), labels = scales::comma)
     }
-    plotHeight = 550 + (length(horizon)-1)*100
+    plotHeight = 550 + (length(input$aheads)-1)*100
     finalPlot <- 
       ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
       layout(
@@ -456,9 +437,9 @@ server <- function(input, output, session) {
   # CREATE TRUTH PLOT
   ###################
   # Create the plot for target variable ground truth
-  truthPlot = function(scoreDf = NULL, targetVariable = NULL, locationsIntersect = NULL, allLocations = FALSE) {
-    observation = paste0('Incident ', targetVariable)
-    if (targetVariable == "Hospitalizations") {
+  truthPlot = function(scoreDf = NULL, locationsIntersect = NULL, allLocations = FALSE) {
+    observation = paste0('Incident ', input$targetVariable)
+    if (input$targetVariable == "Hospitalizations") {
       observation = paste0('Hospital Admissions')
     }
     titleText = paste0('<b>Observed ', observation, '</b>')
@@ -482,8 +463,7 @@ server <- function(input, output, session) {
   # PLOT OUTPUT
   #############
   output$summaryPlot <- renderPlotly({
-    summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters,
-                input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
+    summaryPlot(df, colorSeed)
   })
 
   ###################
@@ -493,8 +473,7 @@ server <- function(input, output, session) {
   observeEvent(input$refreshColors, {
     colorSeed = floor(runif(1, 1, 1000))
     output$summaryPlot <- renderPlotly({
-      summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters,
-                  input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
+      summaryPlot(df, colorSeed)
     })
   })
 

@@ -44,8 +44,14 @@ predictions_cards = get_covidhub_predictions(forecasters,
     filter(!(incidence_period == "epiweek" & ahead > 4))
 
 predictions_cards = predictions_cards %>%
-    filter(!is.na(predictions_cards$target_end_date)) %>%
+    filter(!is.na(target_end_date)) %>%
     filter(target_end_date < today())
+
+# For hospitalizations, drop all US territories except Puerto Rico and the
+# Virgin Islands; HHS does not report data for any territories except PR and VI.
+territories <- c("as", "gu", "mp", "fm", "mh", "pw", "um")
+predictions_cards = predictions_cards %>%
+    filter(!(geo_value %in% territories & data_source == "hhs"))
 
 # For epiweek predictions, only accept forecasts made Monday or earlier.
 # target_end_date is the date of the last day (Saturday) in the epiweek
@@ -66,7 +72,7 @@ class(predictions_cards) = c("predictions_cards", class(predictions_cards))
 
 print("Saving predictions...")
 saveRDS(predictions_cards,
-        file = "predictions_cards.rds",
+        file = prediction_cards_filepath,
         compress = "xz")
 print("Predictions saved")
 

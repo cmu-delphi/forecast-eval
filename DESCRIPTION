@@ -1,6 +1,6 @@
 Package: forecast-eval
 Title: Forecast Evaluation Dashboard
-Version: 2.1
+Version: 3
 Authors@R: person("Kate", "Harwood",
                   role = c("cre")), 
 	   person("Chris", "Scott",

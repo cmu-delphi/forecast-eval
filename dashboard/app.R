@@ -24,6 +24,9 @@ AHEAD_OPTIONS = c(1,2,3,4)
 HOSPITALIZATIONS_OFFSET = 2
 HOSPITALIZATIONS_AHEAD_OPTIONS = c(HOSPITALIZATIONS_OFFSET, HOSPITALIZATIONS_OFFSET + 7, HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21)
 
+# All data is fully loaded from AWS
+dataLoaded = FALSE
+
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
 sharpnessExplanation = includeMarkdown("sharpness.md")
@@ -161,18 +164,19 @@ ui <- fluidPage(padding=0,
             plotlyOutput(outputId = "summaryPlot", height="auto"),
             fluidRow(
               column(11, offset=1, 
-                     div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Recolor"))
+                     hidden(div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Recolor")))
             )),
             tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
               column(11, offset=1,
-                     div(id="notes", "About the Scores"),
+                     div(id="loading-message", "DATA IS LOADING..."),
+                     hidden(div(id="notes", "About the Scores")),
                      hidden(div(id = "wisExplanation", wisExplanation)),
                      hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),
                      hidden(div(id = "aeExplanation", aeExplanation)),
                      hidden(div(id = "coverageExplanation", coverageExplanation)),
-                     div(id = "scoringDisclaimer", scoringDisclaimer)
+                     hidden(div(id = "scoringDisclaimer", scoringDisclaimer))
               )
             ),
             fluidRow(
@@ -236,6 +240,7 @@ server <- function(input, output, session) {
   dfNationDeaths = getData("score_cards_nation_deaths.rds")
   dfStateHospitalizations = getData("score_cards_state_hospitalizations.rds")
   dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds")
+  dataLoaded = TRUE
 
   # Pick out expected columns only
   covCols = paste0("cov_", COVERAGE_INTERVALS)
@@ -260,7 +265,6 @@ server <- function(input, output, session) {
   # Prepare input choices
   forecasterChoices = sort(unique(df$forecaster))
   updateForecasterChoices(session, df, forecasterChoices, 'wis')
-    
   
   ##################
   # CREATE MAIN PLOT
@@ -456,7 +460,7 @@ server <- function(input, output, session) {
           titlefont = list(size = 12))
       ) %>%
       config(displayModeBar = F)
-      
+
     return(finalPlot)
   }
   
@@ -577,6 +581,13 @@ server <- function(input, output, session) {
   
   # Ensure the minimum necessary input selections
   observe({
+    # Show data loading message and hide other messages until all data is loaded
+    if (dataLoaded) {
+      hide("loading-message")
+      show("refresh-colors")
+      show("notes")
+      show("scoringDisclaimer")
+    }
     # Ensure there is always one ahead selected
     if(length(input$aheads) < 1) {
       if (input$targetVariable == 'Hospitalizations') {

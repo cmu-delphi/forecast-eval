@@ -88,12 +88,16 @@
 #drag-to-zoom {
     font-size:11px;
 }
-#refreshColors {
+#refresh-colors {
     height: 26px;
     font-size: 12px;
 }
 #scale-score {
     font-weight: bold;
+}
+#loading-message {
+    font-style: italic;
+    font-size: 18px;
 }
 
 @media (max-width: 1450px) {

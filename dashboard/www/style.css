@@ -85,6 +85,10 @@
     margin-top:-20px; 
     font-size:12px;
 }
+#horizon-disclaimer {
+    margin-top:-10px;
+    font-size:12px;
+}
 #drag-to-zoom {
     font-size:11px;
 }

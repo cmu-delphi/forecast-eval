@@ -102,6 +102,7 @@ ui <- fluidPage(padding=0,
               selected = AHEAD_OPTIONS[1],
               inline = TRUE
             ),
+            hidden(tags$p(id="horizon-disclaimer", "Forecasters submitted earlier than Mondays may have longer actual prediction horizons")),
             conditionalPanel(condition = "input.scoreType == 'coverage'",
                              selectInput(
                                "coverageInterval",
@@ -637,11 +638,14 @@ updateLocationChoices = function(session, df, targetVariable, forecasterChoices,
 
 updateAheadChoices = function(session, df, targetVariable, forecasterChoices, aheads, targetVariableChange) {
   df = df %>% filter(forecaster %in% forecasterChoices)
-  aheadOptions = AHEAD_OPTIONS
-  title = "Forecast Horizon (Weeks)"
   if (targetVariable == 'Hospitalizations') {
     aheadOptions = HOSPITALIZATIONS_AHEAD_OPTIONS
     title = "Forecast Horizon (Days)"
+    show("horizon-disclaimer")
+  } else {
+    aheadOptions = AHEAD_OPTIONS
+    title = "Forecast Horizon (Weeks)"
+    hide("horizon-disclaimer")
   }
   aheadChoices = Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
   # Ensure previsouly selected options are still allowed

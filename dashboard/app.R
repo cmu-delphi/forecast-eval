@@ -361,7 +361,7 @@ server <- function(input, output, session) {
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     if (input$scoreType != 'coverage') {
-      if (input$scaleByBaseline) {
+      if (input$scaleByBaseline && input$targetVariable != "Hospitalizations") {
         baselineDf = filteredScoreDf %>% filter(Forecaster %in% 'COVIDhub-baseline')
         filteredScoreDfMerged = merge(filteredScoreDf, baselineDf, by=c("Week_End_Date","ahead"))
         # Scaling score by baseline forecaster

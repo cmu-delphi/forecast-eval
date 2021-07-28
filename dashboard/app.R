@@ -162,7 +162,7 @@ ui <- fluidPage(padding=0,
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
               column(11, offset=1,
-                     div(id="loading-message", "DATA IS LOADING..."),
+                     div(id="loading-message", "DATA IS LOADING...(this may take a while)"),
                      hidden(div(id="notes", "About the Scores")),
                      hidden(div(id = "wisExplanation", wisExplanation)),
                      hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),

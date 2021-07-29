@@ -9,20 +9,10 @@ library(shinyjs)
 library(tsibble)
 library(aws.s3)
 
-COVERAGE_INTERVALS = c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
-DEATH_FILTER = "deaths_incidence_num"
-CASE_FILTER = "confirmed_incidence_num"
-HOSPITALIZATIONS_FILTER = "confirmed_admissions_covid_1d"
-HOSPITALIZATIONS_TARGET_DAY = "Wednesday"
-TOTAL_LOCATIONS = "Totaled Over States*"
-AHEAD_OPTIONS = c(1,2,3,4)
+source('./common.R')
 
-# Num days to offset the forecast week by
-# Example: if HOSPITALIZATIONS_TARGET_DAY is Wednesday and HOSPITALIZATIONS_OFFSET is 2,
-# ahead 1 has to have forecast date of Monday or earlier,
-# ahead 2 has to have forecast date of Monday + 7 days or earlier (offset + 7 days or more), etc
-HOSPITALIZATIONS_OFFSET = 2
-HOSPITALIZATIONS_AHEAD_OPTIONS = c(HOSPITALIZATIONS_OFFSET, HOSPITALIZATIONS_OFFSET + 7, HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21)
+# All data is fully loaded from AWS
+dataLoaded = FALSE
 
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
@@ -42,9 +32,12 @@ if(length(cssFiles)!=1){
 cssFile = cssFiles[1]
 cat(file=stderr(),"Loaded css file:",cssFile,"\n")
 
+source('./export_scores.R')
+
 ########
 # Layout
 ########
+
 ui <- fluidPage(padding=0,
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = cssFile)
@@ -58,7 +51,7 @@ ui <- fluidPage(padding=0,
         )
       ),
       div(id="title", class="col-sm-6",
-        HTML("FORECAST <span id='bold-title'>EVALUATION DASHBOARD</span> <a id='back-button' href='https://delphi.cmu.edu'>", 
+        HTML("FORECAST <span id='bold-title'>EVALUATION DASHBOARD</span> <a id='back-button' href='https://delphi.cmu.edu'>",
              includeHTML("arrow-left.svg"), "   Back</a>"),
       ),
       div(id="github-logo-container", class="col-sm-1",
@@ -103,12 +96,13 @@ ui <- fluidPage(padding=0,
             ),
             tags$p(id="forecaster-disclaimer", "Some forecasters may not have data for the chosen location or scoring metric"),
             checkboxGroupInput(
-              "aheads", 
+              "aheads",
               "Forecast Horizon (Weeks)",
               choices = AHEAD_OPTIONS,
               selected = AHEAD_OPTIONS[1],
               inline = TRUE
             ),
+            hidden(tags$p(id="horizon-disclaimer", "Forecasters submitted earlier than Mondays may have longer actual prediction horizons")),
             conditionalPanel(condition = "input.scoreType == 'coverage'",
                              selectInput(
                                "coverageInterval",
@@ -128,11 +122,13 @@ ui <- fluidPage(padding=0,
                              )
             ),
             tags$hr(),
+            export_scores_ui,
+            tags$hr(),
         ),
         includeMarkdown("about-dashboard.md"),
         width=3,
       ),
-      
+
       mainPanel(
         width=9,
         tabsetPanel(id = "tabset",
@@ -161,18 +157,19 @@ ui <- fluidPage(padding=0,
             plotlyOutput(outputId = "summaryPlot", height="auto"),
             fluidRow(
               column(11, offset=1, 
-                     div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Recolor"))
+                     hidden(div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Recolor")))
             )),
             tags$br(),
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
               column(11, offset=1,
-                     div(id="notes", "About the Scores"),
+                     div(id="loading-message", "DATA IS LOADING...(this may take a while)"),
+                     hidden(div(id="notes", "About the Scores")),
                      hidden(div(id = "wisExplanation", wisExplanation)),
                      hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),
                      hidden(div(id = "aeExplanation", aeExplanation)),
                      hidden(div(id = "coverageExplanation", coverageExplanation)),
-                     div(id = "scoringDisclaimer", scoringDisclaimer)
+                     hidden(div(id = "scoringDisclaimer", scoringDisclaimer))
               )
             ),
             fluidRow(
@@ -183,7 +180,6 @@ ui <- fluidPage(padding=0,
                 tags$br()
               )
             )
-            
           )
         ),
       ),
@@ -203,7 +199,7 @@ server <- function(input, output, session) {
       return(NULL)
     }
   )
-  
+
   # Get and prepare data
   getData <- function(filename){
     if(!is.null(s3bucket)) {
@@ -220,7 +216,7 @@ server <- function(input, output, session) {
       getFallbackData(filename)
     }
   }
-  
+
   getFallbackData = function(filename) {
     path = ifelse(
       file.exists(filename),
@@ -229,13 +225,14 @@ server <- function(input, output, session) {
     )
     readRDS(path)
   }
-  
+
   dfStateCases <- getData("score_cards_state_cases.rds")
   dfStateDeaths <- getData("score_cards_state_deaths.rds")
   dfNationCases = getData("score_cards_nation_cases.rds")
   dfNationDeaths = getData("score_cards_nation_deaths.rds")
   dfStateHospitalizations = getData("score_cards_state_hospitalizations.rds")
   dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds")
+  dataLoaded = TRUE
 
   # Pick out expected columns only
   covCols = paste0("cov_", COVERAGE_INTERVALS)
@@ -253,45 +250,42 @@ server <- function(input, output, session) {
   
   df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations)
   df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
-  
+
   # Prepare color palette
   colorSeed = 100
-  
+
   # Prepare input choices
   forecasterChoices = sort(unique(df$forecaster))
   updateForecasterChoices(session, df, forecasterChoices, 'wis')
-    
+
   
   ##################
   # CREATE MAIN PLOT
   ##################
-  summaryPlot = function(scoreDf, targetVariable, scoreType, forecasters,
-                         horizon, loc, coverageInterval = NULL, colorSeed, logScale, scaleByBaseline) {
+  summaryPlot = function(scoreDf, colorSeed) {
     allLocations = FALSE
-    if (loc == TOTAL_LOCATIONS) {
+    if (input$location == TOTAL_LOCATIONS) {
       allLocations = TRUE
     }
     signalFilter = CASE_FILTER
-    if (targetVariable == "Deaths") {
+    if (input$targetVariable == "Deaths") {
       signalFilter = DEATH_FILTER
     }
-    if (targetVariable == "Hospitalizations") {
+    if (input$targetVariable == "Hospitalizations") {
       signalFilter = HOSPITALIZATIONS_FILTER
     }
-    scoreDf = scoreDf %>% 
+    filteredScoreDf = scoreDf %>%
       filter(signal == signalFilter) %>%
-      filter(forecaster %in% forecasters)
-    if (signalFilter == HOSPITALIZATIONS_FILTER) {
-      scoreDf = filterHospitalizationsAheads(scoreDf)
-    }
-    scoreDf = scoreDf %>% filter(ahead %in% horizon)
-    filteredScoreDf <- scoreDf %>% rename(Forecaster = forecaster, Forecast_Date = forecast_date,
-                                          Week_End_Date = target_end_date)
+      filter(forecaster %in% input$forecasters)
 
-    if (scoreType == "wis" || scoreType == "sharpness") {
+    if (signalFilter == HOSPITALIZATIONS_FILTER) {
+      filteredScoreDf = filterHospitalizationsAheads(filteredScoreDf)
+    }
+    filteredScoreDf = filteredScoreDf %>% filter(ahead %in% input$aheads)
+    if (input$scoreType == "wis" || input$scoreType == "sharpness") {
       # Only show WIS or Sharpness for forecasts that have all intervals
       filteredScoreDf = filteredScoreDf %>% filter(!is.na(`50`)) %>% filter(!is.na(`80`)) %>% filter(!is.na(`95`))
-      if (targetVariable == "Deaths") {
+      if (input$targetVariable == "Deaths") {
         filteredScoreDf = filteredScoreDf %>% filter(!is.na(`10`)) %>% filter(!is.na(`20`)) %>% filter(!is.na(`30`)) %>%
                           filter(!is.na(`40`)) %>% filter(!is.na(`60`)) %>% filter(!is.na(`70`)) %>% filter(!is.na(`90`)) %>% filter(!is.na(`98`))
       }
@@ -299,51 +293,33 @@ server <- function(input, output, session) {
         output$renderWarningText <- renderText("The selected forecasters do not have enough data to display the selected scoring metric.")
         return()
       }
-      if (scoreType == "wis") {
-        filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)
-        title = "Weighted Interval Score"
+      if (input$scoreType == "wis") {
+        plotTitle = "Weighted Interval Score"
       }
       else {
-        filteredScoreDf <- filteredScoreDf %>% rename(Score = sharpness)
-        title = "Spread"
+        plotTitle = "Spread"
       }
     }
-    if (scoreType == "ae") {
-      filteredScoreDf <- filteredScoreDf %>% rename(Score = ae)
-      title = "Absolute Error"
+    if (input$scoreType == "ae") {
+      plotTitle = "Absolute Error"
     }
-    if (scoreType == "coverage") {
-      filteredScoreDf <- filteredScoreDf %>% rename(Score = !!coverageInterval)
-      title = "Coverage"
+    if (input$scoreType == "coverage") {
+      plotTitle = "Coverage"
     }
+    filteredScoreDf = renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)
 
     # Totaling over all locations
-    locationsIntersect = list()
-    if (allLocations || scoreType == "coverage") {
-      filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
-      # Create df with col for all locations across each unique date, ahead and forecaster combo
-      locationDf = filteredScoreDf %>% group_by(Forecaster, Week_End_Date, ahead) %>% 
-        summarize(location_list = paste(sort(unique(geo_value)),collapse=","))
-      locationDf = locationDf %>% filter(location_list != c('us'))
-      # Create a list containing each row's location list
-      locationList = sapply(locationDf$location_list, function(x) strsplit(x, ","))
-      locationList = lapply(locationList, function(x) x[x != 'us'])
-      # Get the intersection of all the locations in these lists
-      locationsIntersect = unique(Reduce(intersect, locationList))
-      filteredScoreDf = filteredScoreDf %>% filter(geo_value %in% locationsIntersect)
+    if (allLocations || input$scoreType == "coverage") {
+      filteredScoreDfAndIntersections = filterOverAllLocations(filteredScoreDf, input$scoreType)
+      filteredScoreDf = filteredScoreDfAndIntersections[[1]]
+      locationsIntersect = filteredScoreDfAndIntersections[[2]]
       aggregateText = "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
-      if (scoreType == "coverage") {
+      if (input$scoreType == "coverage") {
         aggregate = "Averaged"
-        filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
-          summarize(Score = sum(Score)/length(locationsIntersect), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText," Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "))
       }
       else {
         aggregate = "Totaled"
-        filteredScoreDf = filteredScoreDf %>%
-          group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
-          summarize(Score = sum(Score), actual = sum(actual))
         output$renderAggregateText = renderText(paste(aggregateText, " Locations included: "))
       }
       if (length(locationsIntersect) == 0) {
@@ -361,28 +337,31 @@ server <- function(input, output, session) {
       }
     # Not totaling over all locations
     } else {
-      filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(loc)) %>%
-        group_by(Forecaster, Forecast_Date, Week_End_Date, ahead) %>%
+      filteredScoreDf <- filteredScoreDf %>% filter(geo_value == tolower(input$location)) %>%
+        group_by(forecaster, forecast_date, target_end_date, ahead) %>%
         summarize(Score = Score, actual = actual)
       locationSubtitleText = paste0(', Location: ', input$location)
       output$renderAggregateText = renderText("")
       output$renderLocations <- renderText("")
       output$renderWarningText <- renderText("")
     }
-    
+
+    # Rename columns that will be used as labels
+    filteredScoreDf = filteredScoreDf %>% rename(Forecaster = forecaster, Forecast_Date = forecast_date,
+                                                 Week_End_Date = target_end_date)
     # Render truth plot with observed values
     showElement("truthPlot")
     showElement("refresh-colors")
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
-      truthPlot(truthDf, targetVariable, locationsIntersect, allLocations || scoreType == "coverage")
+      truthPlot(truthDf, locationsIntersect, allLocations || input$scoreType == "coverage")
     })
-    
+
     # Format and transform data
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
-    if (scoreType != 'coverage') {
-      if (scaleByBaseline) {
+    if (input$scoreType != 'coverage') {
+      if (input$scaleByBaseline && input$targetVariable != "Hospitalizations") {
         baselineDf = filteredScoreDf %>% filter(Forecaster %in% 'COVIDhub-baseline')
         filteredScoreDfMerged = merge(filteredScoreDf, baselineDf, by=c("Week_End_Date","ahead"))
         # Scaling score by baseline forecaster
@@ -391,13 +370,13 @@ server <- function(input, output, session) {
           rename(Forecaster = Forecaster.x, Score = Score.x, Forecast_Date = Forecast_Date.x) %>%
           select(Forecaster, Forecast_Date, Week_End_Date, ahead, Score)
       }
-      if (logScale) {
+      if (input$logScale) {
         filteredScoreDf$Score = log10(filteredScoreDf$Score)
       }
     }
 
-    titleText = paste0('<b>',title,'</b>','<br>', '<sup>',
-                       'Target Variable: ', targetVariable,
+    titleText = paste0('<b>', plotTitle,'</b>','<br>', '<sup>',
+                       'Target Variable: ', input$targetVariable,
                        locationSubtitleText, '<br>',
                        tags$span(id="drag-to-zoom", " Drag to zoom"),
                        '</sup>')
@@ -409,7 +388,7 @@ server <- function(input, output, session) {
     # Set labels for faceted horizon plots
     horizonOptions = AHEAD_OPTIONS
     horizonLabels = lapply(AHEAD_OPTIONS, function (x) paste0("Horizon: ", x, " Week(s)"))
-    if (targetVariable == 'Hospitalizations') {
+    if (input$targetVariable == 'Hospitalizations') {
       horizonOptions = HOSPITALIZATIONS_AHEAD_OPTIONS
       horizonLabels = lapply(HOSPITALIZATIONS_AHEAD_OPTIONS, function (x) paste0("Horizon: ", x, " Days"))
     }
@@ -419,7 +398,7 @@ server <- function(input, output, session) {
     set.seed(colorSeed)
     forecasterRand <- sample(unique(df$forecaster))
     colorPalette = setNames(object = viridis(length(unique(df$forecaster))), nm = forecasterRand)
-    
+
     p = ggplot(
         filteredScoreDf, 
         aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster, label = Forecast_Date)
@@ -430,43 +409,43 @@ server <- function(input, output, session) {
       scale_x_date(date_labels = "%b %Y") +
       facet_wrap(~ahead, ncol=1) +
       scale_color_manual(values = colorPalette) +
-      theme_bw() + 
+      theme_bw() +
       theme(panel.spacing=unit(0.5, "lines")) +
       theme(legend.title = element_blank())
 
-    if (scoreType == "coverage") {
-      p = p + geom_hline(yintercept = .01 * as.integer(coverageInterval))
+    if (input$scoreType == "coverage") {
+      p = p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
     }
-    if (logScale) {
+    if (input$logScale) {
       p = p + scale_y_continuous(label = function(x) paste0("10^", x))
     } else {
       p = p + scale_y_continuous(limits = c(0,NA), labels = scales::comma)
     }
-    plotHeight = 550 + (length(horizon)-1)*100
+    plotHeight = 550 + (length(input$aheads)-1)*100
     finalPlot <- 
       ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
       layout(
-        height = plotHeight, 
-        legend = list(orientation = "h", y = -0.1), 
-        margin = list(t=90), 
-        height=500, 
-        hovermode = 'x unified', 
+        height = plotHeight,
+        legend = list(orientation = "h", y = -0.1),
+        margin = list(t=90),
+        height=500,
+        hovermode = 'x unified',
         xaxis = list(
-          title = list(text = "Target Date",standoff = 8L), 
+          title = list(text = "Target Date",standoff = 8L),
           titlefont = list(size = 12))
       ) %>%
       config(displayModeBar = F)
-      
+
     return(finalPlot)
   }
-  
+
   ###################
   # CREATE TRUTH PLOT
   ###################
   # Create the plot for target variable ground truth
-  truthPlot = function(scoreDf = NULL, targetVariable = NULL, locationsIntersect = NULL, allLocations = FALSE) {
-    observation = paste0('Incident ', targetVariable)
-    if (targetVariable == "Hospitalizations") {
+  truthPlot = function(scoreDf = NULL, locationsIntersect = NULL, allLocations = FALSE) {
+    observation = paste0('Incident ', input$targetVariable)
+    if (input$targetVariable == "Hospitalizations") {
       observation = paste0('Hospital Admissions')
     }
     titleText = paste0('<b>Observed ', observation, '</b>')
@@ -475,13 +454,13 @@ server <- function(input, output, session) {
     }
     scoreDf <- scoreDf %>%
       group_by(Week_End_Date) %>% summarize(Reported_Incidence = actual)
-    
+
     return (ggplotly(ggplot(scoreDf, aes(x = Week_End_Date, y = Reported_Incidence)) +
       geom_line() +
       geom_point() +
       labs(x = "", y = "", title = titleText) +
       scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
-      scale_x_date(date_labels = "%b %Y") + theme_bw()) 
+      scale_x_date(date_labels = "%b %Y") + theme_bw())
       %>% layout(hovermode = 'x unified')
       %>% config(displayModeBar = F))
   }
@@ -490,22 +469,20 @@ server <- function(input, output, session) {
   # PLOT OUTPUT
   #############
   output$summaryPlot <- renderPlotly({
-    summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
-                input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
+    summaryPlot(df, colorSeed)
   })
 
   ###################
   # EVENT OBSERVATION
   ###################
-  
+
   observeEvent(input$refreshColors, {
     colorSeed = floor(runif(1, 1, 1000))
     output$summaryPlot <- renderPlotly({
-      summaryPlot(df, input$targetVariable, input$scoreType, input$forecasters, 
-                  input$aheads, input$location, input$coverageInterval, colorSeed, input$logScale, input$scaleByBaseline)
+      summaryPlot(df, colorSeed)
     })
   })
-  
+
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
     if (input$targetVariable == 'Deaths') {
@@ -521,7 +498,7 @@ server <- function(input, output, session) {
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
-  
+
   observeEvent(input$scoreType, {
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
@@ -530,9 +507,9 @@ server <- function(input, output, session) {
     } else {
       df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
     }
-    # Only show forecasters that have data for the score chosen 
+    # Only show forecasters that have data for the score chosen
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
-    
+
     if (input$scoreType == "wis") {
       show("wisExplanation")
       hide("sharpnessExplanation")
@@ -574,9 +551,16 @@ server <- function(input, output, session) {
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
-  
+
   # Ensure the minimum necessary input selections
   observe({
+    # Show data loading message and hide other messages until all data is loaded
+    if (dataLoaded) {
+      hide("loading-message")
+      show("refresh-colors")
+      show("notes")
+      show("scoringDisclaimer")
+    }
     # Ensure there is always one ahead selected
     if(length(input$aheads) < 1) {
       if (input$targetVariable == 'Hospitalizations') {
@@ -596,7 +580,9 @@ server <- function(input, output, session) {
     if(input$scaleByBaseline && !("COVIDhub-baseline" %in% input$forecasters)) {
       updateSelectInput(session, "forecasters", selected = c(input$forecasters, "COVIDhub-baseline"))
     }
-  }) 
+  })
+
+  export_scores_server(input, output, df)
 }
 
 ################
@@ -652,11 +638,14 @@ updateLocationChoices = function(session, df, targetVariable, forecasterChoices,
 
 updateAheadChoices = function(session, df, targetVariable, forecasterChoices, aheads, targetVariableChange) {
   df = df %>% filter(forecaster %in% forecasterChoices)
-  aheadOptions = AHEAD_OPTIONS
-  title = "Forecast Horizon (Weeks)"
   if (targetVariable == 'Hospitalizations') {
     aheadOptions = HOSPITALIZATIONS_AHEAD_OPTIONS
     title = "Forecast Horizon (Days)"
+    show("horizon-disclaimer")
+  } else {
+    aheadOptions = AHEAD_OPTIONS
+    title = "Forecast Horizon (Weeks)"
+    hide("horizon-disclaimer")
   }
   aheadChoices = Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
   # Ensure previsouly selected options are still allowed
@@ -674,28 +663,6 @@ updateAheadChoices = function(session, df, targetVariable, forecasterChoices, ah
                            choices = aheadChoices,
                            selected = selectedAheads,
                            inline = TRUE)
-}
-
-# Only use weekly aheads for hospitalizations
-# May change in the future
-filterHospitalizationsAheads = function(scoreDf) {
-  scoreDf['weekday'] = weekdays(as.Date(scoreDf$target_end_date))
-  scoreDf = scoreDf %>% filter(weekday == HOSPITALIZATIONS_TARGET_DAY)
-
-  oneAheadDf = scoreDf %>% filter(ahead >= HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 7 + HOSPITALIZATIONS_OFFSET)  %>%
-    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
-    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[1])
-  twoAheadDf = scoreDf %>% filter(ahead >= 7 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 14 + HOSPITALIZATIONS_OFFSET) %>%
-    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
-    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[2])
-  threeAheadDf = scoreDf %>% filter(ahead >= 14 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 21 + HOSPITALIZATIONS_OFFSET) %>%
-    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
-    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[3])
-  fourAheadDf = scoreDf %>% filter(ahead >= 21 + HOSPITALIZATIONS_OFFSET) %>% filter(ahead < 28 + HOSPITALIZATIONS_OFFSET) %>%
-    group_by(target_end_date, forecaster) %>% filter(ahead == min(ahead)) %>%
-    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[4])
-
-  return(rbind(oneAheadDf, twoAheadDf, threeAheadDf, fourAheadDf))
 }
 
 shinyApp(ui = ui, server = server)

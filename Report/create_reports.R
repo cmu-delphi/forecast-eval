@@ -23,16 +23,15 @@ prediction_cards_filepath = case_when(
     TRUE~prediction_cards_filename
 )
 
-forecasters = unique(c(get_covidhub_forecaster_names(designations = c("primary", "secondary")),
-                "COVIDhub-baseline", "COVIDhub-trained_ensemble"))
+forecasters = c("USACE-ERDC_SEIR")
 locations = covidHubUtils::hub_locations
 
 # also includes "us", which is national level data
 state_geos = locations %>%
                 filter(nchar(.data$geo_value) == 2) %>%
                 pull(.data$geo_value)
-signals = c("confirmed_incidence_num",
-            "deaths_incidence_num",
+signals = c(# "confirmed_incidence_num",
+            # "deaths_incidence_num",
             "confirmed_admissions_covid_1d")
 
 predictions_cards = get_covidhub_predictions(forecasters,
@@ -45,7 +44,9 @@ predictions_cards = get_covidhub_predictions(forecasters,
 
 predictions_cards = predictions_cards %>%
     filter(!is.na(target_end_date)) %>%
-    filter(target_end_date < today())
+    filter(target_end_date < today()) %>% 
+    filter(target_end_date > as.Date("2020-10-20")) %>% 
+    filter(target_end_date < as.Date("2020-11-10"))
 
 # For hospitalizations, drop all US territories except Puerto Rico and the
 # Virgin Islands; HHS does not report data for any territories except PR and VI.
@@ -70,12 +71,6 @@ predictions_cards = predictions_cards %>%
     ungroup()
 class(predictions_cards) = c("predictions_cards", class(predictions_cards))
 
-print("Saving predictions...")
-saveRDS(predictions_cards,
-        file = prediction_cards_filepath,
-        compress = "xz")
-print("Predictions saved")
-
 # Create error measure functions
 central_intervals = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)
 cov_names = paste0("cov_", central_intervals * 100)
@@ -97,7 +92,6 @@ err_measures = c(wis = weighted_interval_score,
                  value_50 = get_quantile_prediction_factory(0.5),
                  value_80 = get_quantile_prediction_factory(0.8))
 
-nation_predictions = predictions_cards %>% filter(geo_value == "us")
 state_predictions = predictions_cards %>% filter(geo_value != "us")
 
 # predictions_cards not needed beyond this point, try free up the memory
@@ -108,56 +102,3 @@ print("Evaluating state forecasts")
 state_scores = evaluate_covid_predictions(state_predictions,
                                           err_measures,
                                           geo_type = "state")
-
-source("score.R")
-if ( "confirmed_incidence_num" %in% unique(state_scores$signal)) {
-    print("Saving state confirmed incidence...")
-    save_score_cards(state_scores, "state", signal_name = "confirmed_incidence_num",
-                     output_dir = opt$dir)
-} else {
-    warning("State confirmed incidence should generally be available. Please 
-            verify that you expect not to have any cases incidence forecasts")
-}
-if ( "deaths_incidence_num" %in% unique(state_scores$signal)) {
-    print("Saving state deaths incidence...")
-    save_score_cards(state_scores, "state", signal_name = "deaths_incidence_num",
-                     output_dir = opt$dir)
-} else {
-    warning("State deaths incidence should generally be available. Please 
-            verify that you expect not to have any deaths incidence forecasts")
-}
-if ( "confirmed_admissions_covid_1d" %in% unique(state_scores$signal)) {
-    print("Saving state hospitalizations...")
-    save_score_cards(state_scores, "state", signal_name = "confirmed_admissions_covid_1d",
-                     output_dir = opt$dir)
-}
-
-
-print("Evaluating national forecasts")
-# COVIDcast does not return national level data, using CovidHubUtils instead
-
-nation_scores = evaluate_chu(nation_predictions, signals, err_measures)
-
-if ( "confirmed_incidence_num" %in% unique(state_scores$signal)) {
-    print("Saving nation confirmed incidence...")
-    save_score_cards(nation_scores, "nation",
-                     signal_name = "confirmed_incidence_num", output_dir = opt$dir)
-} else {
-    warning("Nation confirmed incidence should generally be available. Please 
-            verify that you expect not to have any cases incidence forecasts")
-}
-if ( "deaths_incidence_num" %in% unique(state_scores$signal)) {
-    print("Saving nation deaths incidence...")
-    save_score_cards(nation_scores, "nation", signal_name = "deaths_incidence_num",
-                     output_dir = opt$dir)
-} else {
-    warning("Nation deaths incidence should generally be available. Please 
-            verify that you expect not to have any deaths incidence forecasts")
-}
-if ( "confirmed_admissions_covid_1d" %in% unique(state_scores$signal)) {
-    print("Saving nation hospitalizations...")
-    save_score_cards(nation_scores, "nation", signal_name = "confirmed_admissions_covid_1d",
-                     output_dir = opt$dir)
-}
-
-print("Done")

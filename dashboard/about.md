@@ -79,9 +79,11 @@ Though hospitalizations are forecasted on a daily basis, in keeping with the cas
 #### **Notes on the Data**
 
 *   If a forecast does not include an explicit point estimate, the 0.5 quantile is taken as the point estimate for calculating absolute error.
-*   WIS is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and hospitalizations and 7 for cases)
+*   The weighted interval score is only shown for forecasts that have predictions for all quantiles (23 quantiles for deaths and hospitalizations and 7 for cases)
 *   Totaling over all states and territories does not include nationwide forecasts. To ensure that values are comparable, these totals also exclude any locations that are absent from any file that was submitted by one of the selected forecasters.
-*   We include revisions of observed values, which means that the scores for forecasts made in the past can change as our understanding of the ground truth changes.
+*   For scoring, we include revisions of observed values, which means that the scores for forecasts made in the past can change as our understanding of the ground truth changes.
+*   The observed data can also be viewed **'as of'** a certain date, which shows what observed data a forecaster had available
+when a past forecast was made (but the forecasts are always scored on the latest revision of the observed data).
 
 #### **Accessing the Data**
 The forecasts and scores are available as RDS files and are uploaded weekly to a publicly accessible AWS bucket.  

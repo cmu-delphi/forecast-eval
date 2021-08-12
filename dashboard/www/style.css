@@ -95,9 +95,15 @@
 #scale-score {
     font-weight: bold;
 }
-#loading-message {
+#data-loading-message {
     font-style: italic;
     font-size: 18px;
+}
+#truth-plot-loading-message {
+    margin-top:50px;
+    font-size: 18px;
+    font-style:italic;
+    color: #949494;
 }
 
 @media (max-width: 1450px) {

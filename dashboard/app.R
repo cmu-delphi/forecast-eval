@@ -15,6 +15,11 @@ source('./common.R')
 # All data is fully loaded from AWS
 DATA_LOADED = FALSE
 
+# Earliest 'as of' date available from covidcast API
+MIN_AVAIL_NATION_AS_OF_DATE = as.Date('2021-01-09')
+MIN_AVAIL_HOSP_AS_OF_DATE  = as.Date('2021-01-13')
+MIN_AVAIL_TERRITORY_AS_OF_DATE = as.Date('2021-02-13')
+
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
 sharpnessExplanation = includeMarkdown("sharpness.md")
@@ -121,14 +126,12 @@ ui <- fluidPage(padding=0,
                                selected = "US"
                              )
             ),
-            conditionalPanel(condition = "input.targetVariable != 'Hospitalizations'",
-                             selectInput(
-                               "asOf",
-                               "As Of",
-                               choices = '',
-                               multiple = FALSE,
-                               selected = ''
-                             )
+            selectInput(
+              "asOf",
+              "As Of",
+              choices = '',
+              multiple = FALSE,
+              selected = ''
             ),
             tags$hr(),
             export_scores_ui,
@@ -172,12 +175,15 @@ ui <- fluidPage(padding=0,
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
               column(11, offset=1,
-                     div(id="loading-message", "DATA IS LOADING..."),
+                     div(id="data-loading-message", "DATA IS LOADING..."),
+                     hidden(div(id="truth-plot-loading-message", "Fetching 'as of' data and loading observed values...")),
                      hidden(div(id="notes", "About the Scores")),
-                     hidden(div(id = "wisExplanation", wisExplanation)),
-                     hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),
-                     hidden(div(id = "aeExplanation", aeExplanation)),
-                     hidden(div(id = "coverageExplanation", coverageExplanation)),
+                     hidden(div(id="scoreExplanations",
+                       hidden(div(id = "wisExplanation", wisExplanation)),
+                       hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),
+                       hidden(div(id = "aeExplanation", aeExplanation)),
+                       hidden(div(id = "coverageExplanation", coverageExplanation))
+                     )),
                      hidden(div(id = "scoringDisclaimer", scoringDisclaimer))
               )
             ),
@@ -239,10 +245,12 @@ server <- function(input, output, session) {
   dfStateDeaths <- getData("score_cards_state_deaths.rds")
   dfNationCases = getData("score_cards_nation_cases.rds")
   dfNationDeaths = getData("score_cards_nation_deaths.rds")
-  # dfStateHospitalizations = getData("score_cards_state_hospitalizations.rds")
-  # dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds")
+  dfStateHospitalizations = getData("score_cards_state_hospitalizations.rds")
+  dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds")
   DATA_LOADED = TRUE
-  MAX_WEEK_END_DATE = reactiveVal(max(dfStateDeaths$target_end_date))
+  TERRITORIES = c('AS', 'GU', 'MP', 'VI')
+  MAX_WEEK_END_DATE = reactiveVal(max(dfNationDeaths$target_end_date))
+  PREV_AS_OF_DATA = reactiveVal(NULL)
 
   # Pick out expected columns only
   covCols = paste0("cov_", COVERAGE_INTERVALS)
@@ -255,10 +263,10 @@ server <- function(input, output, session) {
   dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
   dfNationCases = dfNationCases %>% select(all_of(expectedCols))
   dfNationDeaths = dfNationDeaths %>% select(all_of(expectedCols))
-  # dfStateHospitalizations = dfStateHospitalizations %>% select(all_of(expectedCols))
-  # dfNationHospitalizations = dfNationHospitalizations %>% select(all_of(expectedCols))
+  dfStateHospitalizations = dfStateHospitalizations %>% select(all_of(expectedCols))
+  dfNationHospitalizations = dfNationHospitalizations %>% select(all_of(expectedCols))
   
-  df = rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths)
+  df = rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations)
   df = df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
 
   # Prepare input choices
@@ -270,43 +278,71 @@ server <- function(input, output, session) {
   # CREATE MAIN PLOT
   ##################
   summaryPlot = function(colorSeed = 100, reRenderTruth = FALSE, asOfData = NULL) {
-    # TODO explain
     filteredScoreDf = filterScoreDf()
     if (dim(filteredScoreDf)[1] == 0) {
       output$renderWarningText <- renderText("The selected forecasters do not have enough data to display the selected scoring metric.")
       return()
     }
-
-    # TODO make sure all the group bys and stuff work with the new as of actual column
-    # TODO here is where we need to do the summing over the days to get the weekly number for as of data
-    if (!is.null(asOfData)) {
-      asOfData = asOfData %>% rename(target_end_date = time_value, as_of_actual = value) #TODO back to time_value
+    if (is.null(asOfData)) {
+      if (!is.null(isolate(PREV_AS_OF_DATA())) && dim(isolate(PREV_AS_OF_DATA()))[1] != 0 &&
+          isolate(input$asOf) != '' && isolate(input$asOf) != isolate(MAX_WEEK_END_DATE())) {
+         asOfData = isolate(PREV_AS_OF_DATA())
+      }
+    }
+    if (!is.null(asOfData) && dim(asOfData)[1] != 0) {
+      asOfData = asOfData %>% rename(target_end_date = time_value, as_of_actual = value)
       asOfData = asOfData[c("target_end_date", "geo_value", "as_of_actual")]
 
-      # TODO rename things here and fix the below issues
-      testDf = asOfData %>% filter(asOfData$target_end_date %in% filteredScoreDf$target_end_date)
-      testDf[,"test"] <- NA
-      testDf$test = testDf$target_end_date
+      # Since cases and deaths are shown as weekly incidence, but the "as of" data from the covidcast API
+      # is daily, we need to sum over the days leading up to the target_end_date of each week to get the
+      # weekly incidence.
+      # Get the 'as of' dates that are the target_end_dates in the scoring df
+      dateGroupDf = asOfData %>% filter(asOfData$target_end_date %in% filteredScoreDf$target_end_date)
+      if (dim(dateGroupDf)[1] != 0) {
+        # Hospitalization scores are shown as daily incidence, not weekly incidence, no summing necessary
+        if (input$targetVariable != "Hospitalizations") {
 
-      helpDf = merge(asOfData, testDf, by=c('target_end_date', 'geo_value', 'as_of_actual'), all = TRUE)
+          # Create a df to fill in the corresponding target_end_date in a new date_group column for all intervening days
+          dateGroupDf[,"date_group"] <- NA
+          dateGroupDf$date_group = dateGroupDf$target_end_date
+          asOfData = merge(asOfData, dateGroupDf, by=c('target_end_date', 'geo_value', 'as_of_actual'), all = TRUE)
 
-      # print(helpDf %>% arrange(geo_value))
-      helpDf = helpDf %>% arrange(geo_value) %>% fill(test, .direction = "up")
-      helpDf = helpDf[c('geo_value', 'as_of_actual', 'test')]
-      helpDf = helpDf %>% group_by(geo_value, test) %>% summarize(as_of_actual = sum(as_of_actual))
-      print(helpDf)
-      helpDf = helpDf %>% rename(target_end_date = test)
-      asOfData = helpDf
-      # then fill in blanks with the next one in the target_end_date col
+          # Cut off the extra days on beginning and end of series so that when we sum the values we are only
+          # summing over the weeks included in the score plot
+          asOfData = asOfData %>% filter(target_end_date >= min(filteredScoreDf$target_end_date) - 6)
+          asOfData = asOfData %>% filter(target_end_date <= isolate(input$asOf))
 
-      # asOfData = asOfData %>% filter(target_end_date %in% datesthingie) %>% group_by(geo_value) %>% summarize(as_of_actual = sum(as_of_actual))
+          # Fill in the date_group column with the target week end days for all intervening days
+          asOfData = asOfData %>% arrange(geo_value) %>% fill(date_group, .direction = "up")
 
-      # TODO what about when a target_end_week date might be missing in the as of data? then it would be summing
-      # over two weeks of truth data for the next date
-      # TODO the dates at the beginning go on too long, we should maybe cut off the ones earlier
-      # than 6 dates before the first actual
-      # target end date before we do the fill
-      filteredScoreDf = merge(filteredScoreDf, asOfData, by=c("target_end_date", "geo_value"), all = TRUE)
+          # In the case where there are target week end days missing from the scoring data we don't want to end up summing values over multiple weeks
+          # So we make sure each date_group only spans one week
+          asOfData = asOfData %>% filter(asOfData$date_group - asOfData$target_end_date < 7)
+
+          # Sum over the date_group column, summing up all intervening days for each target week end day
+          asOfData = asOfData[c('geo_value', 'as_of_actual', 'date_group')]
+          asOfData = asOfData %>% group_by(geo_value, date_group) %>% summarize(as_of_actual = sum(as_of_actual))
+          asOfData = asOfData %>% rename(target_end_date = date_group)
+        # If targetVariable is Hospitalizations
+        } else {
+          asOfData = dateGroupDf
+          # Need to make sure that we are only matching the target_end_dates shown in the scoring plot
+          # and not using fetched data for as of dates before those target_end_dates.
+          # This is taken care of above for cases and deaths.
+          minDate = min(filteredScoreDf$target_end_date)
+          if (input$scoreType != 'coverage' && input$location != TOTAL_LOCATIONS) {
+            chosenLocationDf = filteredScoreDf %>% filter(geo_value == tolower(input$location))
+            minDate = min(chosenLocationDf$target_end_date)
+          }
+          asOfData = asOfData %>% filter(target_end_date >= minDate)
+        }
+        filteredScoreDf = merge(filteredScoreDf, asOfData, by=c("target_end_date", "geo_value"), all = TRUE)
+      } else {
+        # Input 'as of' date chosen does not match the available target_end_dates that result from the rest of the selected inputs
+        # It is too far back or we are switching between hosp and cases/deaths which have different target date days
+        # As of input will be updated to the default (latest) and plot will re-render with the just the normal truth data, no 'as of'
+        asOfData = NULL
+      }
     }
 
     # Totaling over all locations
@@ -335,6 +371,7 @@ server <- function(input, output, session) {
         locationSubtitleText = paste0(', Location: ', aggregate ,' over all states and territories common to these forecasters*')
         output$renderLocations <- renderText(toupper(locationsIntersect))
         output$renderWarningText = renderText("")
+        showElement("truthPlot")
       }
     # Not totaling over all locations
     } else {
@@ -353,34 +390,34 @@ server <- function(input, output, session) {
       output$renderWarningText <- renderText("")
     }
 
+    showElement("refresh-colors")
+    if(dim(filteredScoreDf)[1] == 0) {
+      return()
+    }
+
     # Rename columns that will be used as labels and for clarity on CSV exports
     filteredScoreDf = filteredScoreDf %>% rename(Forecaster = forecaster, Forecast_Date = forecast_date,
                                                  Week_End_Date = target_end_date)
-
     # Render truth plot with observed values
-    showElement("refresh-colors")
     truthDf = filteredScoreDf
-    #TODO ok so the as of data will be the covidcast df in full, and then somewhere before here we need to
-    # 0. check if we have asOf data (so the API call really only can happen when we actually want to show as of data)
-    # 1. check the available weekly aheads after all the above filtering has taken place
-    # 2. create new dataframe with those weekly aheads in the week end date column
-    # 3. do the calculation to get the total weekly incidence on those dates
-    # 4. put those values in the new dataframe in a col called As_Of_Actual
-    # 5. send this to truthPlot as asOfData to be plotted alongside the current truth data line
-
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, locationsIntersect, !is.null(asOfData))
     })
-    MAX_WEEK_END_DATE(max(truthDf$Week_End_Date))
+    if (!is.null(truthDf) && length(truthDf$Week_End_Date) != 0) {
+      MAX_WEEK_END_DATE(max(truthDf$Week_End_Date, na.rm=TRUE))
+    }
 
-    # TODO explain
+    # If we are just re-rendering the truth plot with as of data
+    # we don't need to re-render the score plot
     if (reRenderTruth) {
       return()
     }
-    # TODO explain (don't need to update as of if we are just re rnedering the truth plot, options won't change)
-    updateAsOfChoices(session, truthDf, isolate(input$asOf))
+    # If we are re-rendering scoring plot with new inputs that were just selected
+    # we need to make sure the as of input options are valid with those inputs
+    updateAsOfChoices(session, truthDf)
 
-    # Format and transform data
+    # Format and transform data for plot
+    filteredScoreDf = filteredScoreDf %>% filter(!is.na(Week_End_Date))
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     if (input$scoreType != 'coverage') {
@@ -402,7 +439,7 @@ server <- function(input, output, session) {
     if (input$scoreType == "wis") {
       plotTitle = "Weighted Interval Score"
     }
-    else if (input$scoreType == "spread") {
+    else if (input$scoreType == "sharpness") {
       plotTitle = "Spread"
     }
     else if (input$scoreType == "ae") {
@@ -417,6 +454,11 @@ server <- function(input, output, session) {
                        locationSubtitleText, '<br>',
                        tags$span(id="drag-to-zoom", " Drag to zoom"),
                        '</sup>')
+
+    # Some forecasters have multiple forecasts for the same week end date with the same score,
+    # and tsibbles needs unique keys/indexes
+    # So we remove dups before setting tsibble
+    filteredScoreDf = filteredScoreDf[!duplicated(filteredScoreDf[c("Week_End_Date" , "Forecaster")]), ]
     # Fill gaps so there are line breaks on weeks without data
     filteredScoreDf = filteredScoreDf %>%
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
@@ -481,7 +523,6 @@ server <- function(input, output, session) {
   ###################
   # Create the plot for target variable ground truth
   truthPlot = function(filteredDf = NULL, locationsIntersect = NULL, hasAsOfData = FALSE) {
-    showElement("truthPlot")
     observation = paste0('Incident ', input$targetVariable)
     if (input$targetVariable == "Hospitalizations") {
       observation = paste0('Hospital Admissions')
@@ -500,15 +541,19 @@ server <- function(input, output, session) {
     }
 
     finalPlot = ggplot(filteredDf, aes(Week_End_Date)) +
-      geom_line(aes(y = Reported_Incidence)) +
-      geom_point(aes(y = Reported_Incidence)) +
       labs(x = "", y = "", title = titleText) +
       scale_y_continuous(limits = c(0,NA), labels = scales::comma) +
       scale_x_date(date_labels = "%b %Y") + theme_bw()
 
     if (hasAsOfData) {
-      finalPlot = finalPlot + geom_line(aes(y = Reported_As_Of_Incidence, color="red")) +
-        geom_point(aes(y = Reported_As_Of_Incidence, color="red"))
+      finalPlot = finalPlot +
+        geom_line(aes(y = Reported_Incidence), color="grey") +
+        geom_point(aes(y = Reported_Incidence), color="grey") +
+        geom_line(aes(y = Reported_As_Of_Incidence)) +
+        geom_point(aes(y = Reported_As_Of_Incidence))
+    } else {
+      finalPlot = finalPlot + geom_line(aes(y = Reported_Incidence)) +
+        geom_point(aes(y = Reported_Incidence))
     }
     return (ggplotly(finalPlot)
       %>% layout(hovermode = 'x unified')
@@ -522,7 +567,7 @@ server <- function(input, output, session) {
     summaryPlot()
   })
 
-  # TODO description
+  # Filter scoring df by inputs chosen (targetVariable, forecasters, aheads)
   filterScoreDf = function() {
     signalFilter = CASE_FILTER
     if (input$targetVariable == "Deaths") {
@@ -576,7 +621,8 @@ server <- function(input, output, session) {
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
-  })
+    updateAsOfData()
+ })
 
   observeEvent(input$scoreType, {
     if (input$targetVariable == 'Deaths') {
@@ -588,6 +634,12 @@ server <- function(input, output, session) {
     }
     # Only show forecasters that have data for the score chosen
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
+
+    # If we are switching between coverage and other score types we need to
+    # update the as of data we have so it matches the correct locations shown
+    if (input$location == 'US') {
+      updateAsOfData()
+    }
 
     if (input$scoreType == "wis") {
       show("wisExplanation")
@@ -631,33 +683,22 @@ server <- function(input, output, session) {
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
   })
 
+  observeEvent(input$location, {
+    updateAsOfData()
+  })
+
   observeEvent(input$asOf, {
-    if(input$targetVariable == "Cases") {
-      targetSignal = "confirmed_incidence_num"
-    } else if (input$targetVariable == "Deaths") {
-      targetSignal = "deaths_incidence_num"
-    }
-
-    if (input$asOf != MAX_WEEK_END_DATE() && input$asOf != '') {
-      asOfTruthData = covidcast_signal(data_source = "jhu-csse", signal = targetSignal,
-                                       start_day = "2020-02-15", end_day = input$asOf,
-                                       as_of = input$asOf,
-                                       geo_type = "state")
-
-      summaryPlot(reRenderTruth = TRUE, asOfData = asOfTruthData)
-
-    } else if(input$asOf == MAX_WEEK_END_DATE() && input$asOf != '') {
-      summaryPlot(reRenderTruth = TRUE)
-    }
+    updateAsOfData()
   })
 
   # The following checks ensure the minimum necessary input selections
   observe({
     # Show data loading message and hide other messages until all data is loaded
     if (DATA_LOADED) {
-      hide("loading-message")
+      hide("data-loading-message")
       show("refresh-colors")
       show("notes")
+      show("scoreExplanations")
       show("scoringDisclaimer")
     }
     # Ensure there is always one ahead selected
@@ -681,6 +722,85 @@ server <- function(input, output, session) {
     }
   })
 
+  updateAsOfData = function() {
+    dataSource = "jhu-csse"
+    if(input$targetVariable == "Cases") {
+      targetSignal = "confirmed_incidence_num"
+    } else if (input$targetVariable == "Deaths") {
+      targetSignal = "deaths_incidence_num"
+    } else if (input$targetVariable == "Hospitalizations") {
+      targetSignal = "confirmed_admissions_covid_1d"
+      dataSource = "hhs"
+    }
+
+    if (input$location == 'US' && input$scoreType != 'coverage') {
+      location = "nation"
+    } else {
+      location = "state"
+    }
+    if (input$asOf < MAX_WEEK_END_DATE() && input$asOf != '') {
+      hideElement("truthPlot")
+      hideElement("notes")
+      hideElement("scoringDisclaimer")
+      hideElement("scoreExplanations")
+      hideElement("renderAggregateText")
+      hideElement("renderLocations")
+      showElement("truth-plot-loading-message")
+
+      # Since as_of matches to the issue date in covidcast (rather than the time_value)
+      # we need to add one extra day to get the as of we want.
+      # We also add extra days up to a week so that we can try to account for any potential lag.
+      fetchDate = as.Date(input$asOf) + 6
+
+      # Covidcast API call
+      asOfTruthData = covidcast_signal(data_source = dataSource, signal = targetSignal,
+                                       start_day = "2020-02-15", end_day = fetchDate,
+                                       as_of = fetchDate,
+                                       geo_type = location)
+      showElement("truthPlot")
+      showElement("notes")
+      showElement("scoringDisclaimer")
+      showElement("scoreExplanations")
+      showElement("renderAggregateText")
+      showElement("renderLocations")
+      hideElement("truth-plot-loading-message")
+      PREV_AS_OF_DATA(asOfTruthData)
+
+      if(dim(asOfTruthData)[1] == 0) {
+        return()
+      }
+      summaryPlot(reRenderTruth = TRUE, asOfData = asOfTruthData)
+    } else if(input$asOf == MAX_WEEK_END_DATE() && input$asOf != '') {
+      summaryPlot(reRenderTruth = TRUE)
+    }
+  }
+
+  updateAsOfChoices = function(session, truthDf) {
+    asOfChoices = truthDf$Week_End_Date
+    selectedAsOf = isolate(input$asOf)
+    if (selectedAsOf == '' && length(asOfChoices) != 0) {
+      selectedAsOf = max(asOfChoices, na.rm=TRUE)
+    }
+    if (input$location == 'US' && input$scoreType != 'coverage') {
+      minChoice = MIN_AVAIL_NATION_AS_OF_DATE
+      asOfChoices = asOfChoices[asOfChoices >= minChoice]
+    }
+    if(input$targetVariable == "Hospitalizations") {
+      minChoice = MIN_AVAIL_HOSP_AS_OF_DATE
+      asOfChoices = asOfChoices[asOfChoices >= minChoice]
+    } else if(input$location %in% TERRITORIES || input$location == TOTAL_LOCATIONS || input$scoreType == 'coverage') {
+      # Most territories only have as of data from 2/13 onwards
+      minChoice = MIN_AVAIL_TERRITORY_AS_OF_DATE
+      asOfChoices = asOfChoices[asOfChoices >= minChoice]
+    }
+    # Make sure we have a valid as of selection
+    if (length(asOfChoices) != 0 && !(as.Date(selectedAsOf) %in% asOfChoices)) {
+      selectedAsOf = max(asOfChoices, na.rm=TRUE)
+    }
+    updateSelectInput(session, "asOf",
+                      choices = sort(asOfChoices),
+                      selected = selectedAsOf)
+  }
   export_scores_server(input, output, df)
 }
 
@@ -724,7 +844,7 @@ updateLocationChoices = function(session, df, targetVariable, forecasterChoices,
   locationChoices = unique(toupper(df$geo_value))
   locationChoices = locationChoices[c(length(locationChoices), (1:length(locationChoices)-1))] # Move US to front of list
   locationChoices = c(TOTAL_LOCATIONS, locationChoices)
-  # Ensure previsouly selected options are still allowed
+  # Ensure previously selected options are still allowed
   if (locationInput %in% locationChoices) {
     selectedLocation = locationInput
   } else {
@@ -761,16 +881,6 @@ updateAheadChoices = function(session, df, targetVariable, forecasterChoices, ah
                            inline = TRUE)
 }
 
-updateAsOfChoices = function(session, truthDf, selectedAsOf) {
-  # TODO this changes every time the forecaster changes, 
-  # change it so tht it checks if selected is still in list of choices
-  if (selectedAsOf == '') {
-    selectedAsOf = max(truthDf$Week_End_Date)
-  }
-  updateSelectInput(session, "asOf",
-                    choices = truthDf$Week_End_Date,
-                    selected = selectedAsOf)
 
-}
 
 shinyApp(ui = ui, server = server)

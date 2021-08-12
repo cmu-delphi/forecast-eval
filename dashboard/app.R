@@ -108,6 +108,7 @@ ui <- fluidPage(padding=0,
               selected = AHEAD_OPTIONS[1],
               inline = TRUE
             ),
+            hidden(tags$p(id="horizon-disclaimer", "Forecasters submitted earlier than Mondays may have longer actual prediction horizons")),
             conditionalPanel(condition = "input.scoreType == 'coverage'",
                              selectInput(
                                "coverageInterval",
@@ -175,7 +176,9 @@ ui <- fluidPage(padding=0,
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
               column(11, offset=1,
-                     div(id="data-loading-message", "DATA IS LOADING..."),
+
+                     
+                div(id="data-loading-message", "DATA IS LOADING...(this may take a while)"),
                      hidden(div(id="truth-plot-loading-message", "Fetching 'as of' data and loading observed values...")),
                      hidden(div(id="notes", "About the Scores")),
                      hidden(div(id="scoreExplanations",
@@ -421,7 +424,7 @@ server <- function(input, output, session) {
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     if (input$scoreType != 'coverage') {
-      if (input$scaleByBaseline) {
+      if (input$scaleByBaseline && input$targetVariable != "Hospitalizations") {
         baselineDf = filteredScoreDf %>% filter(Forecaster %in% 'COVIDhub-baseline')
         filteredScoreDfMerged = merge(filteredScoreDf, baselineDf, by=c("Week_End_Date","ahead"))
         # Scaling score by baseline forecaster
@@ -857,11 +860,14 @@ updateLocationChoices = function(session, df, targetVariable, forecasterChoices,
 
 updateAheadChoices = function(session, df, targetVariable, forecasterChoices, aheads, targetVariableChange) {
   df = df %>% filter(forecaster %in% forecasterChoices)
-  aheadOptions = AHEAD_OPTIONS
-  title = "Forecast Horizon (Weeks)"
   if (targetVariable == 'Hospitalizations') {
     aheadOptions = HOSPITALIZATIONS_AHEAD_OPTIONS
     title = "Forecast Horizon (Days)"
+    show("horizon-disclaimer")
+  } else {
+    aheadOptions = AHEAD_OPTIONS
+    title = "Forecast Horizon (Weeks)"
+    hide("horizon-disclaimer")
   }
   aheadChoices = Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
   # Ensure previsouly selected options are still allowed

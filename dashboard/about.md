@@ -89,7 +89,9 @@ when a past forecast was made (but the forecasts are always scored on the latest
 The forecasts and scores are available as RDS files and are uploaded weekly to a publicly accessible AWS bucket.  
 
 You can use the url https://forecast-eval.s3.us-east-2.amazonaws.com/ + filename to download
-any of the files from the bucket. For instance: https://forecast-eval.s3.us-east-2.amazonaws.com/score_cards_nation_cases.rds to download scores for nation level case predictions.  
+any of the files from the bucket.
+
+For instance: https://forecast-eval.s3.us-east-2.amazonaws.com/score_cards_nation_cases.rds to download scores for nation level case predictions.
 
 The available files are:
 * predictions_cards.rds (forecasts)
@@ -99,5 +101,29 @@ The available files are:
 * score_cards_state_deaths.rds
 * score_cards_state_hospitalizations.rds
 * score_cards_nation_hospitalizations.rds
+
+You can also connect to AWS and retrieve the data in R. Example of retrieving state cases file:
+
+```
+library(aws.s3)
+Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
+s3bucket = tryCatch(
+  {
+    get_bucket(bucket = 'forecast-eval')
+  },
+  error = function(e) {
+    e
+  }
+)
+
+stateCases = tryCatch(
+  {
+    s3readRDS(object = "score_cards_state_cases.rds", bucket = s3bucket)
+  },
+  error = function(e) {
+    e
+  }
+)
+```
   
   

@@ -176,8 +176,6 @@ ui <- fluidPage(padding=0,
             plotlyOutput(outputId = "truthPlot", height="auto"),
             fluidRow(
               column(11, offset=1,
-
-                     
                 div(id="data-loading-message", "DATA IS LOADING...(this may take a while)"),
                      hidden(div(id="truth-plot-loading-message", "Fetching 'as of' data and loading observed values...")),
                      hidden(div(id="notes", "About the Scores")),
@@ -302,43 +300,7 @@ server <- function(input, output, session) {
       # Get the 'as of' dates that are the target_end_dates in the scoring df
       dateGroupDf = asOfData %>% filter(asOfData$target_end_date %in% filteredScoreDf$target_end_date)
       if (dim(dateGroupDf)[1] != 0) {
-        # Hospitalization scores are shown as daily incidence, not weekly incidence, no summing necessary
-        if (input$targetVariable != "Hospitalizations") {
-
-          # Create a df to fill in the corresponding target_end_date in a new date_group column for all intervening days
-          dateGroupDf[,"date_group"] <- NA
-          dateGroupDf$date_group = dateGroupDf$target_end_date
-          asOfData = merge(asOfData, dateGroupDf, by=c('target_end_date', 'geo_value', 'as_of_actual'), all = TRUE)
-
-          # Cut off the extra days on beginning and end of series so that when we sum the values we are only
-          # summing over the weeks included in the score plot
-          asOfData = asOfData %>% filter(target_end_date >= min(filteredScoreDf$target_end_date) - 6)
-          asOfData = asOfData %>% filter(target_end_date <= isolate(input$asOf))
-
-          # Fill in the date_group column with the target week end days for all intervening days
-          asOfData = asOfData %>% arrange(geo_value) %>% fill(date_group, .direction = "up")
-
-          # In the case where there are target week end days missing from the scoring data we don't want to end up summing values over multiple weeks
-          # So we make sure each date_group only spans one week
-          asOfData = asOfData %>% filter(asOfData$date_group - asOfData$target_end_date < 7)
-
-          # Sum over the date_group column, summing up all intervening days for each target week end day
-          asOfData = asOfData[c('geo_value', 'as_of_actual', 'date_group')]
-          asOfData = asOfData %>% group_by(geo_value, date_group) %>% summarize(as_of_actual = sum(as_of_actual))
-          asOfData = asOfData %>% rename(target_end_date = date_group)
-        # If targetVariable is Hospitalizations
-        } else {
-          asOfData = dateGroupDf
-          # Need to make sure that we are only matching the target_end_dates shown in the scoring plot
-          # and not using fetched data for as of dates before those target_end_dates.
-          # This is taken care of above for cases and deaths.
-          minDate = min(filteredScoreDf$target_end_date)
-          if (input$scoreType != 'coverage' && input$location != TOTAL_LOCATIONS) {
-            chosenLocationDf = filteredScoreDf %>% filter(geo_value == tolower(input$location))
-            minDate = min(chosenLocationDf$target_end_date)
-          }
-          asOfData = asOfData %>% filter(target_end_date >= minDate)
-        }
+        asOfData = filterAsOfData(asOfData, dateGroupDf, filteredScoreDf)
         filteredScoreDf = merge(filteredScoreDf, asOfData, by=c("target_end_date", "geo_value"), all = TRUE)
       } else {
         # Input 'as of' date chosen does not match the available target_end_dates that result from the rest of the selected inputs
@@ -461,7 +423,10 @@ server <- function(input, output, session) {
     # Some forecasters have multiple forecasts for the same week end date with the same score,
     # and tsibbles needs unique keys/indexes
     # So we remove dups before setting tsibble
-    filteredScoreDf = filteredScoreDf[!duplicated(filteredScoreDf[c("Week_End_Date" , "Forecaster")]), ]
+    # TODO this "fix" messes up the faceted plots, need to figure this out
+    # Without this fix the CUselect on US deaths doesn’t show plot bc it contains week end date / score dups
+    # filteredScoreDf = filteredScoreDf[!duplicated(filteredScoreDf[c("Week_End_Date" , "Forecaster")]), ]
+
     # Fill gaps so there are line breaks on weeks without data
     filteredScoreDf = filteredScoreDf %>%
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
@@ -597,6 +562,48 @@ server <- function(input, output, session) {
     }
     filteredScoreDf = renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)
     return(filteredScoreDf)
+  }
+
+  # Filter as of data so that it matches weekly incidence for the target end dates in the score df
+  filterAsOfData = function(asOfData, dateGroupDf, filteredScoreDf) {
+    # Hospitalization scores are shown as daily incidence, not weekly incidence, no summing necessary
+    if (input$targetVariable != "Hospitalizations") {
+
+      # Create a df to fill in the corresponding target_end_date in a new date_group column for all intervening days
+      dateGroupDf[,"date_group"] <- NA
+      dateGroupDf$date_group = dateGroupDf$target_end_date
+      asOfData = merge(asOfData, dateGroupDf, by=c('target_end_date', 'geo_value', 'as_of_actual'), all = TRUE)
+
+      # Cut off the extra days on beginning and end of series so that when we sum the values we are only
+      # summing over the weeks included in the score plot
+      asOfData = asOfData %>% filter(target_end_date >= min(filteredScoreDf$target_end_date) - 6)
+      asOfData = asOfData %>% filter(target_end_date <= isolate(input$asOf))
+
+      # Fill in the date_group column with the target week end days for all intervening days
+      asOfData = asOfData %>% arrange(geo_value) %>% fill(date_group, .direction = "up")
+
+      # In the case where there are target week end days missing from the scoring data we don't want to end up summing values over multiple weeks
+      # So we make sure each date_group only spans one week
+      asOfData = asOfData %>% filter(asOfData$date_group - asOfData$target_end_date < 7)
+
+      # Sum over the date_group column, summing up all intervening days for each target week end day
+      asOfData = asOfData[c('geo_value', 'as_of_actual', 'date_group')]
+      asOfData = asOfData %>% group_by(geo_value, date_group) %>% summarize(as_of_actual = sum(as_of_actual))
+      asOfData = asOfData %>% rename(target_end_date = date_group)
+      # If targetVariable is Hospitalizations
+    } else {
+      asOfData = dateGroupDf
+      # Need to make sure that we are only matching the target_end_dates shown in the scoring plot
+      # and not using fetched data for as of dates before those target_end_dates.
+      # This is taken care of above for cases and deaths.
+      minDate = min(filteredScoreDf$target_end_date)
+      if (input$scoreType != 'coverage' && input$location != TOTAL_LOCATIONS) {
+        chosenLocationDf = filteredScoreDf %>% filter(geo_value == tolower(input$location))
+        minDate = min(chosenLocationDf$target_end_date)
+      }
+      asOfData = asOfData %>% filter(target_end_date >= minDate)
+    }
+    return(asOfData)
   }
 
   ###################
@@ -886,7 +893,5 @@ updateAheadChoices = function(session, df, targetVariable, forecasterChoices, ah
                            selected = selectedAheads,
                            inline = TRUE)
 }
-
-
 
 shinyApp(ui = ui, server = server)

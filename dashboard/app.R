@@ -16,9 +16,9 @@ source('./common.R')
 DATA_LOADED = FALSE
 
 # Earliest 'as of' date available from covidcast API
-MIN_AVAIL_NATION_AS_OF_DATE = as.Date('2021-01-09')
-MIN_AVAIL_HOSP_AS_OF_DATE  = as.Date('2021-01-13')
-MIN_AVAIL_TERRITORY_AS_OF_DATE = as.Date('2021-02-13')
+MIN_AVAIL_NATION_AS_OF_DATE = as.Date('2021-01-02')
+MIN_AVAIL_HOSP_AS_OF_DATE  = as.Date('2020-11-11')
+MIN_AVAIL_TERRITORY_AS_OF_DATE = as.Date('2021-02-10')
 
 # Score explanations
 wisExplanation = includeMarkdown("wis.md")
@@ -294,12 +294,12 @@ server <- function(input, output, session) {
       asOfData = asOfData %>% rename(target_end_date = time_value, as_of_actual = value)
       asOfData = asOfData[c("target_end_date", "geo_value", "as_of_actual")]
 
-      # Since cases and deaths are shown as weekly incidence, but the "as of" data from the covidcast API
-      # is daily, we need to sum over the days leading up to the target_end_date of each week to get the
-      # weekly incidence.
       # Get the 'as of' dates that are the target_end_dates in the scoring df
       dateGroupDf = asOfData %>% filter(asOfData$target_end_date %in% filteredScoreDf$target_end_date)
       if (dim(dateGroupDf)[1] != 0) {
+        # Since cases and deaths are shown as weekly incidence, but the "as of" data from the covidcast API
+        # is daily, we need to sum over the days leading up to the target_end_date of each week to get the
+        # weekly incidence
         asOfData = filterAsOfData(asOfData, dateGroupDf, filteredScoreDf)
         filteredScoreDf = merge(filteredScoreDf, asOfData, by=c("target_end_date", "geo_value"), all = TRUE)
       } else {
@@ -420,14 +420,8 @@ server <- function(input, output, session) {
                        tags$span(id="drag-to-zoom", " Drag to zoom"),
                        '</sup>')
 
-    # Some forecasters have multiple forecasts for the same week end date with the same score,
-    # and tsibbles needs unique keys/indexes
-    # So we remove dups before setting tsibble
-    # TODO this "fix" messes up the faceted plots, need to figure this out
-    # Without this fix the CUselect on US deaths doesn’t show plot bc it contains week end date / score dups
-    # filteredScoreDf = filteredScoreDf[!duplicated(filteredScoreDf[c("Week_End_Date" , "Forecaster")]), ]
-
     # Fill gaps so there are line breaks on weeks without data
+    # This is failing for CU-select on US deaths (https://github.com/cmu-delphi/forecast-eval/issues/157)
     filteredScoreDf = filteredScoreDf %>%
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, Forecast_Date, ahead) %>%
@@ -568,7 +562,6 @@ server <- function(input, output, session) {
   filterAsOfData = function(asOfData, dateGroupDf, filteredScoreDf) {
     # Hospitalization scores are shown as daily incidence, not weekly incidence, no summing necessary
     if (input$targetVariable != "Hospitalizations") {
-
       # Create a df to fill in the corresponding target_end_date in a new date_group column for all intervening days
       dateGroupDf[,"date_group"] <- NA
       dateGroupDf$date_group = dateGroupDf$target_end_date
@@ -582,12 +575,12 @@ server <- function(input, output, session) {
       # Fill in the date_group column with the target week end days for all intervening days
       asOfData = asOfData %>% arrange(geo_value) %>% fill(date_group, .direction = "up")
 
-      # In the case where there are target week end days missing from the scoring data we don't want to end up summing values over multiple weeks
-      # So we make sure each date_group only spans one week
+      # In the case where there are target week end days missing from the scoring or as of data
+      # we don't want to end up summing values over multiple weeks so we make sure each date_group only spans one week
       asOfData = asOfData %>% filter(asOfData$date_group - asOfData$target_end_date < 7)
 
-      # Sum over the date_group column, summing up all intervening days for each target week end day
       asOfData = asOfData[c('geo_value', 'as_of_actual', 'date_group')]
+      # Sum over preceding week for all weekly target variables
       asOfData = asOfData %>% group_by(geo_value, date_group) %>% summarize(as_of_actual = sum(as_of_actual))
       asOfData = asOfData %>% rename(target_end_date = date_group)
       # If targetVariable is Hospitalizations
@@ -799,7 +792,6 @@ server <- function(input, output, session) {
       minChoice = MIN_AVAIL_HOSP_AS_OF_DATE
       asOfChoices = asOfChoices[asOfChoices >= minChoice]
     } else if(input$location %in% TERRITORIES || input$location == TOTAL_LOCATIONS || input$scoreType == 'coverage') {
-      # Most territories only have as of data from 2/13 onwards
       minChoice = MIN_AVAIL_TERRITORY_AS_OF_DATE
       asOfChoices = asOfChoices[asOfChoices >= minChoice]
     }

@@ -32,7 +32,7 @@ renameScoreCol = function(filteredScoreDf, scoreType, coverageInterval) {
 }
 
 
-filterOverAllLocations = function(filteredScoreDf, scoreType) {
+filterOverAllLocations = function(filteredScoreDf, scoreType, hasAsOfData = FALSE) {
     locationsIntersect = list()
     filteredScoreDf = filteredScoreDf %>% filter(!is.na(Score))
     # Create df with col for all locations across each unique date, ahead and forecaster combo
@@ -46,14 +46,26 @@ filterOverAllLocations = function(filteredScoreDf, scoreType) {
     locationsIntersect = unique(Reduce(intersect, locationList))
     filteredScoreDf = filteredScoreDf %>% filter(geo_value %in% locationsIntersect)
     if (scoreType == "coverage") {
-      filteredScoreDf = filteredScoreDf %>%
-        group_by(forecaster, forecast_date, target_end_date, ahead) %>%
-        summarize(Score = sum(Score)/length(locationsIntersect), actual = sum(actual))
+      if (hasAsOfData) {
+        filteredScoreDf = filteredScoreDf %>%
+          group_by(forecaster, forecast_date, target_end_date, ahead) %>%
+          summarize(Score = sum(Score)/length(locationsIntersect), actual = sum(actual), as_of_actual = sum(as_of_actual))
+      } else {
+        filteredScoreDf = filteredScoreDf %>%
+          group_by(forecaster, forecast_date, target_end_date, ahead) %>%
+          summarize(Score = sum(Score)/length(locationsIntersect), actual = sum(actual))
+      }
     }
     else {
+      if (hasAsOfData) {
+        filteredScoreDf = filteredScoreDf %>%
+          group_by(forecaster, forecast_date, target_end_date, ahead) %>%
+          summarize(Score = sum(Score), actual = sum(actual), as_of_actual = sum(as_of_actual))
+      } else {
       filteredScoreDf = filteredScoreDf %>%
         group_by(forecaster, forecast_date, target_end_date, ahead) %>%
         summarize(Score = sum(Score), actual = sum(actual))
+      }
     }
     return (list(filteredScoreDf, locationsIntersect))
 }

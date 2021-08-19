@@ -752,8 +752,7 @@ server <- function(input, output, session) {
 
       # Since as_of matches to the issue date in covidcast (rather than the time_value)
       # we need to add one extra day to get the as of we want.
-      # We also add extra days up to a week so that we can try to account for any potential lag.
-      fetchDate = as.Date(input$asOf) + 6
+      fetchDate = as.Date(input$asOf) + 1
 
       # Covidcast API call
       asOfTruthData = covidcast_signal(data_source = dataSource, signal = targetSignal,
@@ -784,12 +783,11 @@ server <- function(input, output, session) {
     if (selectedAsOf == '' && length(asOfChoices) != 0) {
       selectedAsOf = max(asOfChoices, na.rm=TRUE)
     }
-    if (input$location == 'US' && input$scoreType != 'coverage') {
-      minChoice = MIN_AVAIL_NATION_AS_OF_DATE
-      asOfChoices = asOfChoices[asOfChoices >= minChoice]
-    }
-    if(input$targetVariable == "Hospitalizations") {
+    if (input$targetVariable == "Hospitalizations") {
       minChoice = MIN_AVAIL_HOSP_AS_OF_DATE
+      asOfChoices = asOfChoices[asOfChoices >= minChoice]
+    } else if(input$location == 'US' && input$scoreType != 'coverage') {
+      minChoice = MIN_AVAIL_NATION_AS_OF_DATE
       asOfChoices = asOfChoices[asOfChoices >= minChoice]
     } else if(input$location %in% TERRITORIES || input$location == TOTAL_LOCATIONS || input$scoreType == 'coverage') {
       minChoice = MIN_AVAIL_TERRITORY_AS_OF_DATE

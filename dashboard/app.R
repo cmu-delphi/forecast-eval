@@ -519,36 +519,8 @@ server <- function(input, output, session) {
       filteredDf = filteredDf %>%
         group_by(Week_End_Date) %>% summarize(Forecaster = Forecaster, Reported_Incidence = actual, Reported_As_Of_Incidence = as_of_actual) %>%
         distinct()
-
       if(input$showForecasts && !SUMMARIZING_OVER_ALL_LOCATIONS()) {
-        dfWithForecasts  = dfWithForecasts %>% filter(geo_value == tolower(input$location)) %>%
-          filter(forecast_date > input$asOf)  %>%
-          rename(Week_End_Date = target_end_date, Forecaster = forecaster, Quantile_50 = value_50) %>%
-          group_by(Week_End_Date) %>%
-          summarize(Forecaster, forecast_date, Quantile_50)
-
-        # Get the next as of choice available in dropdown menu
-        dfWithForecasts = dfWithForecasts[order(dfWithForecasts$forecast_date),]
-        AS_OF_CHOICES(sort(AS_OF_CHOICES() %>% unique()))
-        nextAsOfInList = AS_OF_CHOICES()[which.min(abs(AS_OF_CHOICES()-dfWithForecasts$forecast_date[1])) + 1]
-
-        # Take only those forecasts with a forecast date after the current chosen as of date, but before the next as of date in dropdown
-        # aka within the week after the current as of
-        dfWithForecasts = dfWithForecasts %>% filter(forecast_date >= dfWithForecasts$forecast_date[1]) %>%
-          filter(forecast_date < nextAsOfInList)
-
-        # Hospitalizations will have multiple forecast dates within this target week
-        # So we want to take the earliest forecast date for each forecaster & week end date pair
-        if (input$targetVariable == "Hospitalizations") {
-          dfWithForecasts = dfWithForecasts %>% group_by(Week_End_Date, Forecaster) %>% top_n(n=1, wt=desc(forecast_date))
-          dfWithForecasts = dfWithForecasts %>% group_by(Forecaster) %>% filter(forecast_date == first(forecast_date))
-        }
-        filteredDf = merge(filteredDf, dfWithForecasts, by=c('Week_End_Date', 'Forecaster'), all = TRUE) %>%
-          group_by(Week_End_Date) %>%
-          select(Quantile_50, Forecaster, Reported_Incidence, Reported_As_Of_Incidence)
-        # Remove rows of NAs
-        filteredDf = filteredDf %>% filter(!is.null(Forecaster))
-        filteredDf = filteredDf %>% arrange(Week_End_Date) %>% fill(Reported_Incidence, .direction = "downup")
+        filteredDf = filterForecastData(filteredDf, dfWithForecasts)
       }
     } else {
       filteredDf <- filteredDf %>%
@@ -664,6 +636,38 @@ server <- function(input, output, session) {
       asOfData = asOfData %>% filter(target_end_date >= minDate)
     }
     return(asOfData)
+  }
+
+  filterForecastData = function(filteredDf, dfWithForecasts) {
+    dfWithForecasts  = dfWithForecasts %>% filter(geo_value == tolower(input$location)) %>%
+      filter(forecast_date > input$asOf)  %>%
+      rename(Week_End_Date = target_end_date, Forecaster = forecaster, Quantile_50 = value_50) %>%
+      group_by(Week_End_Date) %>%
+      summarize(Forecaster, forecast_date, Quantile_50)
+
+    # Get the next as of choice available in dropdown menu
+    dfWithForecasts = dfWithForecasts[order(dfWithForecasts$forecast_date),]
+    AS_OF_CHOICES(sort(AS_OF_CHOICES() %>% unique()))
+    nextAsOfInList = AS_OF_CHOICES()[which.min(abs(AS_OF_CHOICES()-dfWithForecasts$forecast_date[1])) + 1]
+
+    # Take only those forecasts with a forecast date after the current chosen as of date, but before the next as of date in dropdown
+    # aka within the week after the current as of
+    dfWithForecasts = dfWithForecasts %>% filter(forecast_date >= dfWithForecasts$forecast_date[1]) %>%
+      filter(forecast_date < nextAsOfInList)
+
+    # Hospitalizations will have multiple forecast dates within this target week
+    # So we want to take the earliest forecast date for each forecaster & week end date pair
+    if (input$targetVariable == "Hospitalizations") {
+      dfWithForecasts = dfWithForecasts %>% group_by(Week_End_Date, Forecaster) %>% top_n(n=1, wt=desc(forecast_date))
+      dfWithForecasts = dfWithForecasts %>% group_by(Forecaster) %>% filter(forecast_date == first(forecast_date))
+    }
+    filteredDf = merge(filteredDf, dfWithForecasts, by=c('Week_End_Date', 'Forecaster'), all = TRUE) %>%
+      group_by(Week_End_Date) %>%
+      select(Quantile_50, Forecaster, Reported_Incidence, Reported_As_Of_Incidence)
+    # Remove rows of NAs
+    filteredDf = filteredDf %>% filter(!is.null(Forecaster))
+    filteredDf = filteredDf %>% arrange(Week_End_Date) %>% fill(Reported_Incidence, .direction = "downup")
+    return (filteredDf)
   }
 
   ###################

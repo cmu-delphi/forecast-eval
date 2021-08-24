@@ -9,6 +9,7 @@ library(shinyjs)
 library(tsibble)
 library(aws.s3)
 library(covidcast)
+library(stringr)
 
 source('./common.R')
 

@@ -654,7 +654,7 @@ server <- function(input, output, session) {
         group_by(Forecaster, forecast_date, Week_End_Date, ahead) %>%
         summarize(Quantile_50 = sum(Quantile_50))
     }
-    dfWithForecasts  = dfWithForecasts %>% filter(geo_value == tolower(input$location)) %>%
+    dfWithForecasts  = dfWithForecasts %>%
       # We want the forecasts to be later than latest as of date with data
       filter(forecast_date >= tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n=1)$Week_End_Date[1]) %>%
       group_by(Week_End_Date) %>%
@@ -735,7 +735,7 @@ server <- function(input, output, session) {
       updateAsOfData()
     }
 
-    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) 
+    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
       hideElement("showForecastsCheckbox")
     } else {
       showElement("showForecastsCheckbox")

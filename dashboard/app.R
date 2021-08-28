@@ -17,7 +17,7 @@ source('./common.R')
 DATA_LOADED = FALSE
 
 # Earliest 'as of' date available from covidcast API
-MIN_AVAIL_NATION_AS_OF_DATE = as.Date('2021-01-02')
+MIN_AVAIL_NATION_AS_OF_DATE = as.Date('2021-01-09')
 MIN_AVAIL_HOSP_AS_OF_DATE  = as.Date('2020-11-11')
 MIN_AVAIL_TERRITORY_AS_OF_DATE = as.Date('2021-02-10')
 
@@ -101,7 +101,7 @@ ui <- fluidPage(padding=0,
               multiple = TRUE,
               selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
             ),
-            tags$p(id="forecaster-disclaimer", "Some forecasters may not have data for the chosen location or scoring metric"),
+            tags$p(id="missing-data-disclaimer", "Some forecasters may not have data for the chosen location or scoring metric"),
             checkboxGroupInput(
               "aheads",
               "Forecast Horizon (Weeks)",
@@ -135,6 +135,7 @@ ui <- fluidPage(padding=0,
               multiple = FALSE,
               selected = ''
             ),
+            tags$p(id="missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
             hidden(div(id="showForecastsCheckbox",
                              checkboxInput(
                                "showForecasts",
@@ -258,10 +259,13 @@ server <- function(input, output, session) {
   dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds")
   DATA_LOADED = TRUE
   TERRITORIES = c('AS', 'GU', 'MP', 'VI')
-  MAX_WEEK_END_DATE = reactiveVal(max(dfNationDeaths$target_end_date))
   PREV_AS_OF_DATA = reactiveVal(NULL)
   AS_OF_CHOICES = reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS = reactive(input$scoreType == 'coverage' || input$location == TOTAL_LOCATIONS)
+
+  # Get most recent target end date (prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations)
+  prevWeek <- seq(Sys.Date()-7,Sys.Date()-1,by='day')
+  CURRENT_WEEK_END_DATE = reactiveVal(prevWeek[weekdays(prevWeek)=='Saturday'])
 
   # Pick out expected columns only
   covCols = paste0("cov_", COVERAGE_INTERVALS)
@@ -302,7 +306,7 @@ server <- function(input, output, session) {
     }
     if (is.null(asOfData)) {
       if (!is.null(isolate(PREV_AS_OF_DATA())) && dim(isolate(PREV_AS_OF_DATA()))[1] != 0 &&
-          isolate(input$asOf) != '' && isolate(input$asOf) != isolate(MAX_WEEK_END_DATE())) {
+          isolate(input$asOf) != '' && isolate(input$asOf) != isolate(CURRENT_WEEK_END_DATE())) {
          asOfData = isolate(PREV_AS_OF_DATA())
       }
     }
@@ -397,9 +401,6 @@ server <- function(input, output, session) {
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
     })
-    if (!is.null(truthDf) && length(truthDf$Week_End_Date) != 0) {
-      MAX_WEEK_END_DATE(max(truthDf$Week_End_Date, na.rm=TRUE))
-    }
 
     # If we are just re-rendering the truth plot with as of data
     # we don't need to re-render the score plot
@@ -653,8 +654,9 @@ server <- function(input, output, session) {
         group_by(Forecaster, forecast_date, Week_End_Date, ahead) %>%
         summarize(Quantile_50 = sum(Quantile_50))
     }
-    dfWithForecasts = dfWithForecasts %>%
-      filter(forecast_date > input$asOf)  %>%
+    dfWithForecasts  = dfWithForecasts %>% filter(geo_value == tolower(input$location)) %>%
+      # We want the forecasts to be later than latest as of date with data
+      filter(forecast_date >= tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n=1)$Week_End_Date[1]) %>%
       group_by(Week_End_Date) %>%
       summarize(Forecaster, forecast_date, Quantile_50)
 
@@ -663,10 +665,12 @@ server <- function(input, output, session) {
     AS_OF_CHOICES(sort(AS_OF_CHOICES() %>% unique()))
     nextAsOfInList = AS_OF_CHOICES()[which.min(abs(AS_OF_CHOICES()-dfWithForecasts$forecast_date[1])) + 1]
 
-    # Take only those forecasts with a forecast date after the current chosen as of date, but before the next as of date in dropdown
-    # aka within the week after the current as of
-    dfWithForecasts = dfWithForecasts %>% filter(forecast_date >= dfWithForecasts$forecast_date[1]) %>%
-      filter(forecast_date < nextAsOfInList)
+    # Take only those forecasts with a forecast date before the next as of date in dropdown
+    # aka within the week after the current as of shown
+    if(length(nextAsOfInList) != 0 && !is.na(nextAsOfInList)) {
+      dfWithForecasts = dfWithForecasts %>%
+        filter(forecast_date < nextAsOfInList)
+    }
 
     # Hospitalizations will have multiple forecast dates within this target week
     # So we want to take the earliest forecast date for each forecaster & week end date pair
@@ -696,12 +700,15 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
+    prevWeek <- seq(Sys.Date()-7,Sys.Date()-1,by='day')
+    CURRENT_WEEK_END_DATE(prevWeek[weekdays(prevWeek)=='Saturday'])
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
     } else if (input$targetVariable == 'Cases') {
       df = df %>% filter(signal == CASE_FILTER)
     } else {
       df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
+      CURRENT_WEEK_END_DATE(prevWeek[weekdays(prevWeek)=='Wednesday'])
     }
 
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
@@ -728,7 +735,7 @@ server <- function(input, output, session) {
       updateAsOfData()
     }
 
-    if (input$asOf != '' && input$asOf == MAX_WEEK_END_DATE()) {
+    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) 
       hideElement("showForecastsCheckbox")
     } else {
       showElement("showForecastsCheckbox")
@@ -778,7 +785,7 @@ server <- function(input, output, session) {
   observeEvent(input$location, {
     updateAsOfData()
     # Only show forecast check box option if we are showing as of data
-    if (input$asOf != '' && input$asOf == MAX_WEEK_END_DATE()) {
+    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
       hideElement("showForecastsCheckbox")
     } else {
       showElement("showForecastsCheckbox")
@@ -788,7 +795,7 @@ server <- function(input, output, session) {
   observeEvent(input$asOf, {
     updateAsOfData()
     # Only show forecast check box option if we are showing as of data
-    if (input$asOf != '' && input$asOf == MAX_WEEK_END_DATE()) {
+    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
       hideElement("showForecastsCheckbox")
     } else {
       showElement("showForecastsCheckbox")
@@ -842,7 +849,7 @@ server <- function(input, output, session) {
     } else {
       location = "state"
     }
-    if (input$asOf < MAX_WEEK_END_DATE() && input$asOf != '') {
+    if (input$asOf < CURRENT_WEEK_END_DATE() && input$asOf != '') {
       hideElement("truthPlot")
       hideElement("notes")
       hideElement("scoringDisclaimer")
@@ -873,7 +880,7 @@ server <- function(input, output, session) {
         return()
       }
       summaryPlot(reRenderTruth = TRUE, asOfData = asOfTruthData)
-    } else if(input$asOf == MAX_WEEK_END_DATE() && input$asOf != '') {
+    } else if(input$asOf == CURRENT_WEEK_END_DATE() && input$asOf != '') {
       summaryPlot(reRenderTruth = TRUE)
     }
   }
@@ -894,6 +901,7 @@ server <- function(input, output, session) {
       minChoice = MIN_AVAIL_TERRITORY_AS_OF_DATE
       asOfChoices = asOfChoices[asOfChoices >= minChoice]
     }
+    asOfChoices = c(asOfChoices, CURRENT_WEEK_END_DATE())
     # Make sure we have a valid as of selection
     if (length(asOfChoices) != 0 && !(as.Date(selectedAsOf) %in% asOfChoices)) {
       selectedAsOf = max(asOfChoices, na.rm=TRUE)

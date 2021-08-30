@@ -6,7 +6,15 @@ Epiforecast scoring and interactive evaluation tools.
 1. Create a new branch off of `dev`
 2. Create a pull request into `dev`
 
-Branch `main` is the production branch. Branch `dev` will be merged into main when a release is ready.
+Branch `main` is the production branch. Branch `dev` will be merged into main when a release is ready. See below for instructions on how to create a release.
+
+
+
+**Note:** the easiest way to view and develop this project locally is to use RStudio and run the RShiny app from inside the IDE
+
+<img width="1111" alt="Screen Shot 2021-08-30 at 10 56 59 AM" src="https://user-images.githubusercontent.com/14190352/131359925-3b460d21-b9aa-4a40-a691-cd705ab98431.png">
+
+Alternatively, ...
 
 
 ## Building
@@ -51,6 +59,21 @@ git push origin v1.0
 ```
 Create a PR into `main`.  
 After code is merged to `main`, perform cleanup by merging `main` into `dev` so that `dev` stays up to date.
+
+## Code Structure
+ - `workflows` contains the weekly data pipeline workflow action (`s3_upload_ec2.yml`) and the `main.yml` that runs on branch merge
+ - `Report` contains the scoring and data upload scripts that run weekly
+ - `dashboard` contains all the code for the RShiny dashboard
+   - `www` contains the styling and the assets
+   - `app.R` is the main RShiny file with the UI and server functions
+   - `common.R` is for code shared between the app and the download feature
+   - `export_scores.R` contains the code for the download feature
+   - `about.md` contains the code for the "About" tab in the dasboard (other .md files contain explanations of the scores and other text info that appears in the app)
+ - `docker_buid` contains the `Dockerfile` specifying the version of the `covidcast` docker image to use
+ - `docker_dashboard` contains the `Dockerfile` and `shiny_server.conf` for the RShiny app
+   - ***Note: when adding a new package dependency to the app, it must be specified in this Dockerfile***
+ - `DESCRIPTION` is where the version number is updated for each release
+ - `Makefile` contains all commands to build and run the dashboard and score and upload the data
 
 ## Note on Scoring Script
 

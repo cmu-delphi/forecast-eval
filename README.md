@@ -1,7 +1,10 @@
 # Forecast Eval
 
-https://delphi.cmu.edu/forecast-eval/
 Epiforecast scoring and interactive evaluation tools.
+https://delphi.cmu.edu/forecast-eval/
+
+Code on the `dev` branch appears in staging: https://staging.delphi.cmu.edu/forecast-eval/  
+Username and password are included in the [meeting notes doc](https://docs.google.com/document/d/1q8sKrbjzymEDsWQ9mUomOZ255-_5W6RPGgTdFlHmpmE/edit)
 
 ## Steps to contribute
 1. Create a new branch off of `dev`

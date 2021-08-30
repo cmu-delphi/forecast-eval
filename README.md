@@ -61,7 +61,7 @@ git push origin v1.0
 Create a PR into `main`.  
 After code is merged to `main`, perform cleanup by merging `main` into `dev` so that `dev` stays up to date.
 
-## Code Structure
+# Code Structure
  - `workflows` contains the weekly data pipeline workflow action (`s3_upload_ec2.yml`) and the `main.yml` that runs on branch merge
  - `Report` contains the scoring and data upload scripts that run weekly
  - `dashboard` contains all the code for the RShiny dashboard

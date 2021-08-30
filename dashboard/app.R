@@ -45,7 +45,7 @@ source('./export_scores.R')
 # Layout
 ########
 
-ui <- fluidPage(padding=0,
+ui <- fluidPage(padding=0, title="Forecast Eval Dashboard",
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = cssFile)
     ),

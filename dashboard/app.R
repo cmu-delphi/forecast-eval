@@ -335,6 +335,9 @@ server <- function(input, output, session) {
       filteredScoreDfAndIntersections = filterOverAllLocations(filteredScoreDf, input$scoreType, !is.null(asOfData))
       filteredScoreDf = filteredScoreDfAndIntersections[[1]]
       locationsIntersect = filteredScoreDfAndIntersections[[2]]
+      if (input$showForecasts) {
+        dfWithForecasts = dfWithForecasts %>% filter(geo_value %in% locationsIntersect)
+      }
       aggregateText = "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (input$scoreType == "coverage") {
         aggregate = "Averaged"
@@ -521,7 +524,7 @@ server <- function(input, output, session) {
       filteredDf = filteredDf %>%
         group_by(Week_End_Date) %>% summarize(Forecaster = Forecaster, Reported_Incidence = actual, Reported_As_Of_Incidence = as_of_actual) %>%
         distinct()
-      if(input$showForecasts && !SUMMARIZING_OVER_ALL_LOCATIONS()) {
+      if(input$showForecasts) {
         filteredDf = filterForecastData(filteredDf, dfWithForecasts)
       }
     } else {
@@ -543,7 +546,7 @@ server <- function(input, output, session) {
         geom_point(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
         geom_line(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence")) +
         geom_point(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence"))
-      if(input$showForecasts && !SUMMARIZING_OVER_ALL_LOCATIONS()) {
+      if(input$showForecasts) {
         finalPlot = finalPlot +
           geom_line(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
           geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster))
@@ -641,10 +644,19 @@ server <- function(input, output, session) {
   }
 
   filterForecastData = function(filteredDf, dfWithForecasts) {
-    dfWithForecasts  = dfWithForecasts %>% filter(geo_value == tolower(input$location)) %>%
+    dfWithForecasts = dfWithForecasts %>%
+      rename(Week_End_Date = target_end_date, Forecaster = forecaster, Quantile_50 = value_50)
+    if (!SUMMARIZING_OVER_ALL_LOCATIONS()) {
+      dfWithForecasts  = dfWithForecasts %>% filter(geo_value == tolower(input$location))
+    } else {
+      # Sum the predictions for all included locations
+      dfWithForecasts = dfWithForecasts %>%
+        group_by(Forecaster, forecast_date, Week_End_Date, ahead) %>%
+        summarize(Quantile_50 = sum(Quantile_50))
+    }
+    dfWithForecasts  = dfWithForecasts %>%
       # We want the forecasts to be later than latest as of date with data
       filter(forecast_date >= tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n=1)$Week_End_Date[1]) %>%
-      rename(Week_End_Date = target_end_date, Forecaster = forecaster, Quantile_50 = value_50) %>%
       group_by(Week_End_Date) %>%
       summarize(Forecaster, forecast_date, Quantile_50)
 
@@ -723,7 +735,7 @@ server <- function(input, output, session) {
       updateAsOfData()
     }
 
-    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE() || SUMMARIZING_OVER_ALL_LOCATIONS()) {
+    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
       hideElement("showForecastsCheckbox")
     } else {
       showElement("showForecastsCheckbox")
@@ -773,7 +785,7 @@ server <- function(input, output, session) {
   observeEvent(input$location, {
     updateAsOfData()
     # Only show forecast check box option if we are showing as of data
-    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE() || SUMMARIZING_OVER_ALL_LOCATIONS()) {
+    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
       hideElement("showForecastsCheckbox")
     } else {
       showElement("showForecastsCheckbox")
@@ -783,7 +795,7 @@ server <- function(input, output, session) {
   observeEvent(input$asOf, {
     updateAsOfData()
     # Only show forecast check box option if we are showing as of data
-    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE() || SUMMARIZING_OVER_ALL_LOCATIONS()) {
+    if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
       hideElement("showForecastsCheckbox")
     } else {
       showElement("showForecastsCheckbox")

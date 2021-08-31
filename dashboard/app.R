@@ -263,8 +263,13 @@ server <- function(input, output, session) {
   AS_OF_CHOICES = reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS = reactive(input$scoreType == 'coverage' || input$location == TOTAL_LOCATIONS)
 
-  # Get most recent target end date (prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations)
-  prevWeek <- seq(Sys.Date()-7,Sys.Date()-1,by='day')
+  # Get most recent target end date
+  # Prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations (updated when selected)
+  # Use 8 and 2 for Cases and Deaths so that Sundays will not use the Saturday directly beforehand
+  # since we don't upload the new observed data for Saturday until Monday
+  # (This means that on Mondays until the afternoon when pipeline completes, the "as of" will show most recent Saturday date
+  # even though the actual updated data won't be there yet)
+  prevWeek <- seq(Sys.Date()-8,Sys.Date()-2,by='day')
   CURRENT_WEEK_END_DATE = reactiveVal(prevWeek[weekdays(prevWeek)=='Saturday'])
 
   # Pick out expected columns only
@@ -700,7 +705,7 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
-    prevWeek <- seq(Sys.Date()-7,Sys.Date()-1,by='day')
+    prevWeek <- seq(Sys.Date()-8,Sys.Date()-2,by='day')
     CURRENT_WEEK_END_DATE(prevWeek[weekdays(prevWeek)=='Saturday'])
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
@@ -708,6 +713,7 @@ server <- function(input, output, session) {
       df = df %>% filter(signal == CASE_FILTER)
     } else {
       df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
+      prevWeek <- seq(Sys.Date()-7,Sys.Date()-1,by='day')
       CURRENT_WEEK_END_DATE(prevWeek[weekdays(prevWeek)=='Wednesday'])
     }
 
@@ -888,9 +894,6 @@ server <- function(input, output, session) {
   updateAsOfChoices = function(session, truthDf) {
     asOfChoices = truthDf$Week_End_Date
     selectedAsOf = isolate(input$asOf)
-    if (selectedAsOf == '' && length(asOfChoices) != 0) {
-      selectedAsOf = max(asOfChoices, na.rm=TRUE)
-    }
     if (input$targetVariable == "Hospitalizations") {
       minChoice = MIN_AVAIL_HOSP_AS_OF_DATE
       asOfChoices = asOfChoices[asOfChoices >= minChoice]
@@ -903,7 +906,8 @@ server <- function(input, output, session) {
     }
     asOfChoices = c(asOfChoices, CURRENT_WEEK_END_DATE())
     # Make sure we have a valid as of selection
-    if (length(asOfChoices) != 0 && !(as.Date(selectedAsOf) %in% asOfChoices)) {
+    nonValidAsOf = selectedAsOf == '' || !(as.Date(selectedAsOf) %in% asOfChoices)
+    if (length(asOfChoices) != 0 && nonValidAsOf) {
       selectedAsOf = max(asOfChoices, na.rm=TRUE)
     }
     AS_OF_CHOICES(asOfChoices)

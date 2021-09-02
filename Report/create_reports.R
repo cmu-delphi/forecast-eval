@@ -134,9 +134,9 @@ if ( "confirmed_admissions_covid_1d" %in% unique(state_scores$signal)) {
 
 
 print("Evaluating national forecasts")
-# COVIDcast does not return national level data, using CovidHubUtils instead
-
-nation_scores = evaluate_chu(nation_predictions, signals, err_measures)
+nation_scores_covidcast = evaluate_covid_predictions(nation_predictions,
+                                                     err_measures,
+                                                     geo_type = "nation")
 
 if ( "confirmed_incidence_num" %in% unique(state_scores$signal)) {
     print("Saving nation confirmed incidence...")

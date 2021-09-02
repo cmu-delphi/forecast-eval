@@ -264,13 +264,19 @@ server <- function(input, output, session) {
   SUMMARIZING_OVER_ALL_LOCATIONS = reactive(input$scoreType == 'coverage' || input$location == TOTAL_LOCATIONS)
 
   # Get most recent target end date
-  # Prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations (updated when selected)
+  # Prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations
+  # Since we don't upload new observed data until Monday:
   # Use 8 and 2 for Cases and Deaths so that Sundays will not use the Saturday directly beforehand
-  # since we don't upload the new observed data for Saturday until Monday
-  # (This means that on Mondays until the afternoon when pipeline completes, the "as of" will show most recent Saturday date
-  # even though the actual updated data won't be there yet)
+  # since we don't have data for it yet.
+  # Use 5 and 11 for Hospitalizations since Thurs-Sun should also not use the Wednesday directly beforehand.
+  # (This means that on Mondays until the afternoon when pipeline completes, the "as of" will show
+  # most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
   prevWeek <- seq(Sys.Date()-8,Sys.Date()-2,by='day')
-  CURRENT_WEEK_END_DATE = reactiveVal(prevWeek[weekdays(prevWeek)=='Saturday'])
+  CASES_DEATHS_CURRENT = prevWeek[weekdays(prevWeek)=='Saturday']
+  CURRENT_WEEK_END_DATE = reactiveVal(CASES_DEATHS_CURRENT)
+  prevHospWeek <- seq(Sys.Date()-11,Sys.Date()-5,by='day')
+  HOSP_CURRENT = prevHospWeek[weekdays(prevHospWeek)=='Wednesday']
+
 
   # Pick out expected columns only
   covCols = paste0("cov_", COVERAGE_INTERVALS)
@@ -705,16 +711,14 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
-    prevWeek <- seq(Sys.Date()-8,Sys.Date()-2,by='day')
-    CURRENT_WEEK_END_DATE(prevWeek[weekdays(prevWeek)=='Saturday'])
+    CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
     if (input$targetVariable == 'Deaths') {
       df = df %>% filter(signal == DEATH_FILTER)
     } else if (input$targetVariable == 'Cases') {
       df = df %>% filter(signal == CASE_FILTER)
     } else {
       df = df %>% filter(signal == HOSPITALIZATIONS_FILTER)
-      prevWeek <- seq(Sys.Date()-7,Sys.Date()-1,by='day')
-      CURRENT_WEEK_END_DATE(prevWeek[weekdays(prevWeek)=='Wednesday'])
+      CURRENT_WEEK_END_DATE(HOSP_CURRENT)
     }
 
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)

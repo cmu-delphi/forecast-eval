@@ -134,11 +134,11 @@ if ( "confirmed_admissions_covid_1d" %in% unique(state_scores$signal)) {
 
 
 print("Evaluating national forecasts")
-nation_scores_covidcast = evaluate_covid_predictions(nation_predictions,
+nation_scores = evaluate_covid_predictions(nation_predictions,
                                                      err_measures,
                                                      geo_type = "nation")
 
-if ( "confirmed_incidence_num" %in% unique(state_scores$signal)) {
+if ( "confirmed_incidence_num" %in% unique(nation_scores$signal)) {
     print("Saving nation confirmed incidence...")
     save_score_cards(nation_scores, "nation",
                      signal_name = "confirmed_incidence_num", output_dir = opt$dir)
@@ -146,7 +146,7 @@ if ( "confirmed_incidence_num" %in% unique(state_scores$signal)) {
     warning("Nation confirmed incidence should generally be available. Please 
             verify that you expect not to have any cases incidence forecasts")
 }
-if ( "deaths_incidence_num" %in% unique(state_scores$signal)) {
+if ( "deaths_incidence_num" %in% unique(nation_scores$signal)) {
     print("Saving nation deaths incidence...")
     save_score_cards(nation_scores, "nation", signal_name = "deaths_incidence_num",
                      output_dir = opt$dir)
@@ -154,7 +154,7 @@ if ( "deaths_incidence_num" %in% unique(state_scores$signal)) {
     warning("Nation deaths incidence should generally be available. Please 
             verify that you expect not to have any deaths incidence forecasts")
 }
-if ( "confirmed_admissions_covid_1d" %in% unique(state_scores$signal)) {
+if ( "confirmed_admissions_covid_1d" %in% unique(nation_scores$signal)) {
     print("Saving nation hospitalizations...")
     save_score_cards(nation_scores, "nation", signal_name = "confirmed_admissions_covid_1d",
                      output_dir = opt$dir)

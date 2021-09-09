@@ -15,7 +15,7 @@ library(memoise)
 source('./common.R')
 
 # Set application-level caching location.
-shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2))
+shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2)) # 1 GB cache limit
 cache <- getShinyOption("cache")
 
 # All data is fully loaded from AWS
@@ -272,7 +272,7 @@ getAllData = function(s3bucket, date) {
 }
 getAllData = memoise(getAllData, cache = cache)
 
-getS3Bucket <- function() {
+getS3Bucket <- function(date, hour) {
   # Connect to AWS s3bucket
   Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
   s3bucket = tryCatch(
@@ -310,10 +310,13 @@ server <- function(input, output, session) {
   HOSP_CURRENT = prevHospWeek[weekdays(prevHospWeek)=='Wednesday']
   
   # Get scores
-  s3bucket <- getS3Bucket()
-  cat(file=stderr(), "does cache key already exist? ", has_cache(getAllData)(s3bucket, as.character(Sys.Date())), "\n")
-  df = getAllData(s3bucket, as.character(Sys.Date()))
-  cat(file=stderr(), "does cache key exist after run? ", has_cache(getAllData)(s3bucket, as.character(Sys.Date())), "\n")
+  currDate <- as.character(Sys.Date())
+  currHour <- as.integer(format(Sys.time(), format="%H"))
+  hoursBetweenCalls <- 4
+  nHourFloor <- currHour - (currHour %% hoursBetweenCalls)
+  
+  s3bucket <- getS3Bucket(currDate, nHourFloor) # Update every n hours.
+  df = getAllData(s3bucket, currDate)
   DATA_LOADED = TRUE
 
   # Prepare input choices

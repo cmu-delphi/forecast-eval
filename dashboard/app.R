@@ -10,8 +10,13 @@ library(tsibble)
 library(aws.s3)
 library(covidcast)
 library(stringr)
+library(memoise)
 
 source('./common.R')
+
+# Set application-level caching location.
+shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2))
+cache <- getShinyOption("cache")
 
 # All data is fully loaded from AWS
 DATA_LOADED = FALSE
@@ -212,7 +217,62 @@ ui <- fluidPage(padding=0, title="Forecast Eval Dashboard",
 )
 
 
-server <- function(input, output, session) {
+# Get and prepare data
+getData <- function(filename, s3bucket){
+  if(!is.null(s3bucket)) {
+    tryCatch(
+      {
+        s3readRDS(object = filename, bucket = s3bucket)
+      },
+      error = function(e) {
+        e
+        getFallbackData(filename)
+      }
+    )
+  } else {
+    getFallbackData(filename)
+  }
+}
+
+getFallbackData = function(filename) {
+  path = ifelse(
+    file.exists(filename),
+    filename,
+    file.path("../dist/",filename)
+  )
+  readRDS(path)
+}
+
+getAllData = function(s3bucket, date) {
+  dfStateCases <- getData("score_cards_state_cases.rds", s3bucket)
+  dfStateDeaths <- getData("score_cards_state_deaths.rds", s3bucket)
+  dfNationCases = getData("score_cards_nation_cases.rds", s3bucket)
+  dfNationDeaths = getData("score_cards_nation_deaths.rds", s3bucket)
+  dfStateHospitalizations = getData("score_cards_state_hospitalizations.rds", s3bucket)
+  dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds", s3bucket)
+
+  # Pick out expected columns only
+  covCols = paste0("cov_", COVERAGE_INTERVALS)
+  expectedCols = c("ahead", "geo_value", "forecaster", "forecast_date",
+                   "data_source", "signal", "target_end_date", "incidence_period",
+                   "actual", "wis", "sharpness", "ae", "value_50",
+                   covCols)
+
+  dfStateCases = dfStateCases %>% select(all_of(expectedCols))
+  dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
+  dfNationCases = dfNationCases %>% select(all_of(expectedCols))
+  dfNationDeaths = dfNationDeaths %>% select(all_of(expectedCols))
+  dfStateHospitalizations = dfStateHospitalizations %>% select(all_of(expectedCols))
+  dfNationHospitalizations = dfNationHospitalizations %>% select(all_of(expectedCols))
+
+  df = rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations)
+  df = df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
+
+  return(df)
+}
+getAllData = memoise(getAllData, cache = cache)
+
+getS3Bucket <- function() {
   # Connect to AWS s3bucket
   Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
   s3bucket = tryCatch(
@@ -224,40 +284,12 @@ server <- function(input, output, session) {
       return(NULL)
     }
   )
+  
+  return(s3bucket)
+}
+getS3Bucket = memoise(getS3Bucket, cache = cache)
 
-  # Get and prepare data
-  getData <- function(filename){
-    if(!is.null(s3bucket)) {
-      tryCatch(
-        {
-          s3readRDS(object = filename, bucket = s3bucket)
-        },
-        error = function(e) {
-          e
-          getFallbackData(filename)
-        }
-      )
-    } else {
-      getFallbackData(filename)
-    }
-  }
-
-  getFallbackData = function(filename) {
-    path = ifelse(
-      file.exists(filename),
-      filename,
-      file.path("../dist/",filename)
-    )
-    readRDS(path)
-  }
-
-  dfStateCases <- getData("score_cards_state_cases.rds")
-  dfStateDeaths <- getData("score_cards_state_deaths.rds")
-  dfNationCases = getData("score_cards_nation_cases.rds")
-  dfNationDeaths = getData("score_cards_nation_deaths.rds")
-  dfStateHospitalizations = getData("score_cards_state_hospitalizations.rds")
-  dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds")
-  DATA_LOADED = TRUE
+server <- function(input, output, session) {
   TERRITORIES = c('AS', 'GU', 'MP', 'VI')
   PREV_AS_OF_DATA = reactiveVal(NULL)
   AS_OF_CHOICES = reactiveVal(NULL)
@@ -276,24 +308,13 @@ server <- function(input, output, session) {
   CURRENT_WEEK_END_DATE = reactiveVal(CASES_DEATHS_CURRENT)
   prevHospWeek <- seq(Sys.Date()-11,Sys.Date()-5,by='day')
   HOSP_CURRENT = prevHospWeek[weekdays(prevHospWeek)=='Wednesday']
-
-
-  # Pick out expected columns only
-  covCols = paste0("cov_", COVERAGE_INTERVALS)
-  expectedCols = c("ahead", "geo_value", "forecaster", "forecast_date",
-                   "data_source", "signal", "target_end_date", "incidence_period",
-                   "actual", "wis", "sharpness", "ae", "value_50",
-                   covCols)
-
-  dfStateCases = dfStateCases %>% select(all_of(expectedCols))
-  dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
-  dfNationCases = dfNationCases %>% select(all_of(expectedCols))
-  dfNationDeaths = dfNationDeaths %>% select(all_of(expectedCols))
-  dfStateHospitalizations = dfStateHospitalizations %>% select(all_of(expectedCols))
-  dfNationHospitalizations = dfNationHospitalizations %>% select(all_of(expectedCols))
   
-  df = rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations)
-  df = df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
+  # Get scores
+  s3bucket <- getS3Bucket()
+  cat(file=stderr(), "does cache key already exist? ", has_cache(getAllData)(s3bucket, as.character(Sys.Date())), "\n")
+  df = getAllData(s3bucket, as.character(Sys.Date()))
+  cat(file=stderr(), "does cache key exist after run? ", has_cache(getAllData)(s3bucket, as.character(Sys.Date())), "\n")
+  DATA_LOADED = TRUE
 
   # Prepare input choices
   forecasterChoices = sort(unique(df$forecaster))

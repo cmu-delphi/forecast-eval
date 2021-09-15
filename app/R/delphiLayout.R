@@ -84,7 +84,7 @@ delphiLayoutUI <- function(id = "delphi-root", title = "My App",
 }
 
 delphiLayoutServer <- function(id = "delphi-root") {
-  moduleServer(
+  shiny::moduleServer(
     id,
     function(input, output, session) {
       observe({

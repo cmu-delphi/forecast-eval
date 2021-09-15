@@ -32,6 +32,12 @@ getData <- function(filename, s3bucket) {
   }
 }
 
+createS3DataFactory <- function(s3bucket) {
+  function(filename) {
+    getData(filename, s3bucket)
+  }
+}
+
 getFallbackData <- function(filename) {
   path <- ifelse(
     file.exists(filename),
@@ -41,13 +47,13 @@ getFallbackData <- function(filename) {
   readRDS(path)
 }
 
-getAllData <- function(s3bucket) {
-  dfStateCases <- getData("score_cards_state_cases.rds", s3bucket)
-  dfStateDeaths <- getData("score_cards_state_deaths.rds", s3bucket)
-  dfNationCases <- getData("score_cards_nation_cases.rds", s3bucket)
-  dfNationDeaths <- getData("score_cards_nation_deaths.rds", s3bucket)
-  dfStateHospitalizations <- getData("score_cards_state_hospitalizations.rds", s3bucket)
-  dfNationHospitalizations <- getData("score_cards_nation_hospitalizations.rds", s3bucket)
+getAllData <- function(loadFile) {
+  dfStateCases <- loadFile("score_cards_state_cases.rds")
+  dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
+  dfNationCases <- loadFile("score_cards_nation_cases.rds")
+  dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
+  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
+  dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
 
   # Pick out expected columns only
   covCols <- paste0("cov_", COVERAGE_INTERVALS)
@@ -90,11 +96,22 @@ createDataLoader <- function() {
       # `getRecentDataHelper`. They persist between calls to `getRecentData` a
       # la https://stackoverflow.com/questions/1088639/static-variables-in-r
       s3bucket <<- newS3bucket
-      df <<- getAllData(s3bucket)
+      df <<- getAllData(createS3DataFactory(s3bucket))
     }
 
     return(df)
   }
 
   return(getRecentData)
+}
+
+
+#' create a data loader with fallback data only
+createFallbackDataLoader <- function() {
+  df <- getAllData(getFallbackData)
+
+  dataLoader <- function() {
+    df
+  }
+  dataLoader
 }

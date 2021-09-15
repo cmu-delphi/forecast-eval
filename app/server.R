@@ -1,17 +1,93 @@
+################
+# UTIL FUNCTIONS before server definition
+################
+updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
+  if (scoreType == "wis") {
+    df <- df %>% filter(!is.na(wis))
+  }
+  if (scoreType == "ae") {
+    df <- df %>% filter(!is.na(ae))
+  }
+  forecasterChoices <- unique(df$forecaster)
+  updateSelectInput(session, "forecasters",
+    choices = forecasterChoices,
+    selected = forecasterInput
+  )
+}
+
+
+updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices, coverageInput, output) {
+  df <- df %>% filter(forecaster %in% forecasterChoices)
+  df <- Filter(function(x) !all(is.na(x)), df)
+  coverageChoices <- intersect(colnames(df), COVERAGE_INTERVALS)
+  # Ensure previsouly selected options are still allowed
+  if (coverageInput %in% coverageChoices) {
+    selectedCoverage <- coverageInput
+  } else if ("95" %in% coverageChoices) {
+    selectedCoverage <- "95"
+  } else {
+    selectedCoverage <- coverageChoices[1]
+  }
+  updateSelectInput(session, "coverageInterval",
+    choices = coverageChoices,
+    selected = selectedCoverage
+  )
+}
+
+
+updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
+  df <- df %>% filter(forecaster %in% forecasterChoices)
+  locationChoices <- unique(toupper(df$geo_value))
+  locationChoices <- locationChoices[c(length(locationChoices), (1:length(locationChoices) - 1))] # Move US to front of list
+  locationChoices <- c(TOTAL_LOCATIONS, locationChoices)
+  # Ensure previously selected options are still allowed
+  if (locationInput %in% locationChoices) {
+    selectedLocation <- locationInput
+  } else {
+    selectedLocation <- locationChoices[1]
+  }
+  updateSelectInput(session, "location",
+    choices = locationChoices,
+    selected = selectedLocation
+  )
+}
+
+updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, aheads, targetVariableChange) {
+  df <- df %>% filter(forecaster %in% forecasterChoices)
+  if (targetVariable == "Hospitalizations") {
+    aheadOptions <- HOSPITALIZATIONS_AHEAD_OPTIONS
+    title <- "Forecast Horizon (Days)"
+    show("horizon-disclaimer")
+  } else {
+    aheadOptions <- AHEAD_OPTIONS
+    title <- "Forecast Horizon (Weeks)"
+    hide("horizon-disclaimer")
+  }
+  aheadChoices <- Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
+  # Ensure previsouly selected options are still allowed
+  if (!is.null(aheads) && aheads %in% aheadChoices) {
+    selectedAheads <- aheads
+  } else {
+    selectedAheads <- aheadOptions[1]
+  }
+  # If we are changing target variable, always reset ahead selection to first option
+  if (targetVariableChange) {
+    selectedAheads <- aheadOptions[1]
+  }
+  updateCheckboxGroupInput(session, "aheads",
+    title,
+    choices = aheadChoices,
+    selected = selectedAheads,
+    inline = TRUE
+  )
+}
 # All data is fully loaded from AWS
 DATA_LOADED <- FALSE
-
-# Earliest 'as of' date available from covidcast API
-MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2021-01-09")
-MIN_AVAIL_HOSP_AS_OF_DATE <- as.Date("2020-11-11")
-MIN_AVAIL_TERRITORY_AS_OF_DATE <- as.Date("2021-02-10")
-
-
-getRecentData <- createDataLoader()
-
+loadData <- createFallbackDataLoader() # createDataLoader()
 
 server <- function(input, output, session) {
-  TERRITORIES <- c("AS", "GU", "MP", "VI")
+  delphiLayoutServer()
+
   PREV_AS_OF_DATA <- reactiveVal(NULL)
   AS_OF_CHOICES <- reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
@@ -30,8 +106,9 @@ server <- function(input, output, session) {
   prevHospWeek <- seq(Sys.Date() - 11, Sys.Date() - 5, by = "day")
   HOSP_CURRENT <- prevHospWeek[weekdays(prevHospWeek) == "Wednesday"]
 
+
   # Get scores
-  df <- getRecentData()
+  df <- loadData()
   DATA_LOADED <- TRUE
 
   # Prepare input choices
@@ -690,89 +767,9 @@ server <- function(input, output, session) {
       selected = selectedAsOf
     )
   }
-  export_scores_server(input, output, df)
-}
 
-################
-# UTIL FUNCTIONS
-################
-updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
-  if (scoreType == "wis") {
-    df <- df %>% filter(!is.na(wis))
-  }
-  if (scoreType == "ae") {
-    df <- df %>% filter(!is.na(ae))
-  }
-  forecasterChoices <- unique(df$forecaster)
-  updateSelectInput(session, "forecasters",
-    choices = forecasterChoices,
-    selected = forecasterInput
-  )
-}
-
-
-updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices, coverageInput, output) {
-  df <- df %>% filter(forecaster %in% forecasterChoices)
-  df <- Filter(function(x) !all(is.na(x)), df)
-  coverageChoices <- intersect(colnames(df), COVERAGE_INTERVALS)
-  # Ensure previsouly selected options are still allowed
-  if (coverageInput %in% coverageChoices) {
-    selectedCoverage <- coverageInput
-  } else if ("95" %in% coverageChoices) {
-    selectedCoverage <- "95"
-  } else {
-    selectedCoverage <- coverageChoices[1]
-  }
-  updateSelectInput(session, "coverageInterval",
-    choices = coverageChoices,
-    selected = selectedCoverage
-  )
-}
-
-
-updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
-  df <- df %>% filter(forecaster %in% forecasterChoices)
-  locationChoices <- unique(toupper(df$geo_value))
-  locationChoices <- locationChoices[c(length(locationChoices), (1:length(locationChoices) - 1))] # Move US to front of list
-  locationChoices <- c(TOTAL_LOCATIONS, locationChoices)
-  # Ensure previously selected options are still allowed
-  if (locationInput %in% locationChoices) {
-    selectedLocation <- locationInput
-  } else {
-    selectedLocation <- locationChoices[1]
-  }
-  updateSelectInput(session, "location",
-    choices = locationChoices,
-    selected = selectedLocation
-  )
-}
-
-updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, aheads, targetVariableChange) {
-  df <- df %>% filter(forecaster %in% forecasterChoices)
-  if (targetVariable == "Hospitalizations") {
-    aheadOptions <- HOSPITALIZATIONS_AHEAD_OPTIONS
-    title <- "Forecast Horizon (Days)"
-    show("horizon-disclaimer")
-  } else {
-    aheadOptions <- AHEAD_OPTIONS
-    title <- "Forecast Horizon (Weeks)"
-    hide("horizon-disclaimer")
-  }
-  aheadChoices <- Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
-  # Ensure previsouly selected options are still allowed
-  if (!is.null(aheads) && aheads %in% aheadChoices) {
-    selectedAheads <- aheads
-  } else {
-    selectedAheads <- aheadOptions[1]
-  }
-  # If we are changing target variable, always reset ahead selection to first option
-  if (targetVariableChange) {
-    selectedAheads <- aheadOptions[1]
-  }
-  updateCheckboxGroupInput(session, "aheads",
-    title,
-    choices = aheadChoices,
-    selected = selectedAheads,
-    inline = TRUE
-  )
+  exportScoresServer("exportScores", generateExportFilename(input), reactive(createExportScoresDataFrame(
+    df, input$targetVariable, input$scoreType, input$forecasters,
+    input$location, input$coverageInterval
+  )))
 }

@@ -27,7 +27,7 @@ Imports:
  covidcast,
  stringr
 Suggests:
- styler
- lintr
- testhat
+ styler,
+ lintr,
+ testthat
 

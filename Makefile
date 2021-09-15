@@ -8,13 +8,12 @@ r_build:
 	docker build --no-cache --pull -t forecast-eval-build docker_build
 
 predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds: dist
-	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@ 
+	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@
 
 pull_data: predictions_cards.rds score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds
 
 dist:
 	mkdir $@
-	cp dashboard/www/style.css dist/style-`md5sum dashboard/www/style.css | cut -d ' ' -f 1`.css
 
 clean:
 	rm -rf dist

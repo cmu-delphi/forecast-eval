@@ -3,6 +3,14 @@ library(shinyjs)
 library(tools)
 library(bslib)
 library(plotly)
+library(tidyr)
+library(dplyr)
+library(lubridate)
+library(viridis)
+library(tsibble)
+library(aws.s3)
+library(covidcast)
+library(stringr)
 
 appVersion <- "4.0.0"
 

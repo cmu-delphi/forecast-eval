@@ -78,11 +78,11 @@
     font-size: 18px;
 }
 #forecaster-input {
-    font-weight:normal; 
+    font-weight:normal;
     font-size:13px;
 }
 #missing-data-disclaimer {
-    margin-top:-20px; 
+    margin-top:-20px;
     font-size:12px;
 }
 #horizon-disclaimer {
@@ -109,46 +109,3 @@
     font-style:italic;
     color: #949494;
 }
-
-@media (max-width: 1450px) {
-    #github-logo-container {
-       margin-left:100px;
-    }
-}
-
-@media (max-width: 1000px) {
-    #title {
-        margin-left: 35px;
-    }
-    #github-logo-container {
-       margin-left:35px;
-    }
-}
-
-@media (max-width: 767px) {
-    #title {
-        width:100%;
-        margin-top: 10px;
-    }
-    #github-logo-container {
-       justify-content: center;
-       margin-top: 10px;
-    }
-}
-
-@media (min-width: 1100px) {
-    #logo {
-        margin-left: 5%;
-    }
-}
-
-@media (min-width: 1450px) {
-    #logo {
-        margin-left: 9%;
-        margin-right: 0;
-    }
-}
-
-
-
-

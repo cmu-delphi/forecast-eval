@@ -1,18 +1,3 @@
-library(shiny)
-library(tidyr)
-library(dplyr)
-library(lubridate)
-library(ggplot2)
-library(viridis)
-library(plotly)
-library(shinyjs)
-library(tsibble)
-library(aws.s3)
-library(covidcast)
-library(stringr)
-
-source('./common.R')
-
 # All data is fully loaded from AWS
 DATA_LOADED = FALSE
 
@@ -21,296 +6,8 @@ MIN_AVAIL_NATION_AS_OF_DATE = as.Date('2021-01-09')
 MIN_AVAIL_HOSP_AS_OF_DATE  = as.Date('2020-11-11')
 MIN_AVAIL_TERRITORY_AS_OF_DATE = as.Date('2021-02-10')
 
-# Score explanations
-wisExplanation = includeMarkdown("wis.md")
-sharpnessExplanation = includeMarkdown("sharpness.md")
-aeExplanation = includeMarkdown("ae.md")
-coverageExplanation = includeMarkdown("coverageplot.md")
-scoringDisclaimer = includeMarkdown("scoring-disclaimer.md")
 
-# About page content
-aboutPageText = includeMarkdown("about.md")
-
-# Get css file
-cssFiles = list.files(path="www",pattern="style*")
-if(length(cssFiles)!=1){
-  cat(file=stderr(),"Error: couldn't load style files\n")
-}
-cssFile = cssFiles[1]
-cat(file=stderr(),"Loaded css file:",cssFile,"\n")
-
-source('./export_scores.R')
-
-########
-# Layout
-########
-
-ui <- fluidPage(padding=0, title="Forecast Eval Dashboard",
-    tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = cssFile)
-    ),
-    tags$head(includeHTML(("google-analytics.html"))),
-    useShinyjs(),
-    div(id="header",class="row",
-      div(id="logo",class="col-sm-2",
-        a(href="https://delphi.cmu.edu",
-          img(src="cmu_brand.png",width="220px",heigh="50px",alt="Carnegie Mellon University Delphi Group")
-        )
-      ),
-      div(id="title", class="col-sm-6",
-        HTML("FORECAST <span id='bold-title'>EVALUATION DASHBOARD</span> <a id='back-button' href='https://delphi.cmu.edu'>",
-             includeHTML("arrow-left.svg"), "   Back</a>"),
-      ),
-      div(id="github-logo-container", class="col-sm-1",
-        a(id="github-logo",href="https://github.com/cmu-delphi/forecast-eval/",
-            includeHTML("github.svg"),
-            HTML("&nbsp;GitHub")
-          )
-      ),
-    ),
-    tags$br(),
-    sidebarLayout(
-      sidebarPanel(id = "inputOptions",
-        conditionalPanel(condition = "input.tabset == 'evaluations'",
-            radioButtons("targetVariable", "Target Variable",
-                                      choices = list("Incident Deaths" = "Deaths", 
-                                                     "Incident Cases" = "Cases",
-                                                     "Hospital Admissions" = "Hospitalizations")),
-            radioButtons("scoreType", "Scoring Metric",
-                                      choices = list("Weighted Interval Score" = "wis",
-                                                     "Spread" = "sharpness",
-                                                     "Absolute Error" = "ae",
-                                                     "Coverage" = "coverage")),
-            conditionalPanel(condition = "input.scoreType != 'coverage'",
-                             tags$p(id="scale-score", "Y-Axis Score Scale"),
-                             checkboxInput(
-                               "logScale",
-                               "Log Scale",
-                               value = FALSE,
-                             )),
-            conditionalPanel(condition = "input.scoreType != 'coverage' && input.targetVariable != 'Hospitalizations'",
-                             checkboxInput(
-                               "scaleByBaseline",
-                               "Scale by Baseline Forecaster",
-                               value = FALSE,
-                             )),
-            selectInput(
-              "forecasters",
-              p("Forecasters", tags$br(), tags$span(id="forecaster-input", "Type a name or select from dropdown")),
-              choices = c("COVIDhub-baseline", "COVIDhub-ensemble"),
-              multiple = TRUE,
-              selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
-            ),
-            tags$p(id="missing-data-disclaimer", "Some forecasters may not have data for the chosen location or scoring metric"),
-            checkboxGroupInput(
-              "aheads",
-              "Forecast Horizon (Weeks)",
-              choices = AHEAD_OPTIONS,
-              selected = AHEAD_OPTIONS[1],
-              inline = TRUE
-            ),
-            hidden(tags$p(id="horizon-disclaimer", "Forecasters submitted earlier than Mondays may have longer actual prediction horizons")),
-            conditionalPanel(condition = "input.scoreType == 'coverage'",
-                             selectInput(
-                               "coverageInterval",
-                               "Coverage Interval",
-                               choices = '',
-                               multiple = FALSE,
-                               selected = "95"
-                             ),
-            ),
-            conditionalPanel(condition = "input.scoreType != 'coverage'",
-                             selectInput(
-                               "location",
-                               "Location",
-                               choices = '',
-                               multiple = FALSE,
-                               selected = "US"
-                             )
-            ),
-            selectInput(
-              "asOf",
-              "As Of",
-              choices = '',
-              multiple = FALSE,
-              selected = ''
-            ),
-            tags$p(id="missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
-            hidden(div(id="showForecastsCheckbox",
-                             checkboxInput(
-                               "showForecasts",
-                               "Show Forecasters' Predictions",
-                               value = FALSE,
-                             )
-            )),
-            tags$hr(),
-            export_scores_ui,
-            tags$hr(),
-        ),
-        includeMarkdown("about-dashboard.md"),
-        width=3,
-      ),
-
-      mainPanel(
-        width=9,
-        tabsetPanel(id = "tabset",
-          selected = "evaluations",
-          tabPanel("About",
-            fluidRow(column(10,
-              div(
-                id="aboutContentArea",
-                aboutPageText,
-                tags$br(),
-                h3("Explanation of Scoring Methods"),
-                h4("Weighted Interval Score"),
-                wisExplanation,
-                h4("Spread"),
-                sharpnessExplanation,
-                h4("Absolute Error"),
-                aeExplanation,
-                h4("Coverage"),
-                coverageExplanation
-              ),
-              tags$br()
-            )),
-          ),
-          tabPanel("Evaluation Plots", value = "evaluations",
-            fluidRow(column(11, textOutput('renderWarningText'))),
-            plotlyOutput(outputId = "summaryPlot", height="auto"),
-            fluidRow(
-              column(11, offset=1, 
-                     hidden(div(id="refresh-colors", actionButton(inputId="refreshColors", label= "Recolor")))
-            )),
-            tags$br(),
-            plotlyOutput(outputId = "truthPlot", height="auto"),
-            fluidRow(
-              column(11, offset=1,
-                div(id="data-loading-message", "DATA IS LOADING...(this may take a while)"),
-                     hidden(div(id="truth-plot-loading-message", "Fetching 'as of' data and loading observed values...")),
-                     hidden(div(id="notes", "About the Scores")),
-                     hidden(div(id="scoreExplanations",
-                       hidden(div(id = "wisExplanation", wisExplanation)),
-                       hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),
-                       hidden(div(id = "aeExplanation", aeExplanation)),
-                       hidden(div(id = "coverageExplanation", coverageExplanation))
-                     )),
-                     hidden(div(id = "scoringDisclaimer", scoringDisclaimer))
-              )
-            ),
-            fluidRow(
-              column(11,offset=1,
-                textOutput('renderLocationText'),
-                textOutput('renderAggregateText'),
-                textOutput('renderLocations'),
-                tags$br()
-              )
-            )
-          )
-        ),
-      ),
-    ),
-)
-
-
-# Get and prepare data
-getS3Bucket <- function() {
-  # Connect to AWS s3bucket
-  Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
-  s3bucket = tryCatch(
-    {
-      get_bucket(bucket = 'forecast-eval')
-    },
-    error = function(e) {
-      e
-      return(NULL)
-    }
-  )
-  
-  return(s3bucket)
-}
-
-getData <- function(filename, s3bucket){
-  if(!is.null(s3bucket)) {
-    tryCatch(
-      {
-        s3readRDS(object = filename, bucket = s3bucket)
-      },
-      error = function(e) {
-        e
-        getFallbackData(filename)
-      }
-    )
-  } else {
-    getFallbackData(filename)
-  }
-}
-
-getFallbackData = function(filename) {
-  path = ifelse(
-    file.exists(filename),
-    filename,
-    file.path("../dist/",filename)
-  )
-  readRDS(path)
-}
-
-getAllData = function(s3bucket) {
-  dfStateCases <- getData("score_cards_state_cases.rds", s3bucket)
-  dfStateDeaths <- getData("score_cards_state_deaths.rds", s3bucket)
-  dfNationCases = getData("score_cards_nation_cases.rds", s3bucket)
-  dfNationDeaths = getData("score_cards_nation_deaths.rds", s3bucket)
-  dfStateHospitalizations = getData("score_cards_state_hospitalizations.rds", s3bucket)
-  dfNationHospitalizations = getData("score_cards_nation_hospitalizations.rds", s3bucket)
-  
-  # Pick out expected columns only
-  covCols = paste0("cov_", COVERAGE_INTERVALS)
-  expectedCols = c("ahead", "geo_value", "forecaster", "forecast_date",
-                   "data_source", "signal", "target_end_date", "incidence_period",
-                   "actual", "wis", "sharpness", "ae", "value_50",
-                   covCols)
-  
-  dfStateCases = dfStateCases %>% select(all_of(expectedCols))
-  dfStateDeaths = dfStateDeaths %>% select(all_of(expectedCols))
-  dfNationCases = dfNationCases %>% select(all_of(expectedCols))
-  dfNationDeaths = dfNationDeaths %>% select(all_of(expectedCols))
-  dfStateHospitalizations = dfStateHospitalizations %>% select(all_of(expectedCols))
-  dfNationHospitalizations = dfNationHospitalizations %>% select(all_of(expectedCols))
-  
-  df = rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations)
-  df = df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
-  
-  return(df)
-}
-
-getRecentDataHelper = function() {
-  s3bucket <- getS3Bucket()
-  df <- data.frame()
-  
-  getRecentData = function() {
-    newS3bucket <- getS3Bucket()
-    
-    s3Contents <- s3bucket[attr(s3bucket, "names", exact=TRUE)]
-    newS3Contents <- newS3bucket[attr(newS3bucket, "names", exact=TRUE)]
-    
-    # Fetch new score data if contents of S3 bucket has changed (including file
-    # names, sizes, and last modified timestamps). Ignores characteristics of
-    # bucket and request, including bucket region, name, content type, request
-    # date, request ID, etc.
-    if ( nrow(df) == 0 || !identical(s3Contents, newS3Contents) ) {
-      # Save new data and new bucket connection info to vars in env of
-      # `getRecentDataHelper`. They persist between calls to `getRecentData` a
-      # la https://stackoverflow.com/questions/1088639/static-variables-in-r
-      s3bucket <<- newS3bucket
-      df <<- getAllData(s3bucket)
-    }
-    
-    return(df)
-  }
-  
-  return(getRecentData)
-}
-
-getRecentData <- getRecentDataHelper()
+getRecentData <- createDataLoader()
 
 
 server <- function(input, output, session) {
@@ -332,7 +29,7 @@ server <- function(input, output, session) {
   CURRENT_WEEK_END_DATE = reactiveVal(CASES_DEATHS_CURRENT)
   prevHospWeek <- seq(Sys.Date()-11,Sys.Date()-5,by='day')
   HOSP_CURRENT = prevHospWeek[weekdays(prevHospWeek)=='Wednesday']
-  
+
   # Get scores
   df = getRecentData()
   DATA_LOADED = TRUE
@@ -341,7 +38,7 @@ server <- function(input, output, session) {
   forecasterChoices = sort(unique(df$forecaster))
   updateForecasterChoices(session, df, forecasterChoices, 'wis')
 
-  
+
   ##################
   # CREATE MAIN PLOT
   ##################
@@ -520,7 +217,7 @@ server <- function(input, output, session) {
                                    labels = horizonLabels)
 
     p = ggplot(
-        filteredScoreDf, 
+        filteredScoreDf,
         aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster, label = Forecast_Date)
       ) +
       geom_line() +
@@ -542,7 +239,7 @@ server <- function(input, output, session) {
       p = p + scale_y_continuous(limits = c(0,NA), labels = scales::comma)
     }
     plotHeight = 550 + (length(input$aheads)-1)*100
-    finalPlot <- 
+    finalPlot <-
       ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
       layout(
         height = plotHeight,
@@ -1043,5 +740,3 @@ updateAheadChoices = function(session, df, targetVariable, forecasterChoices, ah
                            selected = selectedAheads,
                            inline = TRUE)
 }
-
-shinyApp(ui = ui, server = server)

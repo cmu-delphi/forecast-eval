@@ -25,7 +25,10 @@ createExportScoresDataFrame <- function(scoreDf, targetVariable, scoreType, fore
     return(scoreDf[[1]])
   } else {
     scoreDf <- scoreDf %>% filter(geo_value == tolower(loc))
-    scoreDf <- scoreDf[c("ahead", "geo_value", "forecaster", "forecast_date", "data_source", "target_end_date", "Score", "actual")]
+    scoreDf <- scoreDf[c(
+      "ahead", "geo_value", "forecaster", "forecast_date",
+      "data_source", "target_end_date", "Score", "actual"
+    )]
     return(scoreDf)
   }
 }
@@ -58,11 +61,10 @@ exportScoresServer <- function(id, filename, export_df) {
           message = "Preparing export",
           detail = "This may take a while...",
           value = 0,
-          max = 2,
-          {
-            incProgress(1)
+          max = 2, {
+            shiny::incProgress(1)
             write.csv(export_df, file, row.names = FALSE)
-            incProgress(2)
+            shiny::incProgress(2)
           }
         )
       }

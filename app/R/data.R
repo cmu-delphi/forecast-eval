@@ -1,11 +1,11 @@
+library(aws.s3)
 
 # Get and prepare data
 getS3Bucket <- function() {
   # Connect to AWS s3bucket
   Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
-  s3bucket <- tryCatch(
-    {
-      get_bucket(bucket = "forecast-eval")
+  s3bucket <- tryCatch({
+      aws.s3::get_bucket(bucket = "forecast-eval")
     },
     error = function(e) {
       e
@@ -18,9 +18,8 @@ getS3Bucket <- function() {
 
 getData <- function(filename, s3bucket) {
   if (!is.null(s3bucket)) {
-    tryCatch(
-      {
-        s3readRDS(object = filename, bucket = s3bucket)
+    tryCatch({
+        aws.s3::s3readRDS(object = filename, bucket = s3bucket)
       },
       error = function(e) {
         e
@@ -71,8 +70,15 @@ getAllData <- function(loadFile) {
   dfStateHospitalizations <- dfStateHospitalizations %>% select(all_of(expectedCols))
   dfNationHospitalizations <- dfNationHospitalizations %>% select(all_of(expectedCols))
 
-  df <- rbind(dfStateCases, dfStateDeaths, dfNationCases, dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations)
-  df <- df %>% rename("10" = cov_10, "20" = cov_20, "30" = cov_30, "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70, "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98)
+  df <- rbind(
+    dfStateCases, dfStateDeaths, dfNationCases,
+    dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations
+  )
+  df <- df %>% rename(
+    "10" = cov_10, "20" = cov_20, "30" = cov_30,
+    "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
+    "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
+  )
 
   return(df)
 }

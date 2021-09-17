@@ -46,7 +46,7 @@ generateExportFilename <- function(input) {
   } else {
     filename <- paste0(filename, "-totaled-over-common-locations")
   }
-  shiny::reactive(filename)
+  filename
 }
 
 exportScoresServer <- function(id, filenameReactive, dataReactive) {

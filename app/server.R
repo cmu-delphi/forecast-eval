@@ -87,8 +87,6 @@ DATA_LOADED <- FALSE
 loadData <- createDataLoader()
 
 server <- function(input, output, session) {
-  delphiLayoutServer()
-
   CASES_DEATHS_CURRENT <- resolveCurrentCasesDeathDay()
   HOSP_CURRENT <- resolveCurrentHospDay()
 

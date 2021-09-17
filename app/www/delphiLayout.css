@@ -17,10 +17,6 @@ html {
   display: flex;
 }
 
-.delphi-header.delphi-embedded {
-  display: none;
-}
-
 .delphi-header-logo {
   position: relative;
   width: 220px;

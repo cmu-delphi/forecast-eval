@@ -10,7 +10,8 @@ delphiHeaderUI <- function(id = "delphi-header", title = "My App") {
     shiny::tags$link(rel = "stylesheet", type = "text/css", href = paste0(f, "?md5=", md5))
   }
 
-  div(
+  shiny::conditionalPanel(
+    condition = "window.location.search.indexOf('embed') < 0",
     id = id,
     class = "delphi-header",
     tags$head(
@@ -80,20 +81,5 @@ delphiLayoutUI <- function(id = "delphi-root", title = "My App",
         ),
       ),
     )
-  )
-}
-
-delphiLayoutServer <- function(id = "delphi-root") {
-  shiny::moduleServer(
-    id,
-    function(input, output, session) {
-      observe({
-        query <- shiny::parseQueryString(session$clientData$url_search)
-        if (!is.null(query[["embed"]])) {
-          # hide header in case of embedded flag
-          shinyjs::addClass(class = "delphi-embedded", selector = paste0("#", id, " .delphi-header"))
-        }
-      })
-    }
   )
 }

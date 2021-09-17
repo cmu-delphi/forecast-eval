@@ -22,7 +22,7 @@ filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FAL
     summarize(location_list = paste(sort(unique(geo_value)), collapse = ","))
   locationDf <- locationDf %>% filter(location_list != c("us"))
   # Create a list containing each row's location list
-  locationList <- sapply(locationDf$location_list, function(x) strsplit(x, ","))
+  locationList <- sapply(locationDf$location_list, function(x) stringr::strsplit(x, ","))
   locationList <- lapply(locationList, function(x) x[x != "us"])
   # Get the intersection of all the locations in these lists
   locationsIntersect <- unique(Reduce(intersect, locationList))

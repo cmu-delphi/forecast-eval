@@ -49,18 +49,19 @@ delphiLayoutUI <- function(id = "delphi-root", title = "My App",
                            sidebar = list(),
                            main = list()) {
   ns <- shiny::NS(id)
+  font <- bslib::font_google("Open Sans", local = TRUE)
   div(
     id = id,
     class = "delphi-root",
     delphiHeaderUI(id = ns("header"), title = title),
     fluidPage(
-      theme = bs_theme(
+      theme = bslib::bs_theme(
         version = 4,
         bootswatch = "default",
         primary = "#0f6ecd",
         fg = "#232735",
         bg = "#ffffff",
-        base_font = font_google("Open Sans", local = TRUE)
+        base_font = font,
       ),
       sidebarLayout(
         div(

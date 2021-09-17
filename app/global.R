@@ -1,15 +1,12 @@
 library(shiny)
 library(shinyjs)
-library(tools)
-library(bslib)
 library(plotly)
 library(tidyr)
-library(dplyr)
+library(dplyr, warn.conflicts = FALSE)
 library(lubridate)
 library(viridis)
 library(tsibble)
 library(covidcast)
-library(stringr)
 
 appVersion <- "4.0.0"
 

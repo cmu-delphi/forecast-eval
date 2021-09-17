@@ -27,8 +27,10 @@ AHEAD_OPTIONS <- c(1, 2, 3, 4)
 # ahead 1 has to have forecast date of Monday or earlier,
 # ahead 2 has to have forecast date of Monday + 7 days or earlier (offset + 7 days or more), etc
 HOSPITALIZATIONS_OFFSET <- 2
-HOSPITALIZATIONS_AHEAD_OPTIONS <- c(HOSPITALIZATIONS_OFFSET, HOSPITALIZATIONS_OFFSET + 7,
-  HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21)
+HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
+  HOSPITALIZATIONS_OFFSET, HOSPITALIZATIONS_OFFSET + 7,
+  HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21
+)
 
 # Earliest 'as of' date available from covidcast API
 MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2021-01-09")

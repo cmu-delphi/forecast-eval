@@ -4,7 +4,8 @@ library(aws.s3)
 getS3Bucket <- function() {
   # Connect to AWS s3bucket
   Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
-  s3bucket <- tryCatch({
+  s3bucket <- tryCatch(
+    {
       aws.s3::get_bucket(bucket = "forecast-eval")
     },
     error = function(e) {
@@ -18,7 +19,8 @@ getS3Bucket <- function() {
 
 getData <- function(filename, s3bucket) {
   if (!is.null(s3bucket)) {
-    tryCatch({
+    tryCatch(
+      {
         aws.s3::s3readRDS(object = filename, bucket = s3bucket)
       },
       error = function(e) {
@@ -49,9 +51,9 @@ getFallbackData <- function(filename) {
 getAllData <- function(loadFile) {
   dfStateCases <- loadFile("score_cards_state_cases.rds")
   dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
+  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
   dfNationCases <- loadFile("score_cards_nation_cases.rds")
   dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
-  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
   dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
 
   # Pick out expected columns only
@@ -65,14 +67,14 @@ getAllData <- function(loadFile) {
 
   dfStateCases <- dfStateCases %>% select(all_of(expectedCols))
   dfStateDeaths <- dfStateDeaths %>% select(all_of(expectedCols))
+  dfStateHospitalizations <- dfStateHospitalizations %>% select(all_of(expectedCols))
   dfNationCases <- dfNationCases %>% select(all_of(expectedCols))
   dfNationDeaths <- dfNationDeaths %>% select(all_of(expectedCols))
-  dfStateHospitalizations <- dfStateHospitalizations %>% select(all_of(expectedCols))
   dfNationHospitalizations <- dfNationHospitalizations %>% select(all_of(expectedCols))
 
   df <- rbind(
-    dfStateCases, dfStateDeaths, dfNationCases,
-    dfNationDeaths, dfStateHospitalizations, dfNationHospitalizations
+    dfStateCases, dfStateDeaths, dfStateHospitalizations,
+    dfNationCases, dfNationDeaths, dfNationHospitalizations
   )
   df <- df %>% rename(
     "10" = cov_10, "20" = cov_20, "30" = cov_30,

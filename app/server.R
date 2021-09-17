@@ -765,9 +765,11 @@ server <- function(input, output, session) {
     )
   }
 
-  exportScoresServer("exportScores", shiny::reactive(generateExportFilename(input)),
-   shiny::reactive(createExportScoresDataFrame(
-    df, input$targetVariable, input$scoreType, input$forecasters,
-    input$location, input$coverageInterval
-  )))
+  exportScoresServer(
+    "exportScores", shiny::reactive(generateExportFilename(input)),
+    shiny::reactive(createExportScoresDataFrame(
+      df, input$targetVariable, input$scoreType, input$forecasters,
+      input$location, input$coverageInterval
+    ))
+  )
 }

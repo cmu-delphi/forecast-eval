@@ -99,7 +99,7 @@ sidebar <- conditionalPanel(
     )
   )),
   tags$hr(),
-  exportScoresUI('exportScores'),
+  exportScoresUI("exportScores"),
   tags$hr()
 )
 
@@ -168,8 +168,8 @@ main <- tabsetPanel(
 )
 
 ui <- delphiLayoutUI(
-  title = 'Forecast Evaluation Dashboard',
-  repo = 'https://github.com/cmu-delphi/forecast-eval',
+  title = "Forecast Evaluation Dashboard",
+  repo = "https://github.com/cmu-delphi/forecast-eval",
   sidebar = sidebar,
   main = main
 )

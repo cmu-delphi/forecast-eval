@@ -61,7 +61,8 @@ exportScoresServer <- function(id, filenameReactive, dataReactive) {
           message = "Preparing export",
           detail = "This may take a while...",
           value = 0,
-          max = 2, {
+          max = 2,
+          {
             shiny::incProgress(1)
             write.csv(dataReactive(), file, row.names = FALSE)
             shiny::incProgress(2)

@@ -7,105 +7,110 @@ scoringDisclaimer <- includeMarkdown("assets/scoring-disclaimer.md")
 
 # About page content
 aboutPageText <- includeMarkdown("assets/about.md")
+aboutDashboardText <- includeMarkdown("assets/about-dashboard.md")
 
 ########
 # Layout
 ########
 
-sidebar <- conditionalPanel(
-  condition = "input.tabset == 'evaluations'",
-  radioButtons("targetVariable", "Target Variable",
-    choices = list(
-      "Incident Deaths" = "Deaths",
-      "Incident Cases" = "Cases",
-      "Hospital Admissions" = "Hospitalizations"
-    )
-  ),
-  radioButtons("scoreType", "Scoring Metric",
-    choices = list(
-      "Weighted Interval Score" = "wis",
-      "Spread" = "sharpness",
-      "Absolute Error" = "ae",
-      "Coverage" = "coverage"
-    )
-  ),
+sidebar <- tags$div(
   conditionalPanel(
-    condition = "input.scoreType != 'coverage'",
-    tags$p(id = "scale-score", "Y-Axis Score Scale"),
-    checkboxInput(
-      "logScale",
-      "Log Scale",
-      value = FALSE,
-    )
-  ),
-  conditionalPanel(
-    condition = "input.scoreType != 'coverage' && input.targetVariable != 'Hospitalizations'",
-    checkboxInput(
-      "scaleByBaseline",
-      "Scale by Baseline Forecaster",
-      value = FALSE,
-    )
-  ),
-  selectInput(
-    "forecasters",
-    p("Forecasters", tags$br(), tags$span(id = "forecaster-input", "Type a name or select from dropdown")),
-    choices = c("COVIDhub-baseline", "COVIDhub-ensemble"),
-    multiple = TRUE,
-    selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
-  ),
-  tags$p(
-    id = "missing-data-disclaimer",
-    "Some forecasters may not have data for the chosen location or scoring metric"
-  ),
-  checkboxGroupInput(
-    "aheads",
-    "Forecast Horizon (Weeks)",
-    choices = AHEAD_OPTIONS,
-    selected = AHEAD_OPTIONS[1],
-    inline = TRUE
-  ),
-  hidden(tags$p(
-    id = "horizon-disclaimer",
-    "Forecasters submitted earlier than Mondays may have longer actual prediction horizons"
-  )),
-  conditionalPanel(
-    condition = "input.scoreType == 'coverage'",
-    selectInput(
-      "coverageInterval",
-      "Coverage Interval",
-      choices = "",
-      multiple = FALSE,
-      selected = "95"
+    condition = "input.tabset == 'evaluations'",
+    radioButtons("targetVariable", "Target Variable",
+      choices = list(
+        "Incident Deaths" = "Deaths",
+        "Incident Cases" = "Cases",
+        "Hospital Admissions" = "Hospitalizations"
+      )
     ),
-  ),
-  conditionalPanel(
-    condition = "input.scoreType != 'coverage'",
+    radioButtons("scoreType", "Scoring Metric",
+      choices = list(
+        "Weighted Interval Score" = "wis",
+        "Spread" = "sharpness",
+        "Absolute Error" = "ae",
+        "Coverage" = "coverage"
+      )
+    ),
+    conditionalPanel(
+      condition = "input.scoreType != 'coverage'",
+      tags$p(id = "scale-score", "Y-Axis Score Scale"),
+      checkboxInput(
+        "logScale",
+        "Log Scale",
+        value = FALSE,
+      )
+    ),
+    conditionalPanel(
+      condition = "input.scoreType != 'coverage' && input.targetVariable != 'Hospitalizations'",
+      checkboxInput(
+        "scaleByBaseline",
+        "Scale by Baseline Forecaster",
+        value = FALSE,
+      )
+    ),
     selectInput(
-      "location",
-      "Location",
+      "forecasters",
+      p("Forecasters", tags$br(), tags$span(id = "forecaster-input", "Type a name or select from dropdown")),
+      choices = c("COVIDhub-baseline", "COVIDhub-ensemble"),
+      multiple = TRUE,
+      selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
+    ),
+    tags$p(
+      id = "missing-data-disclaimer",
+      "Some forecasters may not have data for the chosen location or scoring metric"
+    ),
+    checkboxGroupInput(
+      "aheads",
+      "Forecast Horizon (Weeks)",
+      choices = AHEAD_OPTIONS,
+      selected = AHEAD_OPTIONS[1],
+      inline = TRUE
+    ),
+    hidden(tags$p(
+      id = "horizon-disclaimer",
+      "Forecasters submitted earlier than Mondays may have longer actual prediction horizons"
+    )),
+    conditionalPanel(
+      condition = "input.scoreType == 'coverage'",
+      selectInput(
+        "coverageInterval",
+        "Coverage Interval",
+        choices = "",
+        multiple = FALSE,
+        selected = "95"
+      ),
+    ),
+    conditionalPanel(
+      condition = "input.scoreType != 'coverage'",
+      selectInput(
+        "location",
+        "Location",
+        choices = "",
+        multiple = FALSE,
+        selected = "US"
+      )
+    ),
+    selectInput(
+      "asOf",
+      "As Of",
       choices = "",
       multiple = FALSE,
-      selected = "US"
-    )
+      selected = ""
+    ),
+    tags$p(id = "missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
+    hidden(div(
+      id = "showForecastsCheckbox",
+      checkboxInput(
+        "showForecasts",
+        "Show Forecasters' Predictions",
+        value = FALSE,
+      )
+    )),
+    tags$hr(),
+    exportScoresUI("exportScores"),
+    tags$hr()
   ),
-  selectInput(
-    "asOf",
-    "As Of",
-    choices = "",
-    multiple = FALSE,
-    selected = ""
-  ),
-  tags$p(id = "missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
-  hidden(div(
-    id = "showForecastsCheckbox",
-    checkboxInput(
-      "showForecasts",
-      "Show Forecasters' Predictions",
-      value = FALSE,
-    )
-  )),
-  tags$hr(),
-  exportScoresUI("exportScores"),
+  aboutDashboardText,
   tags$hr()
 )
 

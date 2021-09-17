@@ -31,7 +31,10 @@ filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FAL
     if (hasAsOfData) {
       filteredScoreDf <- filteredScoreDf %>%
         group_by(forecaster, forecast_date, target_end_date, ahead) %>%
-        summarize(Score = sum(Score) / length(locationsIntersect), actual = sum(actual), as_of_actual = sum(as_of_actual))
+        summarize(
+          Score = sum(Score) / length(locationsIntersect),
+          actual = sum(actual), as_of_actual = sum(as_of_actual)
+        )
     } else {
       filteredScoreDf <- filteredScoreDf %>%
         group_by(forecaster, forecast_date, target_end_date, ahead) %>%

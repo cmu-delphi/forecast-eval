@@ -53,7 +53,10 @@ sidebar <- conditionalPanel(
     multiple = TRUE,
     selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
   ),
-  tags$p(id = "missing-data-disclaimer", "Some forecasters may not have data for the chosen location or scoring metric"),
+  tags$p(
+    id = "missing-data-disclaimer",
+    "Some forecasters may not have data for the chosen location or scoring metric"
+  ),
   checkboxGroupInput(
     "aheads",
     "Forecast Horizon (Weeks)",
@@ -61,7 +64,10 @@ sidebar <- conditionalPanel(
     selected = AHEAD_OPTIONS[1],
     inline = TRUE
   ),
-  hidden(tags$p(id = "horizon-disclaimer", "Forecasters submitted earlier than Mondays may have longer actual prediction horizons")),
+  hidden(tags$p(
+    id = "horizon-disclaimer",
+    "Forecasters submitted earlier than Mondays may have longer actual prediction horizons"
+  )),
   conditionalPanel(
     condition = "input.scoreType == 'coverage'",
     selectInput(

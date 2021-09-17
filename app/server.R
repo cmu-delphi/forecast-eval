@@ -39,7 +39,7 @@ updateLocationChoices <- function(session, df, targetVariable, forecasterChoices
   df <- df %>% filter(forecaster %in% forecasterChoices)
   locationChoices <- unique(toupper(df$geo_value))
   # Move US to front of list
-  locationChoices <- locationChoices[c(length(locationChoices), (1:length(locationChoices) - 1))]
+  locationChoices <- locationChoices[c(length(locationChoices), seq_len(length(locationChoices) - 1))]
   locationChoices <- c(TOTAL_LOCATIONS, locationChoices)
   # Ensure previously selected options are still allowed
   if (locationInput %in% locationChoices) {
@@ -121,7 +121,10 @@ server <- function(input, output, session) {
     # Need to do this after setting dfWithForecasts to leave in aheads for forecasts
     filteredScoreDf <- filteredScoreDf %>% filter(ahead %in% input$aheads)
     if (dim(filteredScoreDf)[1] == 0) {
-      output$renderWarningText <- renderText("The selected forecasters do not have enough data to display the selected scoring metric.")
+      output$renderWarningText <- renderText(paste0(
+        "The selected forecasters do not have enough data ",
+        "to display the selected scoring metric."
+      ))
       return()
     }
     if (is.null(asOfData)) {
@@ -161,7 +164,10 @@ server <- function(input, output, session) {
       aggregateText <- "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (input$scoreType == "coverage") {
         aggregate <- "Averaged"
-        output$renderAggregateText <- renderText(paste(aggregateText, " Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "))
+        output$renderAggregateText <- renderText(paste(
+          aggregateText,
+          " Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "
+        ))
       } else {
         aggregate <- "Totaled"
         output$renderAggregateText <- renderText(paste(aggregateText, " Locations included: "))
@@ -386,7 +392,7 @@ server <- function(input, output, session) {
       layout(hovermode = "x unified", legend = list(orientation = "h", y = -0.1)) %>%
       config(displayModeBar = F)
     # Remove the extra grouping from the legend: "(___,1)"
-    for (i in 1:length(finalPlot$x$data)) {
+    for (i in seq_along(finalPlot$x$data)) {
       if (!is.null(finalPlot$x$data[[i]]$name)) {
         finalPlot$x$data[[i]]$name <- gsub("\\(", "", str_split(finalPlot$x$data[[i]]$name, ",")[[1]][1])
       }
@@ -495,9 +501,10 @@ server <- function(input, output, session) {
         group_by(Forecaster, forecast_date, Week_End_Date, ahead) %>%
         summarize(Quantile_50 = sum(Quantile_50))
     }
+    # We want the forecasts to be later than latest as of date with data
+    lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
     dfWithForecasts <- dfWithForecasts %>%
-      # We want the forecasts to be later than latest as of date with data
-      filter(forecast_date >= tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]) %>%
+      filter(forecast_date >= lastEndDate) %>%
       group_by(Week_End_Date) %>%
       summarize(Forecaster, forecast_date, Quantile_50)
 

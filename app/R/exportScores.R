@@ -49,21 +49,21 @@ generateExportFilename <- function(input) {
   shiny::reactive(filename)
 }
 
-exportScoresServer <- function(id, filename, export_df) {
+exportScoresServer <- function(id, filenameReactive, dataReactive) {
   shiny::moduleServer(id, function(input, output, session) {
     output$exportScores <- downloadHandler(
       filename = function() {
-        paste0(filename, "-", Sys.Date(), ".csv")
+        paste0(filenameReactive(), "-", Sys.Date(), ".csv")
       },
       contentType = "text/csv",
       content = function(file) {
-        withProgress(
+        shiny::withProgress(
           message = "Preparing export",
           detail = "This may take a while...",
           value = 0,
           max = 2, {
             shiny::incProgress(1)
-            write.csv(export_df, file, row.names = FALSE)
+            write.csv(dataReactive(), file, row.names = FALSE)
             shiny::incProgress(2)
           }
         )

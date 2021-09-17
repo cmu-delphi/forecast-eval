@@ -84,7 +84,7 @@ updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, a
 }
 # All data is fully loaded from AWS
 DATA_LOADED <- FALSE
-loadData <- createFallbackDataLoader() # createDataLoader()
+loadData <- createDataLoader()
 
 server <- function(input, output, session) {
   delphiLayoutServer()
@@ -207,7 +207,8 @@ server <- function(input, output, session) {
     }
 
     showElement("refresh-colors")
-    if (dim(filteredScoreDf)[1] == 0) {
+    if (nrow(filteredScoreDf) == 0) {
+      # no data to show
       return()
     }
 
@@ -705,7 +706,10 @@ server <- function(input, output, session) {
     } else {
       location <- "state"
     }
-    if (input$asOf < CURRENT_WEEK_END_DATE() && input$asOf != "") {
+    if (input$asOf == "") {
+      return()
+    }
+    if (input$asOf < CURRENT_WEEK_END_DATE()) {
       hideElement("truthPlot")
       hideElement("notes")
       hideElement("scoringDisclaimer")
@@ -738,7 +742,7 @@ server <- function(input, output, session) {
         return()
       }
       summaryPlot(reRenderTruth = TRUE, asOfData = asOfTruthData)
-    } else if (input$asOf == CURRENT_WEEK_END_DATE() && input$asOf != "") {
+    } else if (input$asOf == CURRENT_WEEK_END_DATE()) {
       summaryPlot(reRenderTruth = TRUE)
     }
   }

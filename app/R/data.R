@@ -83,7 +83,7 @@ getAllData <- function(loadFile) {
   return(df)
 }
 
-createDataLoader <- function() {
+createS3DataLoader <- function() {
   s3bucket <- getS3Bucket()
   df <- data.frame()
 
@@ -121,3 +121,6 @@ createFallbackDataLoader <- function() {
   }
   dataLoader
 }
+
+
+createDataLoader <- createS3DataLoader

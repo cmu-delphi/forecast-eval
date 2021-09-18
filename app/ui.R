@@ -33,24 +33,25 @@ sidebar <- tags$div(
     ),
     conditionalPanel(
       condition = "input.scoreType != 'coverage'",
-      tags$p(id = "scale-score", "Y-Axis Score Scale"),
+      class = "checkbox-grouper",
+      tags$div(class = "control-label", "Y-Axis Score Scale"),
       checkboxInput(
         "logScale",
         "Log Scale",
         value = FALSE,
-      )
-    ),
-    conditionalPanel(
-      condition = "input.scoreType != 'coverage' && input.targetVariable != 'Hospitalizations'",
-      checkboxInput(
-        "scaleByBaseline",
-        "Scale by Baseline Forecaster",
-        value = FALSE,
-      )
+      ),
+      conditionalPanel(
+        condition = "input.targetVariable != 'Hospitalizations'",
+        checkboxInput(
+          "scaleByBaseline",
+          "Scale by Baseline Forecaster",
+          value = FALSE,
+        )
+      ),
     ),
     selectInput(
       "forecasters",
-      p("Forecasters", tags$br(), tags$span(id = "forecaster-input", "Type a name or select from dropdown")),
+      tags$div("Forecasters", tags$div(id = "forecaster-input", "Type a name or select from dropdown")),
       choices = c("COVIDhub-baseline", "COVIDhub-ensemble"),
       multiple = TRUE,
       selected = c("COVIDhub-baseline", "COVIDhub-ensemble")

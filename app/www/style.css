@@ -25,13 +25,6 @@
 #drag-to-zoom {
     font-size:11px;
 }
-#refresh-colors {
-    height: 26px;
-    font-size: 12px;
-}
-#scale-score {
-    font-weight: bold;
-}
 #data-loading-message {
     font-style: italic;
     font-size: 18px;
@@ -41,4 +34,12 @@
     font-size: 18px;
     font-style:italic;
     color: #949494;
+}
+
+.control-label {
+    font-weight: 600;
+}
+
+.checkbox-grouper > .form-group {
+    margin-bottom: 0;
 }

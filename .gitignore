@@ -8,3 +8,4 @@ Meta
 /*.tar.gz
 *.Rcheck
 /dist
+/NAMESPACE

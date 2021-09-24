@@ -321,16 +321,15 @@ server <- function(input, output, session) {
 
   # Get most recent target end date
   # Prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations
-  # Since we don't upload new observed data until Monday:
-  # Use 8 and 2 for Cases and Deaths so that Sundays will not use the Saturday directly beforehand
-  # since we don't have data for it yet.
-  # Use 5 and 11 for Hospitalizations since Thurs-Sun should also not use the Wednesday directly beforehand.
-  # (This means that on Mondays until the afternoon when pipeline completes, the "as of" will show
-  # most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
-  prevWeek <- seq(Sys.Date()-8,Sys.Date()-2,by='day')
+  # Since we don't upload new observed data until Sunday:
+  # Use 7 and 1 for Cases and Deaths so that Sundays will use the Saturday directly beforehand.
+  # Use 4 and 10 for Hospitalizations since Thurs-Sat should not use the Wednesday directly beforehand.
+  # (This means that on Sundays until the afternoon when the pipeline completes, the "as of" will show
+  # the most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
+  prevWeek <- seq(Sys.Date()-7,Sys.Date()-1,by='day')
   CASES_DEATHS_CURRENT = prevWeek[weekdays(prevWeek)=='Saturday']
   CURRENT_WEEK_END_DATE = reactiveVal(CASES_DEATHS_CURRENT)
-  prevHospWeek <- seq(Sys.Date()-11,Sys.Date()-5,by='day')
+  prevHospWeek <- seq(Sys.Date()-10,Sys.Date()-4,by='day')
   HOSP_CURRENT = prevHospWeek[weekdays(prevHospWeek)=='Wednesday']
   
   # Get scores

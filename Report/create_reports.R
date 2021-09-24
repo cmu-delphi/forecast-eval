@@ -23,7 +23,7 @@ prediction_cards_filepath <- case_when(
 
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
-  "COVIDhub-baseline", "COVIDhub-trained_ensemble"
+  "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"
 ))
 locations <- covidHubUtils::hub_locations
 

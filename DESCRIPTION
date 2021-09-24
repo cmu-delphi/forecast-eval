@@ -22,7 +22,8 @@ Imports:
  viridis,
  aws.s3,
  covidcast,
- stringr
+ stringr,
+ markdown
 Suggests:
  styler,
  lintr,

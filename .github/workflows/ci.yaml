@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+      - name: Pull Image Data
+        run: make pull_data
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
         with:

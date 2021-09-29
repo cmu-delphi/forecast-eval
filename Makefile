@@ -48,4 +48,4 @@ deploy_dashboard: build_dashboard
 	docker push ghcr.io/cmu-delphi/forecast-eval:$(imageTag)
 
 start_dashboard: build_dashboard_dev
-	docker run --rm -p 3838:3838 ghcr.io/cmu-delphi/forecast-eval:latest
+	docker run --rm -p 3838:80 ghcr.io/cmu-delphi/forecast-eval:latest

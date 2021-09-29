@@ -113,7 +113,9 @@ rm(predictions_cards)
 gc()
 
 print("Evaluating state forecasts")
-state_scores <- evaluate_covid_predictions(state_predictions,
+state_scores <- evaluate_covidcast(
+  state_predictions, 
+  signals, 
   err_measures,
   geo_type = "state"
 )

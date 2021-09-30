@@ -49,7 +49,7 @@ delphiLayoutUI <- function(id = "delphi-root", title = "My App",
                            sidebar = list(),
                            main = list()) {
   ns <- shiny::NS(id)
-  font <- bslib::font_google("Open Sans", local = TRUE)
+  font <- bslib::font_google("Open Sans", local = FALSE)
   div(
     id = id,
     class = "delphi-root",

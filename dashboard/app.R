@@ -14,6 +14,17 @@ library(memoise)
 
 source('./common.R')
 
+# Set application-level caching location.
+shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2))
+cache <- getShinyOption("cache")
+
+# Since covidcast data updates about once a day. Add date arg to
+# covidcast_signal so caches aren't used after that.
+covidcast_signal_mem <- function(..., date=Sys.Date()) {
+  return(covidcast_signal(...))
+}
+covidcast_signal_mem <- memoise(covidcast_signal_mem, cache = cache)
+
 # All data is fully loaded from AWS
 DATA_LOADED = FALSE
 
@@ -916,7 +927,7 @@ server <- function(input, output, session) {
       fetchDate = as.Date(input$asOf) + 1
 
       # Covidcast API call
-      asOfTruthData = covidcast_signal(data_source = dataSource, signal = targetSignal,
+      asOfTruthData = covidcast_signal_mem(data_source = dataSource, signal = targetSignal,
                                        start_day = "2020-02-15", end_day = fetchDate,
                                        as_of = fetchDate,
                                        geo_type = location)

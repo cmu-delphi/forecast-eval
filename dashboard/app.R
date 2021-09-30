@@ -88,7 +88,7 @@ ui <- fluidPage(padding=0, title="Forecast Eval Dashboard",
                                "Log Scale",
                                value = FALSE,
                              )),
-            conditionalPanel(condition = "input.scoreType != 'coverage' && input.targetVariable != 'Hospitalizations'",
+            conditionalPanel(condition = "input.scoreType != 'coverage'",
                              checkboxInput(
                                "scaleByBaseline",
                                "Scale by Baseline Forecaster",

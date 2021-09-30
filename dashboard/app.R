@@ -10,6 +10,7 @@ library(tsibble)
 library(aws.s3)
 library(covidcast)
 library(stringr)
+library(memoise)
 
 source('./common.R')
 

@@ -465,7 +465,8 @@ server <- function(input, output, session) {
     truthDf = filteredScoreDf
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
-    })
+    }) %>%
+    bindCache(truthDf, locationsIntersect, asOfData, dfWithForecasts, colorPalette, cache=cache)
 
     # If we are just re-rendering the truth plot with as of data
     # we don't need to re-render the score plot

@@ -10,8 +10,21 @@ library(tsibble)
 library(aws.s3)
 library(covidcast)
 library(stringr)
+library(memoise)
 
 source('./common.R')
+
+# Set application-level caching location. Stores up to 1GB of caches. Removes
+# least recently used objects first.
+shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2, evict="lru"))
+cache <- getShinyOption("cache")
+
+# Since covidcast data updates about once a day. Add date arg to
+# covidcast_signal so caches aren't used after that.
+covidcast_signal_mem <- function(..., date=Sys.Date()) {
+  return(covidcast_signal(...))
+}
+covidcast_signal_mem <- memoise(covidcast_signal_mem, cache = cache)
 
 # All data is fully loaded from AWS
 DATA_LOADED = FALSE
@@ -88,7 +101,7 @@ ui <- fluidPage(padding=0, title="Forecast Eval Dashboard",
                                "Log Scale",
                                value = FALSE,
                              )),
-            conditionalPanel(condition = "input.scoreType != 'coverage' && input.targetVariable != 'Hospitalizations'",
+            conditionalPanel(condition = "input.scoreType != 'coverage'",
                              checkboxInput(
                                "scaleByBaseline",
                                "Scale by Baseline Forecaster",
@@ -321,16 +334,15 @@ server <- function(input, output, session) {
 
   # Get most recent target end date
   # Prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations
-  # Since we don't upload new observed data until Monday:
-  # Use 8 and 2 for Cases and Deaths so that Sundays will not use the Saturday directly beforehand
-  # since we don't have data for it yet.
-  # Use 5 and 11 for Hospitalizations since Thurs-Sun should also not use the Wednesday directly beforehand.
-  # (This means that on Mondays until the afternoon when pipeline completes, the "as of" will show
-  # most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
-  prevWeek <- seq(Sys.Date()-8,Sys.Date()-2,by='day')
+  # Since we don't upload new observed data until Sunday:
+  # Use 7 and 1 for Cases and Deaths so that Sundays will use the Saturday directly beforehand.
+  # Use 4 and 10 for Hospitalizations since Thurs-Sat should not use the Wednesday directly beforehand.
+  # (This means that on Sundays until the afternoon when the pipeline completes, the "as of" will show
+  # the most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
+  prevWeek <- seq(Sys.Date()-7,Sys.Date()-1,by='day')
   CASES_DEATHS_CURRENT = prevWeek[weekdays(prevWeek)=='Saturday']
   CURRENT_WEEK_END_DATE = reactiveVal(CASES_DEATHS_CURRENT)
-  prevHospWeek <- seq(Sys.Date()-11,Sys.Date()-5,by='day')
+  prevHospWeek <- seq(Sys.Date()-10,Sys.Date()-4,by='day')
   HOSP_CURRENT = prevHospWeek[weekdays(prevHospWeek)=='Wednesday']
   
   # Get scores
@@ -469,7 +481,7 @@ server <- function(input, output, session) {
     filteredScoreDf = filteredScoreDf[c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")]
     filteredScoreDf = filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
     if (input$scoreType != 'coverage') {
-      if (input$scaleByBaseline && input$targetVariable != "Hospitalizations") {
+      if (input$scaleByBaseline) {
         baselineDf = filteredScoreDf %>% filter(Forecaster %in% 'COVIDhub-baseline')
         filteredScoreDfMerged = merge(filteredScoreDf, baselineDf, by=c("Week_End_Date","ahead"))
         # Scaling score by baseline forecaster
@@ -915,7 +927,7 @@ server <- function(input, output, session) {
       fetchDate = as.Date(input$asOf) + 1
 
       # Covidcast API call
-      asOfTruthData = covidcast_signal(data_source = dataSource, signal = targetSignal,
+      asOfTruthData = covidcast_signal_mem(data_source = dataSource, signal = targetSignal,
                                        start_day = "2020-02-15", end_day = fetchDate,
                                        as_of = fetchDate,
                                        geo_type = location)

@@ -14,7 +14,8 @@ RUN install2.r --error \
     aws.s3 \
     covidcast \
     stringr \
-    markdown
+    markdown \
+    memoise
 
 COPY dist/*rds /srv/shiny-server/
 COPY dashboard/* /srv/shiny-server/

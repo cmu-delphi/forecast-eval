@@ -149,13 +149,15 @@ ui <- fluidPage(padding=0, title="Forecast Eval Dashboard",
               selected = ''
             ),
             tags$p(id="missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
-            hidden(div(id="showForecastsCheckbox",
-                             checkboxInput(
-                               "showForecasts",
-                               "Show Forecasters' Predictions",
-                               value = FALSE,
-                             )
-            )),
+            div(id="showForecastsCheckbox",
+                disabled(
+                  checkboxInput(
+                    "showForecasts",
+                    "Show Forecasters' Predictions",
+                    value = FALSE,
+                  )
+                )
+            ),
             tags$hr(),
             export_scores_ui,
             tags$hr(),
@@ -800,9 +802,9 @@ server <- function(input, output, session) {
     }
 
     if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
-      hideElement("showForecastsCheckbox")
+      disable("showForecasts")
     } else {
-      showElement("showForecastsCheckbox")
+      enable("showForecasts")
     }
     if (input$scoreType == "wis") {
       show("wisExplanation")
@@ -850,9 +852,9 @@ server <- function(input, output, session) {
     updateAsOfData()
     # Only show forecast check box option if we are showing as of data
     if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
-      hideElement("showForecastsCheckbox")
+      disable("showForecasts")
     } else {
-      showElement("showForecastsCheckbox")
+      enable("showForecasts")
     }
   })
 
@@ -860,9 +862,9 @@ server <- function(input, output, session) {
     updateAsOfData()
     # Only show forecast check box option if we are showing as of data
     if (input$asOf != '' && input$asOf == CURRENT_WEEK_END_DATE()) {
-      hideElement("showForecastsCheckbox")
+      disable("showForecasts")
     } else {
-      showElement("showForecastsCheckbox")
+      enable("showForecasts")
     }
   })
 

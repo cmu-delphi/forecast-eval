@@ -327,6 +327,10 @@ getRecentData <- getRecentDataHelper()
 
 
 server <- function(input, output, session) {
+  # Reconnect user to new session after long network interruption. Selections are saved and applied
+  # to the new session.
+  session$allowReconnect(TRUE)
+
   TERRITORIES = c('AS', 'GU', 'MP', 'VI')
   PREV_AS_OF_DATA = reactiveVal(NULL)
   AS_OF_CHOICES = reactiveVal(NULL)

@@ -889,7 +889,7 @@ server <- function(input, output, session) {
     # Ensure there is always one forecaster selected
     if(length(input$forecasters) < 1) {
       updateSelectInput(session, "forecasters",
-                        selected = c("COVIDhub-ensemble")) # Use ensemble rather than baseline bc it has hospitalization scores
+                        selected = c("COVIDhub-baseline"))
     }
     # Ensure COVIDhub-baseline is selected when scaling by baseline
     if(input$scaleByBaseline && !("COVIDhub-baseline" %in% input$forecasters)) {
@@ -954,14 +954,12 @@ server <- function(input, output, session) {
     selectedAsOf = isolate(input$asOf)
     if (input$targetVariable == "Hospitalizations") {
       minChoice = MIN_AVAIL_HOSP_AS_OF_DATE
-      asOfChoices = asOfChoices[asOfChoices >= minChoice]
     } else if(input$location == 'US' && input$scoreType != 'coverage') {
       minChoice = MIN_AVAIL_NATION_AS_OF_DATE
-      asOfChoices = asOfChoices[asOfChoices >= minChoice]
     } else if(input$location %in% TERRITORIES || input$location == TOTAL_LOCATIONS || input$scoreType == 'coverage') {
       minChoice = MIN_AVAIL_TERRITORY_AS_OF_DATE
-      asOfChoices = asOfChoices[asOfChoices >= minChoice]
     }
+    asOfChoices = asOfChoices[asOfChoices >= minChoice]
     asOfChoices = c(asOfChoices, CURRENT_WEEK_END_DATE())
     # Make sure we have a valid as of selection
     nonValidAsOf = selectedAsOf == '' || !(as.Date(selectedAsOf) %in% asOfChoices)

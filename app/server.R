@@ -720,7 +720,7 @@ server <- function(input, output, session) {
       fetchDate <- as.Date(input$asOf) + 1
 
       # Covidcast API call
-      asOfTruthData <- covidcast_signal(
+      asOfTruthData <- covidcast_signal_mem(
         data_source = dataSource, signal = targetSignal,
         start_day = "2020-02-15", end_day = fetchDate,
         as_of = fetchDate,

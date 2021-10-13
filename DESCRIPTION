@@ -23,7 +23,8 @@ Imports:
  aws.s3,
  covidcast,
  stringr,
- markdown
+ markdown,
+ memoise
 Suggests:
  styler,
  lintr,

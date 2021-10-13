@@ -40,14 +40,11 @@ sidebar <- tags$div(
         "Log Scale",
         value = FALSE,
       ),
-      conditionalPanel(
-        condition = "input.targetVariable != 'Hospitalizations'",
-        checkboxInput(
-          "scaleByBaseline",
-          "Scale by Baseline Forecaster",
-          value = FALSE,
-        )
-      ),
+      checkboxInput(
+        "scaleByBaseline",
+        "Scale by Baseline Forecaster",
+        value = FALSE,
+      )
     ),
     selectInput(
       "forecasters",

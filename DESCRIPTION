@@ -1,4 +1,4 @@
-Package: forecast-eval
+Package: forecasteval
 Title: Forecast Evaluation Dashboard
 Version: 4.2.0
 Authors@R: c(person("Kate", "Harwood", email = "kharwood@andrew.cmu.edu", role = "cre"),
@@ -6,3 +6,26 @@ Authors@R: c(person("Kate", "Harwood", email = "kharwood@andrew.cmu.edu", role =
 	   person("Jed", "Grabman", role = "ctb"))
 Description: This app collects and scores COVID-19 forecasts submitted to the CDC and displays the results in an RShiny dashboard.
 License: MIT License, Copyright (c) 2021 Delphi contributors
+URL: https://github.com/cmu-delphi/forecast-eval/
+BugReports: https://github.com/cmu-delphi/forecast-eval/issues
+Depends: R (>= 3.6.0)
+Encoding: UTF-8
+Type: Shiny
+Imports:
+ shiny,
+ shinyjs,
+ bslib,
+ plotly,
+ dplyr,
+ tools,
+ tsibble,
+ viridis,
+ aws.s3,
+ covidcast,
+ stringr,
+ markdown
+Suggests:
+ styler,
+ lintr,
+ testthat
+RoxygenNote: 7.1.1

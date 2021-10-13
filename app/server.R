@@ -58,11 +58,11 @@ updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, a
   if (targetVariable == "Hospitalizations") {
     aheadOptions <- HOSPITALIZATIONS_AHEAD_OPTIONS
     title <- "Forecast Horizon (Days)"
-    show("horizon-disclaimer")
+    showElement("horizon-disclaimer")
   } else {
     aheadOptions <- AHEAD_OPTIONS
     title <- "Forecast Horizon (Weeks)"
-    hide("horizon-disclaimer")
+    hideElement("horizon-disclaimer")
   }
   aheadChoices <- Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
   # Ensure previsouly selected options are still allowed
@@ -592,28 +592,28 @@ server <- function(input, output, session) {
       showElement("showForecastsCheckbox")
     }
     if (input$scoreType == "wis") {
-      show("wisExplanation")
-      hide("sharpnessExplanation")
-      hide("aeExplanation")
-      hide("coverageExplanation")
+      showElement("wisExplanation")
+      hideElement("sharpnessExplanation")
+      hideElement("aeExplanation")
+      hideElement("coverageExplanation")
     }
     if (input$scoreType == "sharpness") {
-      show("sharpnessExplanation")
-      hide("wisExplanation")
-      hide("aeExplanation")
-      hide("coverageExplanation")
+      showElement("sharpnessExplanation")
+      hideElement("wisExplanation")
+      hideElement("aeExplanation")
+      hideElement("coverageExplanation")
     }
     if (input$scoreType == "ae") {
-      hide("wisExplanation")
-      hide("sharpnessExplanation")
-      show("aeExplanation")
-      hide("coverageExplanation")
+      hideElement("wisExplanation")
+      hideElement("sharpnessExplanation")
+      showElement("aeExplanation")
+      hideElement("coverageExplanation")
     }
     if (input$scoreType == "coverage") {
-      hide("wisExplanation")
-      hide("sharpnessExplanation")
-      hide("aeExplanation")
-      show("coverageExplanation")
+      hideElement("wisExplanation")
+      hideElement("sharpnessExplanation")
+      hideElement("aeExplanation")
+      showElement("coverageExplanation")
     }
   })
 
@@ -657,11 +657,11 @@ server <- function(input, output, session) {
   observe({
     # Show data loading message and hide other messages until all data is loaded
     if (DATA_LOADED) {
-      hide("data-loading-message")
-      show("refresh-colors")
-      show("notes")
-      show("scoreExplanations")
-      show("scoringDisclaimer")
+      hideElement("data-loading-message")
+      showElement("refresh-colors")
+      showElement("notes")
+      showElement("scoreExplanations")
+      showElement("scoringDisclaimer")
     }
     # Ensure there is always one ahead selected
     if (length(input$aheads) < 1) {

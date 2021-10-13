@@ -2,12 +2,12 @@ library(aws.s3)
 
 # Set application-level caching location. Stores up to 1GB of caches. Removes
 # least recently used objects first.
-shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2, evict="lru"))
+shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2, evict = "lru"))
 cache <- getShinyOption("cache")
 
 # Since covidcast data updates about once a day. Add date arg to
 # covidcast_signal so caches aren't used after that.
-covidcast_signal_mem <- function(..., date=Sys.Date()) {
+covidcast_signal_mem <- function(..., date = Sys.Date()) {
   return(covidcast_signal(...))
 }
 covidcast_signal_mem <- memoise::memoise(covidcast_signal_mem, cache = cache)

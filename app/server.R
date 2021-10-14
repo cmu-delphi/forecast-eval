@@ -114,6 +114,8 @@ server <- function(input, output, session) {
     filteredScoreDf <- filterScoreDf()
     if (!SUMMARIZING_OVER_ALL_LOCATIONS()) {
       filteredScoreDf <- filter(filteredScoreDf, geo_value == tolower(input$location))
+    } else if (SUMMARIZING_OVER_ALL_LOCATIONS()) {
+      filteredScoreDf <- filteredScoreDf %>% filter(geo_value != "us")
     }
 
     dfWithForecasts <- NULL

@@ -112,6 +112,10 @@ server <- function(input, output, session) {
   ##################
   summaryPlot <- function(colorSeed = 100, reRenderTruth = FALSE, asOfData = NULL) {
     filteredScoreDf <- filterScoreDf()
+    if (!SUMMARIZING_OVER_ALL_LOCATIONS()) {
+      filteredScoreDf <- filter(filteredScoreDf, geo_value == tolower(input$location))
+    }
+
     dfWithForecasts <- NULL
     if (input$showForecasts) {
       dfWithForecasts <- filteredScoreDf

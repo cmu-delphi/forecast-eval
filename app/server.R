@@ -111,7 +111,7 @@ server <- function(input, output, session) {
   # CREATE MAIN PLOT
   ##################
   summaryPlot <- function(colorSeed = 100, reRenderTruth = FALSE, asOfData = NULL) {
-    filteredScoreDf <- filterScoreDf()
+    filteredScoreDf <- filterScoreDf(isolate(SUMMARIZING_OVER_ALL_LOCATIONS()))
     dfWithForecasts <- NULL
     if (input$showForecasts) {
       dfWithForecasts <- filteredScoreDf
@@ -405,8 +405,8 @@ server <- function(input, output, session) {
     summaryPlot()
   })
 
-  # Filter scoring df by inputs chosen (targetVariable, forecasters, aheads)
-  filterScoreDf <- function() {
+  # Filter scoring df by inputs chosen (targetVariable, forecasters, aheads, location)
+  filterScoreDf <- function(summarize_over_all_locations) {
     signalFilter <- CASE_FILTER
     if (input$targetVariable == "Deaths") {
       signalFilter <- DEATH_FILTER
@@ -440,6 +440,13 @@ server <- function(input, output, session) {
       }
     }
     filteredScoreDf <- renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)
+
+    if (!summarize_over_all_locations) {
+      filteredScoreDf <- filter(filteredScoreDf, geo_value == tolower(input$location))
+    } else if (summarize_over_all_locations) {
+      filteredScoreDf <- filteredScoreDf %>% filter(geo_value != "us")
+    }
+
     return(filteredScoreDf)
   }
 

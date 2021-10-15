@@ -38,9 +38,18 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
 updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
   df <- df %>% filter(forecaster %in% forecasterChoices)
   locationChoices <- unique(toupper(df$geo_value))
+
   # Move US to front of list
   locationChoices <- locationChoices[c(length(locationChoices), seq_len(length(locationChoices) - 1))]
+  # Add totaled states option to front of list
   locationChoices <- c(TOTAL_LOCATIONS, locationChoices)
+
+  # Display full names for subset of locations
+  longnames <- STATE_NAME[match(locationChoices, STATE_ABB)]
+  names(locationChoices) <- paste(locationChoices, "-", longnames)
+  unmatched <- which(is.na(longnames))
+  names(locationChoices)[unmatched] <- locationChoices[unmatched]
+
   # Ensure previously selected options are still allowed
   if (locationInput %in% locationChoices) {
     selectedLocation <- locationInput

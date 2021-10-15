@@ -94,6 +94,7 @@ server <- function(input, output, session) {
   AS_OF_CHOICES <- reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
 
+  COLOR_SEED <- reactiveVal(100)
 
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
 
@@ -110,7 +111,7 @@ server <- function(input, output, session) {
   ##################
   # CREATE MAIN PLOT
   ##################
-  summaryPlot <- function(colorSeed = 100, reRenderTruth = FALSE, asOfData = NULL) {
+  summaryPlot <- function(reRenderTruth = FALSE, asOfData = NULL) {
     filteredScoreDf <- filterScoreDf()
     dfWithForecasts <- NULL
     if (input$showForecasts) {
@@ -215,7 +216,7 @@ server <- function(input, output, session) {
     )
 
     # Set forecaster colors for plot
-    set.seed(colorSeed)
+    set.seed(COLOR_SEED())
     forecasterRand <- sample(unique(df$forecaster))
     colorPalette <- setNames(object = viridis(length(unique(df$forecaster))), nm = forecasterRand)
     if (!is.null(asOfData)) {
@@ -544,9 +545,9 @@ server <- function(input, output, session) {
   ###################
 
   observeEvent(input$refreshColors, {
-    colorSeed <- floor(runif(1, 1, 1000))
+    COLOR_SEED(floor(runif(1, 1, 1000)))
     output$summaryPlot <- renderPlotly({
-      summaryPlot(colorSeed)
+      summaryPlot()
     })
   })
 

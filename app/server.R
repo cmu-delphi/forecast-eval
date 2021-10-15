@@ -319,12 +319,10 @@ server <- function(input, output, session) {
     }
     plotHeight <- 550 + (length(input$aheads) - 1) * 100
     finalPlot <-
-      ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
+      ggplotly(p, tooltip = c("x", "y", "shape", "label"), height = plotHeight) %>%
       layout(
-        height = plotHeight,
         legend = list(orientation = "h", y = -0.1),
         margin = list(t = 90),
-        height = 500,
         hovermode = "x unified",
         xaxis = list(
           title = list(text = "Target Date", standoff = 8L),
@@ -380,7 +378,7 @@ server <- function(input, output, session) {
         geom_point(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence"))
       if (input$showForecasts) {
         finalPlot <- finalPlot +
-          geom_line(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
+          geom_line(aes(y = Quantile_50, color = Forecaster)) +
           geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster))
       }
     } else {

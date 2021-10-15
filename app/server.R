@@ -118,7 +118,7 @@ server <- function(input, output, session) {
     }
     # Need to do this after setting dfWithForecasts to leave in aheads for forecasts
     filteredScoreDf <- filteredScoreDf %>% filter(ahead %in% input$aheads)
-    if (dim(filteredScoreDf)[1] == 0) {
+    if (nrow(filteredScoreDf) == 0) {
       output$renderWarningText <- renderText(paste0(
         "The selected forecasters do not have enough data ",
         "to display the selected scoring metric."
@@ -126,23 +126,23 @@ server <- function(input, output, session) {
       return()
     }
     if (is.null(asOfData)) {
-      if (!is.null(isolate(PREV_AS_OF_DATA())) && dim(isolate(PREV_AS_OF_DATA()))[1] != 0 &&
+      if (!is.null(isolate(PREV_AS_OF_DATA())) && nrow(isolate(PREV_AS_OF_DATA())) != 0 &&
         isolate(input$asOf) != "" && isolate(input$asOf) != isolate(CURRENT_WEEK_END_DATE())) {
         asOfData <- isolate(PREV_AS_OF_DATA())
       }
     }
-    if (!is.null(asOfData) && dim(asOfData)[1] != 0) {
+    if (!is.null(asOfData) && nrow(asOfData) != 0) {
       asOfData <- asOfData %>% rename(target_end_date = time_value, as_of_actual = value)
       asOfData <- asOfData[c("target_end_date", "geo_value", "as_of_actual")]
 
       # Get the 'as of' dates that are the target_end_dates in the scoring df
       dateGroupDf <- asOfData %>% filter(asOfData$target_end_date %in% filteredScoreDf$target_end_date)
-      if (dim(dateGroupDf)[1] != 0) {
+      if (nrow(dateGroupDf) != 0) {
         # Since cases and deaths are shown as weekly incidence, but the "as of" data from the covidcast API
         # is daily, we need to sum over the days leading up to the target_end_date of each week to get the
         # weekly incidence
         asOfData <- filterAsOfData(asOfData, dateGroupDf, filteredScoreDf)
-        filteredScoreDf <- merge(filteredScoreDf, asOfData, by = c("target_end_date", "geo_value"), all = TRUE)
+        filteredScoreDf <- full_join(filteredScoreDf, asOfData, by = c("target_end_date", "geo_value"))
       } else {
         # Input 'as of' date chosen does not match the available target_end_dates that result from the rest of the selected inputs
         # It is too far back or we are switching between hosp and cases/deaths which have different target date days
@@ -239,9 +239,10 @@ server <- function(input, output, session) {
     updateAsOfChoices(session, truthDf)
 
     # Format and transform data for plot
-    filteredScoreDf <- filteredScoreDf %>% filter(!is.na(Week_End_Date))
-    filteredScoreDf <- filteredScoreDf[c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")]
-    filteredScoreDf <- filteredScoreDf %>% mutate(across(where(is.numeric), ~ round(., 2)))
+    filteredScoreDf <- filteredScoreDf %>%
+      filter(!is.na(Week_End_Date)) %>%
+      select(Forecaster, Forecast_Date, Week_End_Date, Score, ahead) %>%
+      mutate(across(where(is.numeric), ~ round(., 2)))
     if (input$scoreType != "coverage") {
       if (input$scaleByBaseline) {
         baselineDf <- filteredScoreDf %>% filter(Forecaster %in% "COVIDhub-baseline")
@@ -450,12 +451,13 @@ server <- function(input, output, session) {
       # Create a df to fill in the corresponding target_end_date in a new date_group column for all intervening days
       dateGroupDf[, "date_group"] <- NA
       dateGroupDf$date_group <- dateGroupDf$target_end_date
-      asOfData <- merge(asOfData, dateGroupDf, by = c("target_end_date", "geo_value", "as_of_actual"), all = TRUE)
+      asOfData <- full_join(asOfData, dateGroupDf, by = c("target_end_date", "geo_value", "as_of_actual"))
 
       # Cut off the extra days on beginning and end of series so that when we sum the values we are only
       # summing over the weeks included in the score plot
-      asOfData <- asOfData %>% filter(target_end_date >= min(filteredScoreDf$target_end_date) - 6)
-      asOfData <- asOfData %>% filter(target_end_date <= isolate(input$asOf))
+      asOfData <- asOfData %>%
+        filter(target_end_date >= min(filteredScoreDf$target_end_date) - 6) %>%
+        filter(target_end_date <= isolate(input$asOf))
 
       # Fill in the date_group column with the target week end days for all intervening days
       asOfData <- asOfData %>%
@@ -735,7 +737,7 @@ server <- function(input, output, session) {
       hideElement("truth-plot-loading-message")
       PREV_AS_OF_DATA(asOfTruthData)
 
-      if (dim(asOfTruthData)[1] == 0) {
+      if (nrow(asOfTruthData) == 0) {
         return()
       }
       summaryPlot(reRenderTruth = TRUE, asOfData = asOfTruthData)
@@ -749,12 +751,14 @@ server <- function(input, output, session) {
     selectedAsOf <- isolate(input$asOf)
     if (input$targetVariable == "Hospitalizations") {
       minChoice <- MIN_AVAIL_HOSP_AS_OF_DATE
+      asOfChoices <- asOfChoices[asOfChoices >= minChoice]
     } else if (input$location == "US" && input$scoreType != "coverage") {
       minChoice <- MIN_AVAIL_NATION_AS_OF_DATE
+      asOfChoices <- asOfChoices[asOfChoices >= minChoice]
     } else if (input$location %in% TERRITORIES || input$location == TOTAL_LOCATIONS || input$scoreType == "coverage") {
       minChoice <- MIN_AVAIL_TERRITORY_AS_OF_DATE
+      asOfChoices <- asOfChoices[asOfChoices >= minChoice]
     }
-    asOfChoices <- asOfChoices[asOfChoices >= minChoice]
     asOfChoices <- c(asOfChoices, CURRENT_WEEK_END_DATE())
     # Make sure we have a valid as of selection
     nonValidAsOf <- selectedAsOf == "" || !(as.Date(selectedAsOf) %in% asOfChoices)

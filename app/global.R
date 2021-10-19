@@ -35,6 +35,8 @@ MIN_AVAIL_HOSP_AS_OF_DATE <- as.Date("2020-11-11")
 MIN_AVAIL_TERRITORY_AS_OF_DATE <- as.Date("2021-02-10")
 
 TERRITORIES <- c("AS", "GU", "MP", "VI")
+STATE_ABB <- c(state.abb, TERRITORIES, "PR", "DC")
+STATE_NAME <- c(state.name, "American Samoa", "Guam", "Northern Mariana Islands", "US Virgin Islands", "Puerto Rico", "District of Columbia")
 
 resolveCurrentCasesDeathDay <- function() {
   # Get most recent target end date

@@ -96,14 +96,16 @@ sidebar <- tags$div(
       selected = ""
     ),
     tags$p(id = "missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
-    hidden(div(
+    div(
       id = "showForecastsCheckbox",
-      checkboxInput(
-        "showForecasts",
-        "Show Forecasters' Predictions",
-        value = FALSE,
+      disabled(
+        checkboxInput(
+          "showForecasts",
+          "Show Forecasters' Predictions",
+          value = FALSE,
+        )
       )
-    )),
+    ),
     tags$hr(),
     exportScoresUI("exportScores"),
     tags$hr()

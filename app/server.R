@@ -597,9 +597,9 @@ server <- function(input, output, session) {
     }
 
     if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      hideElement("showForecastsCheckbox")
+      disable("showForecasts")
     } else {
-      showElement("showForecastsCheckbox")
+      enable("showForecasts")
     }
     if (input$scoreType == "wis") {
       showElement("wisExplanation")
@@ -647,9 +647,9 @@ server <- function(input, output, session) {
     updateAsOfData()
     # Only show forecast check box option if we are showing as of data
     if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      hideElement("showForecastsCheckbox")
+      disable("showForecasts")
     } else {
-      showElement("showForecastsCheckbox")
+      enable("showForecasts")
     }
   })
 
@@ -657,9 +657,9 @@ server <- function(input, output, session) {
     updateAsOfData()
     # Only show forecast check box option if we are showing as of data
     if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      hideElement("showForecastsCheckbox")
+      disable("showForecasts")
     } else {
-      showElement("showForecastsCheckbox")
+      enable("showForecasts")
     }
   })
 

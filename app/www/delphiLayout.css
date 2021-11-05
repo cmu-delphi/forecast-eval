@@ -53,12 +53,14 @@ html {
   flex-grow: 1;
   display: -webkit-flex;
   display: flex;
+  min-width: 0;
   margin: 0;
 }
 
 .delphi-root > .container-fluid > .row {
   -webkit-flex-grow: 1;
   flex-grow: 1;
+  min-width: 0;
 }
 
 .delphi-credits {
@@ -100,7 +102,7 @@ a:hover {
 }
 
 .delphi-main-panel {
-  padding: 0;
+  padding: 10px;
   display: -webkit-flex;
   display: flex;
 }
@@ -112,6 +114,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   -webkit-flex-direction: column;
+  min-width: 0;
 }
 
 .delphi-main-panel > .tabbable > .tab-content {

@@ -328,9 +328,10 @@ server <- function(input, output, session) {
     }
     plotHeight <- 550 + (length(input$aheads) - 1) * 100
     finalPlot <-
-      ggplotly(p, tooltip = c("x", "y", "shape", "label"), height = plotHeight) %>%
+      ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
       layout(
-        legend = list(orientation = "h", y = -0.1, title=list(text = NULL)),
+        height = plotHeight,
+        legend = list(orientation = "h", y = -0.1, title = list(text=NULL)),
         margin = list(t = 90),
         hovermode = "x unified",
         xaxis = list(
@@ -396,7 +397,7 @@ server <- function(input, output, session) {
     finalPlot <- ggplotly(finalPlot, tooltip = c("shape", "x", "y")) %>%
       layout(
         hovermode = "x unified",
-        legend = list(orientation = "h", y = -0.1, title=list(text = NULL))
+        legend = list(orientation = "h", y = -0.1, title = list(text=NULL))
       ) %>%
       config(displayModeBar = F)
     # Remove the extra grouping from the legend: "(___,1)"

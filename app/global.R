@@ -30,9 +30,9 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
 )
 
 # Earliest 'as of' date available from covidcast API
-MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2021-01-09")
-MIN_AVAIL_HOSP_AS_OF_DATE <- as.Date("2020-11-11")
-MIN_AVAIL_TERRITORY_AS_OF_DATE <- as.Date("2021-02-10")
+MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2020-04-02")
+MIN_AVAIL_HOSP_AS_OF_DATE <- as.Date("2020-11-16")
+MIN_AVAIL_TERRITORY_AS_OF_DATE <- as.Date("2020-04-02")
 
 TERRITORIES <- c("AS", "GU", "MP", "VI")
 STATE_ABB <- c(state.abb, TERRITORIES, "PR", "DC")

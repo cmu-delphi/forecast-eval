@@ -316,8 +316,7 @@ server <- function(input, output, session) {
       facet_wrap(~ahead, ncol = 1) +
       scale_color_manual(values = colorPalette) +
       theme_bw() +
-      theme(panel.spacing = unit(0.5, "lines")) +
-      theme(legend.title = element_blank())
+      theme(panel.spacing = unit(0.5, "lines"))
 
     if (input$scoreType == "coverage") {
       p <- p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
@@ -329,9 +328,10 @@ server <- function(input, output, session) {
     }
     plotHeight <- 550 + (length(input$aheads) - 1) * 100
     finalPlot <-
-      ggplotly(p, tooltip = c("x", "y", "shape", "label"), height = plotHeight) %>%
+      ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
       layout(
-        legend = list(orientation = "h", y = -0.1),
+        height = plotHeight,
+        legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
         margin = list(t = 90),
         hovermode = "x unified",
         xaxis = list(
@@ -377,8 +377,7 @@ server <- function(input, output, session) {
       scale_y_continuous(limits = c(0, NA), labels = scales::comma) +
       scale_x_date(date_labels = "%b %Y") +
       scale_color_manual(values = colorPalette) +
-      theme_bw() +
-      theme(legend.title = element_blank())
+      theme_bw()
 
     if (hasAsOfData) {
       finalPlot <- finalPlot +
@@ -396,7 +395,10 @@ server <- function(input, output, session) {
         geom_point(aes(y = Reported_Incidence))
     }
     finalPlot <- ggplotly(finalPlot, tooltip = c("shape", "x", "y")) %>%
-      layout(hovermode = "x unified", legend = list(orientation = "h", y = -0.1)) %>%
+      layout(
+        hovermode = "x unified",
+        legend = list(orientation = "h", y = -0.1, title = list(text = NULL))
+      ) %>%
       config(displayModeBar = F)
     # Remove the extra grouping from the legend: "(___,1)"
     for (i in seq_along(finalPlot$x$data)) {

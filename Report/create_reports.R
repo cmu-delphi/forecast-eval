@@ -3,6 +3,8 @@ library("optparse")
 library("dplyr")
 library("evalcast")
 library("lubridate")
+library("jsonlite")
+
 
 option_list <- list(
   make_option(
@@ -25,6 +27,60 @@ forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"
 ))
+
+## Get list of new and modified files to download
+# The `path` field includes only commits that acted in that dir
+BASE_URL <- "https://api.github.com/repos/reichlab/covid19-forecast-hub/commits?sha=%s&per_page=%s&path=data-processed&since=%s&page=%s"
+ITEMS_PER_PAGE <- 100
+BRANCH <- "master"
+
+# We want to fetch all commits made in the last week. (Really this only needs to
+# be the last 5 days, since we run the pipeline on Sunday, Monday, and Tuesday,
+# but this adds some buffer for outages and timezone shenanigans.)
+since_date <- sprintf("%sT00:00:00Z", today() - 7)
+
+page <- 0
+commit_sha_dates <- list()
+
+while ( !exists("temp_commits") || nrow(temp_commits) == 100 ) {
+  page <- page + 1
+  commits_url <- sprintf(BASE_URL, BRANCH, ITEMS_PER_PAGE, since_date, page)
+  temp_commits <- fromJSON(commits_url, simplifyDataFrame = TRUE, flatten=TRUE)
+  if ( identical(temp_commits, list()) ) {break}
+  commit_sha_dates[[page]] <-select(temp_commits, sha, url, commit.author.date)
+}
+
+commit_sha_dates <- bind_rows(commit_sha_dates)
+
+added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
+  commit <- fromJSON(commit_url, simplifyDataFrame = TRUE, flatten=TRUE)
+  commit_files <- commit$files %>% 
+    select(filename, status) %>% 
+    # file must be in data-processed dir somewhere and be a csv
+    filter(startsWith(filename, "data-processed"), endsWith(filename, ".csv"))
+  
+  filename_parts <- strsplit(commit_files$filename, "/")
+  # Get forecaster name
+  commit_files$forecaster <- lapply(filename_parts, function(parts) {
+    parts[[2]]
+  }) %>%
+    unlist()
+  
+  # Get forecast date (file date)
+  commit_files$forecast.date <- lapply(filename_parts, function(parts) {
+    substr(parts[[3]], start=1, stop=10)
+  }) %>%
+    unlist()
+  
+  commit_files$commit.date <- commit$commit$author$date
+  
+  return(commit_files)
+}) %>%
+  bind_rows()%>%
+  filter(status %in% c("added", "modified"), forecaster %in% forecasters) %>% 
+  select(-status) %>% 
+  distinct()
+
 locations <- covidHubUtils::hub_locations
 
 # also includes "us", which is national level data
@@ -37,10 +93,12 @@ signals <- c(
   "confirmed_admissions_covid_1d"
 )
 
-predictions_cards <- get_covidhub_predictions(forecasters,
+predictions_cards <- get_covidhub_predictions(
+  unique(added_modified_files$forecaster),
   signal = signals,
   ahead = 1:28,
   geo_values = state_geos,
+  forecast_dates = unique(added_modified_files$forecast.date),
   verbose = TRUE,
   use_disk = TRUE
 ) %>%
@@ -51,7 +109,7 @@ predictions_cards <- predictions_cards %>%
   filter(target_end_date < today())
 
 # For hospitalizations, drop all US territories except Puerto Rico and the
-# Virgin Islands; HHS does not report data for any territories except PR and VI.
+# Virgin Islands; HHS does not report data for any territories except these two.
 territories <- c("as", "gu", "mp", "fm", "mh", "pw", "um")
 predictions_cards <- predictions_cards %>%
   filter(!(geo_value %in% territories & data_source == "hhs"))
@@ -66,11 +124,23 @@ predictions_cards <- predictions_cards %>%
       (incidence_period == "day" & target_end_date > forecast_date)
   )
 
-# And only a forecaster's last forecast if multiple were made
-predictions_cards <- predictions_cards %>%
+# Load old predictions cards.
+old_predictions_cards <- readRDS(prediction_cards_filepath) %>% 
+  mutate(creation_date = today() - 1)
+
+# Merge old and updated predictions cards. If multiple forecasts were made for a
+# given set of characteristics, keep the most recent forecast
+predictions_cards <- bind_rows(
+  mutate(predictions_cards, creation_date = today()),
+  old_predictions_cards
+) %>%
   group_by(forecaster, geo_value, target_end_date, quantile, ahead, signal) %>%
-  filter(forecast_date == max(forecast_date)) %>%
-  ungroup()
+  filter(
+    forecast_date == max(forecast_date),
+    creation_date == max(creation_date)
+  ) %>%
+  ungroup() %>% 
+  select(-creation_date)
 class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
 
 print("Saving predictions...")

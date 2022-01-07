@@ -4,6 +4,13 @@ library("dplyr")
 library("evalcast")
 library("lubridate")
 library("jsonlite")
+library("httr")
+
+
+# Set up GitHub API authentication
+## TODO: setup for Github Actions, so can pass token info into script
+uname <- ""
+token <- ""
 
 
 option_list <- list(
@@ -45,7 +52,11 @@ commit_sha_dates <- list()
 while ( !exists("temp_commits") || nrow(temp_commits) == 100 ) {
   page <- page + 1
   commits_url <- sprintf(BASE_URL, BRANCH, ITEMS_PER_PAGE, since_date, page)
-  temp_commits <- fromJSON(commits_url, simplifyDataFrame = TRUE, flatten=TRUE)
+  request <- GET(commits_url, authenticate(uname, token))
+  stop_for_status(request)
+  temp_commits <- content(request, as = "text") %>%
+    fromJSON(simplifyDataFrame = TRUE, flatten=TRUE)
+  
   if ( identical(temp_commits, list()) ) {break}
   commit_sha_dates[[page]] <-select(temp_commits, sha, url, commit.author.date)
 }
@@ -53,33 +64,53 @@ while ( !exists("temp_commits") || nrow(temp_commits) == 100 ) {
 commit_sha_dates <- bind_rows(commit_sha_dates)
 
 added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
-  commit <- fromJSON(commit_url, simplifyDataFrame = TRUE, flatten=TRUE)
-  commit_files <- commit$files %>% 
-    select(filename, status) %>% 
-    # file must be in data-processed dir somewhere and be a csv
-    filter(startsWith(filename, "data-processed"), endsWith(filename, ".csv"))
+  print(commit_url)
   
-  filename_parts <- strsplit(commit_files$filename, "/")
-  # Get forecaster name
-  commit_files$forecaster <- lapply(filename_parts, function(parts) {
-    parts[[2]]
-  }) %>%
-    unlist()
+  # Make API call for each commit sha
+  request <- GET(commit_url, authenticate(uname, token))
+  stop_for_status(request)
+  commit <- content(request, as = "text") %>%
+    fromJSON(simplifyDataFrame = TRUE, flatten=TRUE)
   
-  # Get forecast date (file date)
-  commit_files$forecast.date <- lapply(filename_parts, function(parts) {
-    substr(parts[[3]], start=1, stop=10)
-  }) %>%
-    unlist()
+  commit_files <- commit$files
   
-  commit_files$commit.date <- commit$commit$author$date
+  # Return if no files listed (can happen with merges, e.g.)
+  if ( identical(commit_files, list())) { return(data.frame()) }
   
-  return(commit_files)
-}) %>%
-  bind_rows()%>%
-  filter(status %in% c("added", "modified"), forecaster %in% forecasters) %>% 
+  # Else return changed file list for each + commit date
+  commit_files %>% mutate(commit.date = commit$commit$author$date)
+}) %>% 
+  bind_rows() %>%
+  select(filename, status, commit.date) %>% 
+  # File must be in data-processed dir somewhere and be a csv with expected name
+  # format. We're only interested in added or modified files (not deleted,
+  # renamed, copied, etc).
+  filter(
+    grepl("data-processed/.*/[0-9]{4}-[0-9]{2}-[0-9]{2}-.*[.]csv", filename),
+    status %in% c("added", "modified")
+  ) %>%
   select(-status) %>% 
-  distinct()
+  group_by(filename) %>% 
+  filter(
+    commit.date == max(commit.date)
+  ) %>%
+  ungroup()
+  
+# Parse forecaster name and date from filename
+filename_parts <- strsplit(added_modified_files$filename, "/")
+added_modified_files <- added_modified_files %>% 
+  mutate(
+    forecaster = lapply(filename_parts, function(parts) {
+      parts[[2]]
+    }) %>%
+      unlist(),
+    forecast.date = lapply(filename_parts, function(parts) {
+      substr(parts[[3]], start=1, stop=10)
+    }) %>%
+      unlist()
+  ) %>% 
+  filter(forecaster %in% forecasters)
+
 
 locations <- covidHubUtils::hub_locations
 

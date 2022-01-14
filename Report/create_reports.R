@@ -4,6 +4,8 @@ library("dplyr")
 library("evalcast")
 library("lubridate")
 
+options(warn = 1)
+
 option_list <- list(
   make_option(
     c("-d", "--dir"),

@@ -23,6 +23,9 @@ prediction_cards_filepath <- case_when(
   TRUE ~ prediction_cards_filename
 )
 
+# Note: CDDEP-ABM is not longer available and causes some warnings when trying
+# to download its data. Defer to `get_covidhub_forecaster_names` and underlying
+# Reich Lab utilities as to which forecasters to include.
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"

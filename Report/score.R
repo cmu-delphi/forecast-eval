@@ -35,21 +35,6 @@ save_score_cards <- function(score_card, geo_type = c("state", "nation"),
     msg = "signal is not in score_card"
   )
   score_card <- score_card %>% filter(signal == signal_name)
-
-  type_map <- list(
-    "confirmed_incidence_num" = "cases",
-    "deaths_incidence_num" = "deaths",
-    "confirmed_admissions_covid_1d" = "hospitalizations"
-  )
-  sig_suffix <- type_map[[signal_name]]
-  output_file_name <- file.path(
-    output_dir,
-    paste0(
-      "score_cards_", geo_type, "_",
-      sig_suffix, ".rds"
-    )
-  )
-
   if (geo_type == "state") {
     score_card <- score_card %>%
       filter(nchar(geo_value) == 2, geo_value != "us")
@@ -58,10 +43,22 @@ save_score_cards <- function(score_card, geo_type = c("state", "nation"),
       filter(geo_value == "us")
   }
 
+  output_file_name <- generate_score_card_file_path(geo_type, signal_name, output_dir)
   saveRDS(score_card,
     file = output_file_name,
     compress = "xz"
   )
+}
+
+save_score_cards_wrapper <- function(score_card, geo_type, signal_name, output_dir) {
+  if (signal_name %in% unique(score_card["signal"])) {
+    print(paste("Saving", geo, type_map[[signal_name]], "..."))
+    save_score_cards(score_card, geo_type,
+                     signal_name = signal_name, output_dir = output_dir
+    )
+  } else {
+    stop(paste("No", signal_name, "available at the", geo_type, "level"))
+  }
 }
 
 evaluate_chu <- function(predictions, signals, err_measures) {

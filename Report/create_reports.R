@@ -4,6 +4,12 @@ library("dplyr")
 library("evalcast")
 library("lubridate")
 
+# TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
+# Redefines overprediction, underprediction and sharpness
+source("error_measures.R")
+source("score.R")
+source("utils.R")
+
 options(warn = 1)
 
 option_list <- list(
@@ -94,9 +100,6 @@ coverage_functions <- sapply(
 )
 names(coverage_functions) <- cov_names
 
-# TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
-# Redefines overprediction, underprediction and sharpness
-source("error_measures.R")
 
 err_measures <- c(
   wis = weighted_interval_score,
@@ -117,13 +120,18 @@ state_predictions <- predictions_cards %>% filter(geo_value != "us")
 rm(predictions_cards)
 gc()
 
+## Check if nation and state predictions objects contain the expected forecasters
+for (signal_name in signals) {
+  check_for_missing_forecasters(nation_predictions, forecasters, "nation", signal_name, opt$dir)
+  check_for_missing_forecasters(state_predictions, forecasters, "state", signal_name, opt$dir)
+}
+
 print("Evaluating state forecasts")
 state_scores <- evaluate_covid_predictions(state_predictions,
   err_measures,
   geo_type = "state"
 )
 
-source("score.R")
 if ("confirmed_incidence_num" %in% unique(state_scores$signal)) {
   print("Saving state confirmed incidence...")
   save_score_cards(state_scores, "state",

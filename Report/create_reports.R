@@ -4,7 +4,6 @@ library("dplyr")
 library("evalcast")
 library("lubridate")
 
-options(warn = 1)
 
 option_list <- list(
   make_option(
@@ -22,6 +21,8 @@ prediction_cards_filepath <- case_when(
   !is.null(opt$dir) ~ file.path(opt$dir, prediction_cards_filename),
   TRUE ~ prediction_cards_filename
 )
+
+options(warn = 1)
 
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
@@ -47,6 +48,8 @@ predictions_cards <- get_covidhub_predictions(forecasters,
   use_disk = TRUE
 ) %>%
   filter(!(incidence_period == "epiweek" & ahead > 4))
+
+options(warn = 0)
 
 predictions_cards <- predictions_cards %>%
   filter(!is.na(target_end_date)) %>%

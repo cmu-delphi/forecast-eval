@@ -22,8 +22,6 @@ prediction_cards_filepath <- case_when(
   TRUE ~ prediction_cards_filename
 )
 
-options(warn = 1)
-
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"
@@ -39,51 +37,6 @@ signals <- c(
   "deaths_incidence_num",
   "confirmed_admissions_covid_1d"
 )
-
-predictions_cards <- get_covidhub_predictions(forecasters,
-  signal = signals,
-  ahead = 1:28,
-  geo_values = state_geos,
-  verbose = TRUE,
-  use_disk = TRUE
-) %>%
-  filter(!(incidence_period == "epiweek" & ahead > 4))
-
-options(warn = 0)
-
-predictions_cards <- predictions_cards %>%
-  filter(!is.na(target_end_date)) %>%
-  filter(target_end_date < today())
-
-# For hospitalizations, drop all US territories except Puerto Rico and the
-# Virgin Islands; HHS does not report data for any territories except PR and VI.
-territories <- c("as", "gu", "mp", "fm", "mh", "pw", "um")
-predictions_cards <- predictions_cards %>%
-  filter(!(geo_value %in% territories & data_source == "hhs"))
-
-# For epiweek predictions, only accept forecasts made Monday or earlier.
-# target_end_date is the date of the last day (Saturday) in the epiweek
-# For daily predictions, accept any forecast where the target_end_date is later
-# than the forecast_date.
-predictions_cards <- predictions_cards %>%
-  filter(
-    (incidence_period == "epiweek" & target_end_date - (forecast_date + 7 * ahead) >= -2) |
-      (incidence_period == "day" & target_end_date > forecast_date)
-  )
-
-# And only a forecaster's last forecast if multiple were made
-predictions_cards <- predictions_cards %>%
-  group_by(forecaster, geo_value, target_end_date, quantile, ahead, signal) %>%
-  filter(forecast_date == max(forecast_date)) %>%
-  ungroup()
-class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
-
-print("Saving predictions...")
-saveRDS(predictions_cards,
-  file = prediction_cards_filepath,
-  compress = "xz"
-)
-print("Predictions saved")
 
 # Create error measure functions
 central_intervals <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)
@@ -109,6 +62,9 @@ err_measures <- c(
   value_50 = get_quantile_prediction_factory(0.5),
   value_80 = get_quantile_prediction_factory(0.8)
 )
+
+print("Loading predictions...")
+predictions_cards <- readRDS(prediction_cards_filepath)
 
 nation_predictions <- predictions_cards %>% filter(geo_value == "us")
 state_predictions <- predictions_cards %>% filter(geo_value != "us")

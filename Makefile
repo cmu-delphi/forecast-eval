@@ -18,7 +18,7 @@ dist:
 clean:
 	rm -rf dist
 
-score_forecast: r_build dist pull_data
+score_forecast: r_build
 	docker run --rm \
 		-v ${PWD}/Report:/var/forecast-eval \
 		-v ${PWD}/dist:/var/dist \

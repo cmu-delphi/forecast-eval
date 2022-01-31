@@ -10,7 +10,7 @@ r_build:
 %.rds: dist
 	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@
 
-pull_data: score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds score_cards_state_hospitalizations.rds score_cards_nation_hospitalizations.rds
+pull_data: score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds score_cards_state_hospitalizations.rds score_cards_nation_hospitalizations.rds predictions_cards.rds
 
 dist:
 	mkdir $@
@@ -18,7 +18,7 @@ dist:
 clean:
 	rm -rf dist
 
-score_forecast: r_build
+score_forecast: r_build dist pull_data
 	docker run --rm \
 		-v ${PWD}/Report:/var/forecast-eval \
 		-v ${PWD}/dist:/var/dist \

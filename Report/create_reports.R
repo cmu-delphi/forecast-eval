@@ -10,8 +10,6 @@ source("error_measures.R")
 source("score.R")
 source("utils.R")
 
-options(warn = 1)
-
 option_list <- list(
   make_option(
     c("-d", "--dir"),
@@ -28,6 +26,8 @@ prediction_cards_filepath <- case_when(
   !is.null(opt$dir) ~ file.path(opt$dir, prediction_cards_filename),
   TRUE ~ prediction_cards_filename
 )
+
+options(warn = 1)
 
 # Note: CDDEP-ABM is not longer available and causes some warnings when trying
 # to download its data. Defer to `get_covidhub_forecaster_names` and underlying
@@ -56,6 +56,8 @@ predictions_cards <- get_covidhub_predictions(forecasters,
   use_disk = TRUE
 ) %>%
   filter(!(incidence_period == "epiweek" & ahead > 4))
+
+options(warn = 0)
 
 predictions_cards <- predictions_cards %>%
   filter(!is.na(target_end_date)) %>%

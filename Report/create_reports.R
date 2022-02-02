@@ -28,14 +28,7 @@ prediction_cards_filepath <- case_when(
   TRUE ~ prediction_cards_filename
 )
 
-
 options(warn = 1)
-
-# TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
-# Redefines overprediction, underprediction and sharpness
-source("error_measures.R")
-source("score.R")
-source("utils.R")
 
 # Note: CDDEP-ABM is not longer available and causes some warnings when trying
 # to download its data. Defer to `get_covidhub_forecaster_names` and underlying
@@ -110,6 +103,7 @@ coverage_functions <- sapply(
 )
 names(coverage_functions) <- cov_names
 
+
 err_measures <- c(
   wis = weighted_interval_score,
   overprediction = overprediction,
@@ -158,6 +152,5 @@ nation_scores <- evaluate_chu(nation_predictions, signals, err_measures)
 for (signal_name in signals) {
   save_score_cards_wrapper(nation_scores, geo_type, signal_name, output_dir)
 }
-
 
 print("Done")

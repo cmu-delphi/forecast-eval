@@ -54,7 +54,7 @@ save_score_cards_wrapper <- function(score_card, geo_type, signal_name, output_d
   if (signal_name %in% unique(score_card["signal"])) {
     print(paste("Saving", geo, type_map[[signal_name]], "..."))
     save_score_cards(score_card, geo_type,
-                     signal_name = signal_name, output_dir = output_dir
+      signal_name = signal_name, output_dir = output_dir
     )
   } else {
     stop(paste("No", signal_name, "available at the", geo_type, "level"))

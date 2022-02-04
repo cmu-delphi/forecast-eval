@@ -1,6 +1,24 @@
 library("dplyr")
 library("assertthat")
 
+type_map <- list(
+  "confirmed_incidence_num" = "cases",
+  "deaths_incidence_num" = "deaths",
+  "confirmed_admissions_covid_1d" = "hospitalizations"
+)
+
+generate_score_card_file_path <- function(geo_type, signal_name, output_dir) {
+  sig_suffix <- type_map[[signal_name]]
+  output_file_name <- file.path(
+    output_dir,
+    paste0(
+      "score_cards_", geo_type, "_",
+      sig_suffix, ".rds"
+    )
+  )
+  return(output_file_name)
+}
+
 save_score_cards <- function(score_card, geo_type = c("state", "nation"),
                              signal_name = c(
                                "confirmed_incidence_num",

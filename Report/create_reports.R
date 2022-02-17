@@ -137,8 +137,13 @@ state_scores <- evaluate_covid_predictions(state_predictions,
   geo_type = geo_type
 )
 
+save_score_errors <- list()
+
 for (signal_name in signals) {
-  save_score_cards_wrapper(state_scores, geo_type, signal_name, output_dir)
+  status <- save_score_cards_wrapper(state_scores, geo_type, signal_name, output_dir)
+  if (status != 0) {
+    save_score_errors[paste(signal_name, geo_type)] <- status
+  }
 }
 
 print("Evaluating national forecasts")
@@ -150,7 +155,14 @@ geo_type <- "nation"
 nation_scores <- evaluate_chu(nation_predictions, signals, err_measures)
 
 for (signal_name in signals) {
-  save_score_cards_wrapper(nation_scores, geo_type, signal_name, output_dir)
+  status <- save_score_cards_wrapper(nation_scores, geo_type, signal_name, output_dir)
+  if (status != 0) {
+    save_score_errors[paste(signal_name, geo_type)] <- status
+  }
+}
+
+if ( length(save_score_errors) > 0 ) {
+  stop(paste(save_score_errors, collapse="\n"))
 }
 
 print("Done")

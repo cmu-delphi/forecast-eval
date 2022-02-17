@@ -56,8 +56,9 @@ save_score_cards_wrapper <- function(score_card, geo_type, signal_name, output_d
     save_score_cards(score_card, geo_type,
       signal_name = signal_name, output_dir = output_dir
     )
+    return(0)
   } else {
-    stop(paste("No", signal_name, "available at the", geo_type, "level"))
+    return(paste("No", signal_name, "available at the", geo_type, "level"))
   }
 }
 

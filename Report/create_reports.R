@@ -161,8 +161,8 @@ for (signal_name in signals) {
   }
 }
 
-if ( length(save_score_errors) > 0 ) {
-  stop(paste(save_score_errors, collapse="\n"))
+if (length(save_score_errors) > 0) {
+  stop(paste(save_score_errors, collapse = "\n"))
 }
 
 print("Done")

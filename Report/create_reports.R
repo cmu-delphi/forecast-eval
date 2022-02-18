@@ -41,7 +41,7 @@ options(warn = 1)
 #    PandemicCentral-COVIDForest: County-level predictions only
 #    UT_GISAG-SPDM: County-level predictions only
 #    WalmartLabsML-LogForecasting: Only predicts cumulative deaths
-#    Yu_Group-CLEP: County-level predictions only 
+#    Yu_Group-CLEP: County-level predictions only
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"

@@ -133,8 +133,8 @@ for (signal_name in signals) {
 print("Evaluating state forecasts")
 geo_type <- "state"
 state_scores <- evaluate_covidcast(
-  state_predictions, 
-  signals, 
+  state_predictions,
+  signals,
   err_measures,
   geo_type = geo_type
 )

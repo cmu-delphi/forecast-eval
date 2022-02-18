@@ -130,12 +130,12 @@ evaluate_covidcast <- function(predictions, signals, err_measures, geo_type) {
     "confirmed_admissions_covid_1d"
   )
   assert_that(all(signals %in% allowed_signals),
-              msg = paste(
-                "Signal not allowed:",
-                setdiff(signals, allowed_signals)
-              )
+    msg = paste(
+      "Signal not allowed:",
+      setdiff(signals, allowed_signals)
+    )
   )
-  
+
   source_map <- list(
     "confirmed_incidence_num" = "jhu-csse",
     "deaths_incidence_num" = "jhu-csse",
@@ -148,20 +148,20 @@ evaluate_covidcast <- function(predictions, signals, err_measures, geo_type) {
     source <- source_map[[signal_name]]
     covidcast_truth <- get_covidcast_period_actuals(preds_signal)
     signal_scores <- evaluate_predictions(preds_signal,
-                                          truth_data = covidcast_truth,
-                                          err_measures,
-                                          grp_vars = c(
-                                            "target_end_date",
-                                            "geo_value",
-                                            "ahead",
-                                            "forecaster"
-                                          )
+      truth_data = covidcast_truth,
+      err_measures,
+      grp_vars = c(
+        "target_end_date",
+        "geo_value",
+        "ahead",
+        "forecaster"
+      )
     )
     scores[[signal_name]] <- signal_scores
   }
-  
+
   scores <- bind_rows(scores) %>%
-    arrange(ahead, geo_value, forecaster, forecast_date, data_source, signal, target_end_date, incidence_period) %>% 
+    arrange(ahead, geo_value, forecaster, forecast_date, data_source, signal, target_end_date, incidence_period) %>%
     select(ahead, geo_value, forecaster, forecast_date, data_source, signal, target_end_date, incidence_period, everything)
   return(scores)
 }
@@ -170,9 +170,9 @@ evaluate_covidcast <- function(predictions, signals, err_measures, geo_type) {
 get_covidcast_period_actuals <- function(response) {
   # Get start/end dates of each period we want to sum truth values over.
   target_periods <- response %>%
-    select(.data$forecast_date, .data$incidence_period, .data$ahead) %>% 
-    distinct() %>% 
-    purrr::pmap_dfr(get_target_period) %>% 
+    select(.data$forecast_date, .data$incidence_period, .data$ahead) %>%
+    distinct() %>%
+    purrr::pmap_dfr(get_target_period) %>%
     distinct()
 
   # Compute the actual values that the forecaster is trying to
@@ -181,46 +181,49 @@ get_covidcast_period_actuals <- function(response) {
   # - sum up the response over the target incidence period
   target_periods <- target_periods %>%
     mutate(available = .data$end <= Sys.Date()) %>%
-    filter(.data$available) %>% 
+    filter(.data$available) %>%
     select(-.data$available)
-  
+
   covidcast_truth <- covidcast::covidcast_signal(
     source,
     signal_name,
     geo_type = geo_type,
     start_day = as.Date(min(target_periods$start)),
     end_day = as.Date(max(target_periods$end))
-  ) %>% 
+  ) %>%
     select(data_source, signal, geo_value, time_value, value)
-  
+
   # Expand out each period by day so easier to join on.
   target_periods <- target_periods %>% pmap_dfr(function(start_date, end_date) {
-    tibble(start=start_date,
-           target_end_date = end_date,
-           day = seq.Date(from=start_date, to=end_date, by = 1)
+    tibble(
+      start = start_date,
+      target_end_date = end_date,
+      day = seq.Date(from = start_date, to = end_date, by = 1)
     )
   })
-  
-  period_truth <- full_join(covidcast_truth, target_periods, by=c("time_value"="day"))
-  
+
+  period_truth <- full_join(covidcast_truth, target_periods, by = c("time_value" = "day"))
+
   check_count <- period_truth %>%
     group_by(.data$geo_value, .data$start, .data$target_end_date) %>%
-    summarize(num = n(), .groups="drop") %>% 
+    summarize(num = n(), .groups = "drop") %>%
     filter(num < 7)
-  
+
   if (nrow(check_count) != 0) {
-    warning(paste0("Some or all data missing for the following target periods: ",
-                   paste(
-                     paste(period_truth$start, period_truth$target_end_date, sep="-"),
-                     collapse = ", "),
-                   ".")
-    )
+    warning(paste0(
+      "Some or all data missing for the following target periods: ",
+      paste(
+        paste(period_truth$start, period_truth$target_end_date, sep = "-"),
+        collapse = ", "
+      ),
+      "."
+    ))
   }
-  
+
   period_truth <- period_truth %>%
     group_by(.data$geo_value, .data$target_end_date) %>%
-    summarize(actual = sum(.data$value), .groups="drop") %>% 
+    summarize(actual = sum(.data$value), .groups = "drop") %>%
     select(.data$target_end_date, .data$actual, .data$geo_value)
-  
+
   return(period_truth)
 }

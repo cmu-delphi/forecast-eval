@@ -1,6 +1,6 @@
 Package: forecasteval
 Title: Forecast Evaluation Dashboard
-Version: 4.0.0
+Version: 4.2.0
 Authors@R: c(person("Kate", "Harwood", email = "kharwood@andrew.cmu.edu", role = "cre"),
 	   person("Chris", "Scott", role = "ctb"),
 	   person("Jed", "Grabman", role = "ctb"))
@@ -23,7 +23,8 @@ Imports:
  aws.s3,
  covidcast,
  stringr,
- markdown
+ markdown,
+ memoise
 Suggests:
  styler,
  lintr,

@@ -4,6 +4,12 @@ library("dplyr")
 library("evalcast")
 library("lubridate")
 
+# TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
+# Redefines overprediction, underprediction and sharpness
+source("error_measures.R")
+source("score.R")
+source("utils.R")
+
 option_list <- list(
   make_option(
     c("-d", "--dir"),
@@ -15,12 +21,18 @@ option_list <- list(
 )
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
+output_dir <- opt$dir
 prediction_cards_filename <- "predictions_cards.rds"
 prediction_cards_filepath <- case_when(
-  !is.null(opt$dir) ~ file.path(opt$dir, prediction_cards_filename),
+  !is.null(output_dir) ~ file.path(output_dir, prediction_cards_filename),
   TRUE ~ prediction_cards_filename
 )
 
+options(warn = 1)
+
+# Note: CDDEP-ABM is not longer available and causes some warnings when trying
+# to download its data. Defer to `get_covidhub_forecaster_names` and underlying
+# Reich Lab utilities as to which forecasters to include.
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"
@@ -45,6 +57,8 @@ predictions_cards <- get_covidhub_predictions(forecasters,
   use_disk = TRUE
 ) %>%
   filter(!(incidence_period == "epiweek" & ahead > 4))
+
+options(warn = 0)
 
 predictions_cards <- predictions_cards %>%
   filter(!is.na(target_end_date)) %>%
@@ -80,7 +94,7 @@ saveRDS(predictions_cards,
 )
 print("Predictions saved")
 
-# Create error measure functions
+## Create error measure functions
 central_intervals <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)
 cov_names <- paste0("cov_", central_intervals * 100)
 coverage_functions <- sapply(
@@ -89,9 +103,6 @@ coverage_functions <- sapply(
 )
 names(coverage_functions) <- cov_names
 
-# TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
-# Redefines overprediction, underprediction and sharpness
-source("error_measures.R")
 
 err_measures <- c(
   wis = weighted_interval_score,
@@ -112,74 +123,48 @@ state_predictions <- predictions_cards %>% filter(geo_value != "us")
 rm(predictions_cards)
 gc()
 
+## Check if nation and state predictions objects contain the expected forecasters
+for (signal_name in signals) {
+  check_for_missing_forecasters(nation_predictions, forecasters, "nation", signal_name, output_dir)
+  check_for_missing_forecasters(state_predictions, forecasters, "state", signal_name, output_dir)
+}
+
+## Score predictions
 print("Evaluating state forecasts")
+geo_type <- "state"
 state_scores <- evaluate_covidcast(
   state_predictions, 
   signals, 
   err_measures,
-  geo_type = "state"
+  geo_type = geo_type
 )
 
-source("score.R")
-if ("confirmed_incidence_num" %in% unique(state_scores$signal)) {
-  print("Saving state confirmed incidence...")
-  save_score_cards(state_scores, "state",
-    signal_name = "confirmed_incidence_num",
-    output_dir = opt$dir
-  )
-} else {
-  warning("State confirmed incidence should generally be available. Please
-            verify that you expect not to have any cases incidence forecasts")
-}
-if ("deaths_incidence_num" %in% unique(state_scores$signal)) {
-  print("Saving state deaths incidence...")
-  save_score_cards(state_scores, "state",
-    signal_name = "deaths_incidence_num",
-    output_dir = opt$dir
-  )
-} else {
-  warning("State deaths incidence should generally be available. Please
-            verify that you expect not to have any deaths incidence forecasts")
-}
-if ("confirmed_admissions_covid_1d" %in% unique(state_scores$signal)) {
-  print("Saving state hospitalizations...")
-  save_score_cards(state_scores, "state",
-    signal_name = "confirmed_admissions_covid_1d",
-    output_dir = opt$dir
-  )
-}
+save_score_errors <- list()
 
+for (signal_name in signals) {
+  status <- save_score_cards_wrapper(state_scores, geo_type, signal_name, output_dir)
+  if (status != 0) {
+    save_score_errors[paste(signal_name, geo_type)] <- status
+  }
+}
 
 print("Evaluating national forecasts")
-# COVIDcast does not return national level data, using CovidHubUtils instead
-
+# TODO: When this function was created, COVIDcast did not return national level
+# data, and CovidHubUtils was used instead. We could now switch to COVIDcast,
+# but COVIDcast and CovidHubUtils don't produce exactly the same data. This
+# requires more investigation. Also using CovidHubUtils might be faster.
+geo_type <- "nation"
 nation_scores <- evaluate_chu(nation_predictions, signals, err_measures)
 
-if ("confirmed_incidence_num" %in% unique(state_scores$signal)) {
-  print("Saving nation confirmed incidence...")
-  save_score_cards(nation_scores, "nation",
-    signal_name = "confirmed_incidence_num", output_dir = opt$dir
-  )
-} else {
-  warning("Nation confirmed incidence should generally be available. Please
-            verify that you expect not to have any cases incidence forecasts")
+for (signal_name in signals) {
+  status <- save_score_cards_wrapper(nation_scores, geo_type, signal_name, output_dir)
+  if (status != 0) {
+    save_score_errors[paste(signal_name, geo_type)] <- status
+  }
 }
-if ("deaths_incidence_num" %in% unique(state_scores$signal)) {
-  print("Saving nation deaths incidence...")
-  save_score_cards(nation_scores, "nation",
-    signal_name = "deaths_incidence_num",
-    output_dir = opt$dir
-  )
-} else {
-  warning("Nation deaths incidence should generally be available. Please
-            verify that you expect not to have any deaths incidence forecasts")
-}
-if ("confirmed_admissions_covid_1d" %in% unique(state_scores$signal)) {
-  print("Saving nation hospitalizations...")
-  save_score_cards(nation_scores, "nation",
-    signal_name = "confirmed_admissions_covid_1d",
-    output_dir = opt$dir
-  )
+
+if (length(save_score_errors) > 0) {
+  stop(paste(save_score_errors, collapse = "\n"))
 }
 
 print("Done")

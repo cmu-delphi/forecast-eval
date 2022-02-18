@@ -6,7 +6,7 @@ env:
 # Controls when the action will run. 
 on:
   schedule:
-    - cron: '0 14 * * MON-TUE'  # every Monday and Tuesday  at 9amET
+    - cron: '0 14 * * SUN,MON,TUE'  # every Monday and Tuesday  at 10amET
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -16,6 +16,8 @@ jobs:
   deploy:
     # The type of runner that the job will run on
     runs-on: self-hosted
+    # Time out after 24 hours.
+    timeout-minutes: 1440
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:

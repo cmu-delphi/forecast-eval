@@ -30,19 +30,22 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
 )
 
 # Earliest 'as of' date available from covidcast API
-MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2021-01-09")
-MIN_AVAIL_HOSP_AS_OF_DATE <- as.Date("2020-11-11")
-MIN_AVAIL_TERRITORY_AS_OF_DATE <- as.Date("2021-02-10")
+MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2020-04-02")
+MIN_AVAIL_HOSP_AS_OF_DATE <- as.Date("2020-11-16")
+MIN_AVAIL_TERRITORY_AS_OF_DATE <- as.Date("2020-04-02")
 
 TERRITORIES <- c("AS", "GU", "MP", "VI")
+STATE_ABB <- c(state.abb, TERRITORIES, "PR", "DC")
+STATE_NAME <- c(state.name, "American Samoa", "Guam", "Northern Mariana Islands", "US Virgin Islands", "Puerto Rico", "District of Columbia")
 
 resolveCurrentCasesDeathDay <- function() {
   # Get most recent target end date
   # Prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations
-  # Since we don't upload new observed data until Monday:
-  # Use 8 and 2 for Cases and Deaths so that Sundays will not use the Saturday directly beforehand
-  # since we don't have data for it yet.
-  prevWeek <- seq(Sys.Date() - 8, Sys.Date() - 2, by = "day")
+  # Since we don't upload new observed data until Sunday:
+  # Use 7 and 1 for Cases and Deaths so that Sundays will use the Saturday directly beforehand.
+  # (This means that on Sundays until the afternoon when the pipeline completes, the "as of" will show
+  # the most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
+  prevWeek <- seq(Sys.Date() - 7, Sys.Date() - 1, by = "day")
   prevWeek[weekdays(prevWeek) == CASES_DEATHS_TARGET_DAY]
 }
 
@@ -54,10 +57,10 @@ resolveCurrentCasesDeathDay <- function() {
 resolveCurrentHospDay <- function() {
   # Get most recent target end date
   # Prev Saturday for Cases and Deaths, prev Wednesday for Hospitalizations
-  # Since we don't upload new observed data until Monday:
-  # Use 5 and 11 for Hospitalizations since Thurs-Sun should also not use the Wednesday directly beforehand.
-  # (This means that on Mondays until the afternoon when pipeline completes, the "as of" will show
-  # most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
-  prevHospWeek <- seq(Sys.Date() - 11, Sys.Date() - 5, by = "day")
+  # Since we don't upload new observed data until Sunday:
+  # Use 4 and 10 for Hospitalizations since Thurs-Sat should not use the Wednesday directly beforehand.
+  # (This means that on Sundays until the afternoon when the pipeline completes, the "as of" will show
+  # the most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
+  prevHospWeek <- seq(Sys.Date() - 10, Sys.Date() - 4, by = "day")
   prevHospWeek[weekdays(prevHospWeek) == HOSPITALIZATIONS_TARGET_DAY]
 }

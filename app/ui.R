@@ -40,14 +40,11 @@ sidebar <- tags$div(
         "Log Scale",
         value = FALSE,
       ),
-      conditionalPanel(
-        condition = "input.targetVariable != 'Hospitalizations'",
-        checkboxInput(
-          "scaleByBaseline",
-          "Scale by Baseline Forecaster",
-          value = FALSE,
-        )
-      ),
+      checkboxInput(
+        "scaleByBaseline",
+        "Scale by Baseline Forecaster",
+        value = FALSE,
+      )
     ),
     selectInput(
       "forecasters",
@@ -99,14 +96,16 @@ sidebar <- tags$div(
       selected = ""
     ),
     tags$p(id = "missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
-    hidden(div(
+    div(
       id = "showForecastsCheckbox",
-      checkboxInput(
-        "showForecasts",
-        "Show Forecasters' Predictions",
-        value = FALSE,
+      disabled(
+        checkboxInput(
+          "showForecasts",
+          "Show Forecasters' Predictions",
+          value = FALSE,
+        )
       )
-    )),
+    ),
     tags$hr(),
     exportScoresUI("exportScores"),
     tags$hr()

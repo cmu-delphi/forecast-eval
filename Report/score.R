@@ -51,7 +51,7 @@ save_score_cards <- function(score_card, geo_type = c("state", "nation"),
 }
 
 save_score_cards_wrapper <- function(score_card, geo_type, signal_name, output_dir) {
-  if (signal_name %in% unique(score_card["signal"])) {
+  if (signal_name %in% unique(score_card[["signal"]])) {
     print(paste("Saving", geo_type, type_map[[signal_name]], "..."))
     save_score_cards(score_card, geo_type,
       signal_name = signal_name, output_dir = output_dir

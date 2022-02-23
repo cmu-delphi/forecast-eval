@@ -69,9 +69,9 @@ predictions_cards <- get_covidhub_predictions(forecasters,
 
 options(warn = 0)
 
+# Includes predictions for future dates, which will not be scored.
 predictions_cards <- predictions_cards %>%
-  filter(!is.na(target_end_date)) %>%
-  filter(target_end_date < today())
+  filter(!is.na(target_end_date))
 
 # For hospitalizations, drop all US territories except Puerto Rico and the
 # Virgin Islands; HHS does not report data for any territories except PR and VI.

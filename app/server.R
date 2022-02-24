@@ -433,21 +433,23 @@ server <- function(input, output, session) {
       filteredScoreDf <- filterHospitalizationsAheads(filteredScoreDf)
     }
     if (input$scoreType == "wis" || input$scoreType == "sharpness") {
-      # Only show WIS or Sharpness for forecasts that have all intervals
+      # Only show WIS or Sharpness for forecasts that have all intervals unless they are for future dates
       filteredScoreDf <- filteredScoreDf %>%
-        filter(!is.na(`50`)) %>%
-        filter(!is.na(`80`)) %>%
-        filter(!is.na(`95`))
+        filter(!(is.na(`50`) &&
+               is.na(`80`) &&
+               is.na(`95`) &&
+               target_end_date < today()))
       if (input$targetVariable == "Deaths") {
         filteredScoreDf <- filteredScoreDf %>%
-          filter(!is.na(`10`)) %>%
-          filter(!is.na(`20`)) %>%
-          filter(!is.na(`30`)) %>%
-          filter(!is.na(`40`)) %>%
-          filter(!is.na(`60`)) %>%
-          filter(!is.na(`70`)) %>%
-          filter(!is.na(`90`)) %>%
-          filter(!is.na(`98`))
+          filter(!(is.na(`10`) &&
+                 is.na(`20`) &&
+                 is.na(`30`) &&
+                 is.na(`40`) &&
+                 is.na(`60`) &&
+                 is.na(`70`) &&
+                 is.na(`90`) &&
+                 is.na(`98`) &&
+                 target_end_date < today()))
       }
     }
     filteredScoreDf <- renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)
@@ -598,11 +600,6 @@ server <- function(input, output, session) {
       updateAsOfData()
     }
 
-    if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      disable("showForecasts")
-    } else {
-      enable("showForecasts")
-    }
     if (input$scoreType == "wis") {
       showElement("wisExplanation")
       hideElement("sharpnessExplanation")
@@ -647,22 +644,10 @@ server <- function(input, output, session) {
 
   observeEvent(input$location, {
     updateAsOfData()
-    # Only show forecast check box option if we are showing as of data
-    if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      disable("showForecasts")
-    } else {
-      enable("showForecasts")
-    }
   })
 
   observeEvent(input$asOf, {
     updateAsOfData()
-    # Only show forecast check box option if we are showing as of data
-    if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      disable("showForecasts")
-    } else {
-      enable("showForecasts")
-    }
   })
 
   # The following checks ensure the minimum necessary input selections
@@ -757,7 +742,10 @@ server <- function(input, output, session) {
   }
 
   updateAsOfChoices <- function(session, truthDf) {
-    asOfChoices <- truthDf$Week_End_Date
+    asOfChoices <- truthDf %>%
+      select(Week_End_Date) %>%
+      filter(Week_End_Date <= CURRENT_WEEK_END_DATE()) %>%
+      pull()
     selectedAsOf <- isolate(input$asOf)
     if (input$targetVariable == "Hospitalizations") {
       minChoice <- MIN_AVAIL_HOSP_AS_OF_DATE

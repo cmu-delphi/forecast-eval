@@ -175,5 +175,5 @@ if (length(save_score_errors) > 0) {
   stop(paste(save_score_errors, collapse = "\n"))
 }
 
-saveRDS(data.frame(datetime = c(data_pull_timestamp)), file=file.path(output_dir, "datetime_created_utc.rds"))
+saveRDS(data.frame(datetime = c(data_pull_timestamp)), file = file.path(output_dir, "datetime_created_utc.rds"))
 print("Done")

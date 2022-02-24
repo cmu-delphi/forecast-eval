@@ -317,6 +317,13 @@ server <- function(input, output, session) {
       theme_bw() +
       theme(panel.spacing = unit(0.5, "lines"))
 
+    if (input$showForecasts) {
+      maxLim <- max(
+        as.Date(input$asOf) + 7 * 4,
+        filteredScoreDf %>% filter(!is.na(Score)) %>% pull(Week_End_Date) %>% max() + 7 * 2
+      )
+      p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
+    }
     if (input$scoreType == "coverage") {
       p <- p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
     }
@@ -390,9 +397,14 @@ server <- function(input, output, session) {
         geom_point(aes(y = Reported_Incidence))
     }
     if (input$showForecasts) {
+      maxLim <- max(
+        as.Date(input$asOf) + 7 * 4,
+        filteredDf %>% filter(!is.na(Reported_Incidence)) %>% pull(Week_End_Date) %>% max() + 7 * 2
+      )
       finalPlot <- finalPlot +
         geom_line(aes(y = Quantile_50, color = Forecaster)) +
-        geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster))
+        geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
+        scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
     finalPlot <- ggplotly(finalPlot, tooltip = c("shape", "x", "y")) %>%
       layout(

@@ -13,9 +13,9 @@ renameScoreCol <- function(filteredScoreDf, scoreType, coverageInterval) {
 }
 
 
-filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FALSE) {
+filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FALSE, filterDate) {
   locationsIntersect <- list()
-  filteredScoreDf <- filteredScoreDf %>% filter(!(is.na(Score) && target_end_date < today()))
+  filteredScoreDf <- filteredScoreDf %>% filter(!(is.na(Score) && target_end_date < filterDate))
   # Create df with col for all locations across each unique date, ahead and forecaster combo
   locationDf <- filteredScoreDf %>%
     group_by(forecaster, target_end_date, ahead) %>%

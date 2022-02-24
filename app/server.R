@@ -109,7 +109,9 @@ server <- function(input, output, session) {
 
 
   # Get scores
-  df <- loadData()
+  loaded <- loadData()
+  df <- loaded$df
+  dataCreationDate <- loaded$dataCreationDate
   DATA_LOADED <- TRUE
 
   # Prepare input choices
@@ -163,7 +165,7 @@ server <- function(input, output, session) {
 
     # Totaling over all locations
     if (SUMMARIZING_OVER_ALL_LOCATIONS()) {
-      filteredScoreDfAndIntersections <- filterOverAllLocations(filteredScoreDf, input$scoreType, !is.null(asOfData))
+      filteredScoreDfAndIntersections <- filterOverAllLocations(filteredScoreDf, input$scoreType, !is.null(asOfData), filterDate = dataCreationDate)
       filteredScoreDf <- filteredScoreDfAndIntersections[[1]]
       locationsIntersect <- filteredScoreDfAndIntersections[[2]]
       if (input$showForecasts) {
@@ -450,7 +452,7 @@ server <- function(input, output, session) {
         filter(!(is.na(`50`) &&
           is.na(`80`) &&
           is.na(`95`) &&
-          target_end_date < today()))
+          target_end_date < dataCreationDate))
       if (input$targetVariable == "Deaths") {
         filteredScoreDf <- filteredScoreDf %>%
           filter(!(is.na(`10`) &&
@@ -461,7 +463,7 @@ server <- function(input, output, session) {
             is.na(`70`) &&
             is.na(`90`) &&
             is.na(`98`) &&
-            target_end_date < today()))
+            target_end_date < dataCreationDate))
       }
     }
     filteredScoreDf <- renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)

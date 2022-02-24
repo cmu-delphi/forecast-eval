@@ -238,7 +238,6 @@ server <- function(input, output, session) {
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
     })
-
     # If we are just re-rendering the truth plot with as of data
     # we don't need to re-render the score plot
     if (reRenderTruth) {
@@ -268,7 +267,7 @@ server <- function(input, output, session) {
       }
     }
 
-    # Title plot
+    # Set plot title
     if (input$scoreType == "wis") {
       plotTitle <- "Weighted Interval Score"
     } else if (input$scoreType == "sharpness") {
@@ -363,13 +362,14 @@ server <- function(input, output, session) {
         group_by(Week_End_Date) %>%
         summarize(Forecaster = Forecaster, Reported_Incidence = actual, Reported_As_Of_Incidence = as_of_actual) %>%
         distinct()
-      if (input$showForecasts) {
-        filteredDf <- filterForecastData(filteredDf, dfWithForecasts)
-      }
     } else {
       filteredDf <- filteredDf %>%
         group_by(Week_End_Date) %>%
-        summarize(Reported_Incidence = actual)
+        summarize(Forecaster = Forecaster, Reported_Incidence = actual) %>%
+        distinct()
+    }
+    if (input$showForecasts) {
+      filteredDf <- filterForecastData(filteredDf, dfWithForecasts, hasAsOfData)
     }
 
     finalPlot <- ggplot(filteredDf, aes(x = Week_End_Date)) +
@@ -385,14 +385,14 @@ server <- function(input, output, session) {
         geom_point(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
         geom_line(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence")) +
         geom_point(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence"))
-      if (input$showForecasts) {
-        finalPlot <- finalPlot +
-          geom_line(aes(y = Quantile_50, color = Forecaster)) +
-          geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster))
-      }
     } else {
       finalPlot <- finalPlot + geom_line(aes(y = Reported_Incidence)) +
         geom_point(aes(y = Reported_Incidence))
+    }
+    if (input$showForecasts) {
+      finalPlot <- finalPlot +
+        geom_line(aes(y = Quantile_50, color = Forecaster)) +
+        geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster))
     }
     finalPlot <- ggplotly(finalPlot, tooltip = c("shape", "x", "y")) %>%
       layout(
@@ -502,7 +502,7 @@ server <- function(input, output, session) {
     return(asOfData)
   }
 
-  filterForecastData <- function(filteredDf, dfWithForecasts) {
+  filterForecastData <- function(filteredDf, dfWithForecasts, hasAsOfData) {
     dfWithForecasts <- dfWithForecasts %>%
       rename(Week_End_Date = target_end_date, Forecaster = forecaster, Quantile_50 = value_50)
     if (!SUMMARIZING_OVER_ALL_LOCATIONS()) {
@@ -514,7 +514,11 @@ server <- function(input, output, session) {
         summarize(Quantile_50 = sum(Quantile_50))
     }
     # We want the forecasts to be later than latest as of date with data
-    lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
+    if (hasAsOfData) {
+      lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
+    } else {
+      lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_Incidence)), n = 1)$Week_End_Date[1]
+    }
     dfWithForecasts <- dfWithForecasts %>%
       filter(forecast_date >= lastEndDate) %>%
       group_by(Week_End_Date) %>%
@@ -542,9 +546,14 @@ server <- function(input, output, session) {
         group_by(Forecaster) %>%
         filter(forecast_date == first(forecast_date))
     }
+
+    keepCols <- c("Quantile_50", "Forecaster", "Reported_Incidence")
+    if (hasAsOfData) {
+      keepCols <- c(keepCols, "Reported_As_Of_Incidence")
+    }
     filteredDf <- merge(filteredDf, dfWithForecasts, by = c("Week_End_Date", "Forecaster"), all = TRUE) %>%
       group_by(Week_End_Date) %>%
-      select(Quantile_50, Forecaster, Reported_Incidence, Reported_As_Of_Incidence)
+      select(keepCols)
     # Remove rows of NAs
     filteredDf <- filteredDf %>% filter(!is.null(Forecaster))
     filteredDf <- filteredDf %>%

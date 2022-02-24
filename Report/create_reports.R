@@ -58,6 +58,7 @@ signals <- c(
   "confirmed_admissions_covid_1d"
 )
 
+data_pull_timestamp <- now(tzone = "UTC")
 predictions_cards <- get_covidhub_predictions(forecasters,
   signal = signals,
   ahead = 1:28,
@@ -174,4 +175,5 @@ if (length(save_score_errors) > 0) {
   stop(paste(save_score_errors, collapse = "\n"))
 }
 
+saveRDS(data.frame(datetime = c(data_pull_timestamp)), file=file.path(output_dir, "datetime_created_utc.rds"))
 print("Done")

@@ -417,7 +417,11 @@ server <- function(input, output, session) {
     # Remove the extra grouping from the legend: "(___,1)"
     for (i in seq_along(finalPlot$x$data)) {
       if (!is.null(finalPlot$x$data[[i]]$name)) {
+        if (endsWith(finalPlot$x$data[[i]]$name, ",1)") && finalPlot$x$data[[i]]$mode != "lines+markers") {
+          finalPlot$x$data[[i]]$showlegend <- FALSE
+        }
         finalPlot$x$data[[i]]$name <- gsub("\\(", "", stringr::str_split(finalPlot$x$data[[i]]$name, ",")[[1]][1])
+        finalPlot$x$data[[i]]$mode <- "lines+markers"
       }
     }
     return(finalPlot)

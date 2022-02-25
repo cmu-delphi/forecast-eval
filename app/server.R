@@ -322,7 +322,7 @@ server <- function(input, output, session) {
     if (input$showForecasts) {
       maxLim <- max(
         as.Date(input$asOf) + 7 * 4,
-        filteredScoreDf %>% filter(!is.na(Score)) %>% pull(Week_End_Date) %>% max() + 7 * 2
+        CURRENT_WEEK_END_DATE() + 7 * 1
       )
       p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
@@ -401,7 +401,7 @@ server <- function(input, output, session) {
     if (input$showForecasts) {
       maxLim <- max(
         as.Date(input$asOf) + 7 * 4,
-        filteredDf %>% filter(!is.na(Reported_Incidence)) %>% pull(Week_End_Date) %>% max() + 7 * 2
+        CURRENT_WEEK_END_DATE() + 7 * 1
       )
       finalPlot <- finalPlot +
         geom_line(aes(y = Quantile_50, color = Forecaster)) +

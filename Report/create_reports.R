@@ -58,6 +58,7 @@ signals <- c(
   "confirmed_admissions_covid_1d"
 )
 
+data_pull_timestamp <- now(tzone = "UTC")
 predictions_cards <- get_covidhub_predictions(forecasters,
   signal = signals,
   ahead = 1:28,
@@ -69,9 +70,9 @@ predictions_cards <- get_covidhub_predictions(forecasters,
 
 options(warn = 0)
 
+# Includes predictions for future dates, which will not be scored.
 predictions_cards <- predictions_cards %>%
-  filter(!is.na(target_end_date)) %>%
-  filter(target_end_date < today())
+  filter(!is.na(target_end_date))
 
 # For hospitalizations, drop all US territories except Puerto Rico and the
 # Virgin Islands; HHS does not report data for any territories except PR and VI.
@@ -174,4 +175,5 @@ if (length(save_score_errors) > 0) {
   stop(paste(save_score_errors, collapse = "\n"))
 }
 
+saveRDS(data.frame(datetime = c(data_pull_timestamp)), file = file.path(output_dir, "datetime_created_utc.rds"))
 print("Done")

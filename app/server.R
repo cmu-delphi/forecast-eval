@@ -320,9 +320,10 @@ server <- function(input, output, session) {
       theme(panel.spacing = unit(0.5, "lines"))
 
     if (input$showForecasts) {
-      maxLim <- max(
+      maxLim <- if_else(
+        as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
         as.Date(input$asOf) + 7 * 4,
-        CURRENT_WEEK_END_DATE() + 7 * 1
+        as.Date(NA)
       )
       p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
@@ -399,9 +400,10 @@ server <- function(input, output, session) {
         geom_point(aes(y = Reported_Incidence))
     }
     if (input$showForecasts) {
-      maxLim <- max(
+      maxLim <- if_else(
+        as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
         as.Date(input$asOf) + 7 * 4,
-        CURRENT_WEEK_END_DATE() + 7 * 1
+        as.Date(NA)
       )
       finalPlot <- finalPlot +
         geom_line(aes(y = Quantile_50, color = Forecaster)) +

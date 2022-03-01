@@ -406,7 +406,6 @@ server <- function(input, output, session) {
         as.Date(NA)
       )
       finalPlot <- finalPlot +
-        geom_line(aes(y = Quantile_50, color = Forecaster)) +
         geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
         scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
@@ -537,21 +536,32 @@ server <- function(input, output, session) {
         group_by(Forecaster, forecast_date, Week_End_Date, ahead) %>%
         summarize(Quantile_50 = sum(Quantile_50))
     }
-    # We want the forecasts to be later than latest as of date with data
+
     if (hasAsOfData) {
+      # We want the forecasts to be later than latest as of date with data
       lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
+      dfWithForecasts <- dfWithForecasts %>%
+        filter(forecast_date >= lastEndDate) %>%
+        group_by(Week_End_Date) %>%
+        summarize(Forecaster, forecast_date, Quantile_50)
     } else {
-      lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_Incidence)), n = 1)$Week_End_Date[1]
+      # Get the latest predictions for each forecaster
+      dfWithForecasts <- dfWithForecasts %>%
+        group_by(Forecaster) %>%
+        filter(forecast_date == max(forecast_date)) %>%
+        ungroup() %>%
+        group_by(Week_End_Date) %>%
+        summarize(Forecaster, forecast_date, Quantile_50) %>%
+        filter(Week_End_Date > CURRENT_WEEK_END_DATE())
     }
-    dfWithForecasts <- dfWithForecasts %>%
-      filter(forecast_date >= lastEndDate) %>%
-      group_by(Week_End_Date) %>%
-      summarize(Forecaster, forecast_date, Quantile_50)
 
     # Get the next as of choice available in dropdown menu
     dfWithForecasts <- dfWithForecasts[order(dfWithForecasts$forecast_date), ]
     AS_OF_CHOICES(sort(AS_OF_CHOICES() %>% unique()))
-    nextAsOfInList <- AS_OF_CHOICES()[which.min(abs(AS_OF_CHOICES() - dfWithForecasts$forecast_date[1])) + 1]
+    nextAsOfInList <- AS_OF_CHOICES()[which.min(abs(AS_OF_CHOICES() - min(dfWithForecasts$forecast_date))) + 1]
+    if (!hasAsOfData) {
+      nextAsOfInList <- NA
+    }
 
     # Take only those forecasts with a forecast date before the next as of date in dropdown
     # aka within the week after the current as of shown

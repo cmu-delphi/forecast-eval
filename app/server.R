@@ -405,7 +405,7 @@ server <- function(input, output, session) {
         as.Date(input$asOf) + 7 * 4,
         as.Date(NA)
       )
-      
+
       finalPlot <- finalPlot +
         geom_line(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
         geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +

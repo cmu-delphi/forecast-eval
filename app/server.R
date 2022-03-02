@@ -405,7 +405,9 @@ server <- function(input, output, session) {
         as.Date(input$asOf) + 7 * 4,
         as.Date(NA)
       )
+      
       finalPlot <- finalPlot +
+        geom_line(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
         geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
         scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
@@ -418,11 +420,7 @@ server <- function(input, output, session) {
     # Remove the extra grouping from the legend: "(___,1)"
     for (i in seq_along(finalPlot$x$data)) {
       if (!is.null(finalPlot$x$data[[i]]$name)) {
-        if (endsWith(finalPlot$x$data[[i]]$name, ",1)") && finalPlot$x$data[[i]]$mode != "lines+markers") {
-          finalPlot$x$data[[i]]$showlegend <- FALSE
-        }
         finalPlot$x$data[[i]]$name <- gsub("\\(", "", stringr::str_split(finalPlot$x$data[[i]]$name, ",")[[1]][1])
-        finalPlot$x$data[[i]]$mode <- "lines+markers"
       }
     }
     return(finalPlot)

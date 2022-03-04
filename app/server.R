@@ -450,27 +450,29 @@ server <- function(input, output, session) {
       filteredScoreDf <- filterHospitalizationsAheads(filteredScoreDf)
     }
     if (input$scoreType == "wis" || input$scoreType == "sharpness") {
-      # Only show WIS or Sharpness for forecasts that have all intervals unless they are for future dates
+      # Only show WIS or Sharpness for forecasts that have all intervals or are for future dates
       filteredScoreDf <- filteredScoreDf %>%
         filter((
             !is.na(`50`) &
             !is.na(`80`) &
             !is.na(`95`)
           ) |
-            target_end_date >= dataCreationDate)
+            target_end_date >= dataCreationDate
+        )
       if (input$targetVariable == "Deaths") {
         filteredScoreDf <- filteredScoreDf %>%
-          filter(!(
-            (is.na(`10`) |
-              is.na(`20`) |
-              is.na(`30`) |
-              is.na(`40`) |
-              is.na(`60`) |
-              is.na(`70`) |
-              is.na(`90`) |
-              is.na(`98`)
-            ) &
-              target_end_date < dataCreationDate))
+          filter((
+              !is.na(`10`) &
+              !is.na(`20`) &
+              !is.na(`30`) &
+              !is.na(`40`) &
+              !is.na(`60`) &
+              !is.na(`70`) &
+              !is.na(`90`) &
+              !is.na(`98`)
+            ) |
+              target_end_date >= dataCreationDate
+          )
       }
     }
     filteredScoreDf <- renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)

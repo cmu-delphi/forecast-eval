@@ -60,6 +60,13 @@ getFallbackData <- function(filename) {
   readRDS(path)
 }
 
+
+getCreationDate <- function(loadFile) {
+  dataCreationDate <- loadFile("datetime_created_utc.rds")
+  return(dataCreationDate %>% pull(datetime) %>% as.Date())
+}
+
+
 getAllData <- function(loadFile) {
   dfStateCases <- loadFile("score_cards_state_cases.rds")
   dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
@@ -100,6 +107,7 @@ getAllData <- function(loadFile) {
 createS3DataLoader <- function() {
   s3bucket <- getS3Bucket()
   df <- data.frame()
+  dataCreationDate <- as.Date(NA)
 
   getRecentData <- function() {
     newS3bucket <- getS3Bucket()
@@ -117,9 +125,10 @@ createS3DataLoader <- function() {
       # la https://stackoverflow.com/questions/1088639/static-variables-in-r
       s3bucket <<- newS3bucket
       df <<- getAllData(createS3DataFactory(s3bucket))
+      dataCreationDate <<- getCreationDate(createS3DataFactory(s3bucket))
     }
 
-    return(df)
+    return(list(df = df, dataCreationDate = dataCreationDate))
   }
 
   return(getRecentData)

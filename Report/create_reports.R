@@ -95,6 +95,8 @@ for (signal_name in signals) {
   check_for_missing_forecasters(nation_predictions, forecasters, "nation", signal_name, output_dir)
 }
 
+save_score_errors <- list()
+
 print("Evaluating national forecasts")
 # TODO: When this function was created, COVIDcast did not return national level
 # data, and CovidHubUtils was used instead. We could now switch to COVIDcast,

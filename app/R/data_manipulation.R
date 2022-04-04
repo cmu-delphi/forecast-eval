@@ -66,24 +66,29 @@ filterHospitalizationsAheads <- function(scoreDf) {
     group_by(target_end_date, forecaster) %>%
     filter(ahead == min(ahead)) %>%
     mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[1])
-  twoAheadDf <- scoreDf %>%
-    filter(ahead >= 7 + HOSPITALIZATIONS_OFFSET) %>%
-    filter(ahead < 14 + HOSPITALIZATIONS_OFFSET) %>%
-    group_by(target_end_date, forecaster) %>%
-    filter(ahead == min(ahead)) %>%
-    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[2])
-  threeAheadDf <- scoreDf %>%
-    filter(ahead >= 14 + HOSPITALIZATIONS_OFFSET) %>%
-    filter(ahead < 21 + HOSPITALIZATIONS_OFFSET) %>%
-    group_by(target_end_date, forecaster) %>%
-    filter(ahead == min(ahead)) %>%
-    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[3])
-  fourAheadDf <- scoreDf %>%
-    filter(ahead >= 21 + HOSPITALIZATIONS_OFFSET) %>%
-    filter(ahead < 28 + HOSPITALIZATIONS_OFFSET) %>%
-    group_by(target_end_date, forecaster) %>%
-    filter(ahead == min(ahead)) %>%
-    mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[4])
-
-  return(rbind(oneAheadDf, twoAheadDf, threeAheadDf, fourAheadDf))
+  
+  return(bind_rows(scoreDf %>%
+                     filter(ahead >= HOSPITALIZATIONS_OFFSET) %>%
+                     filter(ahead < 7 + HOSPITALIZATIONS_OFFSET) %>%
+                     group_by(target_end_date, forecaster) %>%
+                     filter(ahead == min(ahead)) %>%
+                     mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[1]),
+                   scoreDf %>%
+                     filter(ahead >= 7 + HOSPITALIZATIONS_OFFSET) %>%
+                     filter(ahead < 14 + HOSPITALIZATIONS_OFFSET) %>%
+                     group_by(target_end_date, forecaster) %>%
+                     filter(ahead == min(ahead)) %>%
+                     mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[2]),
+                   scoreDf %>%
+                     filter(ahead >= 14 + HOSPITALIZATIONS_OFFSET) %>%
+                     filter(ahead < 21 + HOSPITALIZATIONS_OFFSET) %>%
+                     group_by(target_end_date, forecaster) %>%
+                     filter(ahead == min(ahead)) %>%
+                     mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[3]),
+                   scoreDf %>%
+                     filter(ahead >= 21 + HOSPITALIZATIONS_OFFSET) %>%
+                     filter(ahead < 28 + HOSPITALIZATIONS_OFFSET) %>%
+                     group_by(target_end_date, forecaster) %>%
+                     filter(ahead == min(ahead)) %>%
+                     mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[4])))
 }

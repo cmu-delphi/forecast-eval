@@ -37,6 +37,8 @@ prediction_cards_filepath <- case_when(
   TRUE ~ prediction_cards_filename
 )
 
+data_pull_timestamp <- now(tzone = "UTC")
+
 options(warn = 1)
 
 # Requested forecasters that do not get included in final scores:
@@ -62,12 +64,14 @@ BASE_URL <- "https://api.github.com/repos/reichlab/covid19-forecast-hub/commits?
 ITEMS_PER_PAGE <- 100
 BRANCH <- "master"
 
-# We want to fetch all commits made in the last week. (Really this only needs to
-# be the last 5 days, since we run the pipeline on Sunday, Monday, and Tuesday,
-# but this adds some buffer for outages and timezone shenanigans.)
-## TODO: instead of `today()` use saved timestamp from `datetime_created_utc.rds`.
-##   Make sure the timezone is in a format the GH API can read
-since_date <- sprintf("%sT00:00:00Z", today() - 7)
+# We want to fetch all commits made since the previous run. Add 1 day in as buffer.
+#
+# Timestamp should be in ISO 8601 format. See
+# https://docs.github.com/en/rest/reference/commits#list-commits--parameters for
+# details.
+previous_run_ts <- readRDS(file.path(output_dir, "datetime_created_utc.rds")) %>%
+  pull(datetime)
+since_date <- strftime(previous_run_ts - days(1), "%Y-%m-%dT%H:%M:%SZ", tz="UTC")
 
 page <- 0
 commit_sha_dates <- list()
@@ -81,9 +85,9 @@ while ( !exists("temp_commits") || nrow(temp_commits) == 100 ) {
   commits_url <- sprintf(BASE_URL, BRANCH, ITEMS_PER_PAGE, since_date, page)
 
   request <- GET(commits_url, authenticate(uname, token))
-  # Convert any HTTP errors to R erros automatically.
+  # Convert any HTTP errors to R errors automatically.
   stop_for_status(request)
-
+  
   # Convert results from nested JSON/list to dataframe
   temp_commits <- content(request, as = "text") %>%
     fromJSON(simplifyDataFrame = TRUE, flatten=TRUE)
@@ -127,6 +131,7 @@ added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
   ) %>%
   select(-status) %>%
   group_by(filename) %>%
+  # Keep most recent reference to a given file. Implicitly deduplicates by filename.
   filter(
     commit.date == max(commit.date)
   ) %>%
@@ -163,7 +168,6 @@ signals <- c(
 )
 
 
-data_pull_timestamp <- now(tzone = "UTC")
 predictions_cards <- get_covidhub_predictions(
   unique(added_modified_files$forecaster),
   signal = signals,
@@ -198,23 +202,22 @@ predictions_cards <- predictions_cards %>%
   )
 
 # Load old predictions cards.
-## TODO: instead of `today()` use saved timestamp from `datetime_created_utc.rds`.
 old_predictions_cards <- readRDS(prediction_cards_filepath) %>%
-  mutate(creation_date = today() - 1)
+  mutate(updated_cards_flag = 0)
 
 # Merge old and updated predictions cards. If multiple forecasts were made for a
-# given set of characteristics, keep the most recent forecast
+# given set of characteristics, keep the new version of the forecast
 predictions_cards <- bind_rows(
-  mutate(predictions_cards, creation_date = today()),
+  mutate(predictions_cards, updated_cards_flag = 1),
   old_predictions_cards
 ) %>%
   group_by(forecaster, geo_value, target_end_date, quantile, ahead, signal) %>%
   filter(
     forecast_date == max(forecast_date),
-    creation_date == max(creation_date)
+    updated_cards_flag == max(updated_cards_flag)
   ) %>%
   ungroup() %>%
-  select(-creation_date)
+  select(-updated_cards_flag)
 class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
 
 print("Saving predictions...")

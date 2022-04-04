@@ -36,7 +36,7 @@ forecasters <- unique(c(
 ))
 
 ## Get list of new and modified files to download
-# The `path` field includes only commits that acted in that dir
+# The `path` field filters commits to only those that modifying the listed dir
 BASE_URL <- "https://api.github.com/repos/reichlab/covid19-forecast-hub/commits?sha=%s&per_page=%s&path=data-processed&since=%s&page=%s"
 ITEMS_PER_PAGE <- 100
 BRANCH <- "master"
@@ -44,26 +44,41 @@ BRANCH <- "master"
 # We want to fetch all commits made in the last week. (Really this only needs to
 # be the last 5 days, since we run the pipeline on Sunday, Monday, and Tuesday,
 # but this adds some buffer for outages and timezone shenanigans.)
+## TODO: instead of `today()` use saved timestamp from `datetime_created_utc.rds`.
+##   Make sure the timezone is in a format the GH API can read
 since_date <- sprintf("%sT00:00:00Z", today() - 7)
 
 page <- 0
 commit_sha_dates <- list()
 
+# Fetch list of commits from API, one page at a time. Each page contains up to
+# 100 commits. If a page contains 100 commits, assume that there are more
+# results and fetch the next page.
 while ( !exists("temp_commits") || nrow(temp_commits) == 100 ) {
   page <- page + 1
+  # Construct the URL
   commits_url <- sprintf(BASE_URL, BRANCH, ITEMS_PER_PAGE, since_date, page)
+
   request <- GET(commits_url, authenticate(uname, token))
+  # Convert any HTTP errors to R erros automatically.
   stop_for_status(request)
+
+  # Convert results from nested JSON/list to dataframe
   temp_commits <- content(request, as = "text") %>%
     fromJSON(simplifyDataFrame = TRUE, flatten=TRUE)
   
-  if ( identical(temp_commits, list()) ) {break}
-  commit_sha_dates[[page]] <-select(temp_commits, sha, url, commit.author.date)
+  ## TODO: will this stop the loop consistently? Aren't we converting
+  #  temp_commits to a dataframe above?
+  if ( identical(temp_commits, list()) ) { break }
+
+  commit_sha_dates[[page]] <- select(temp_commits, sha, url, commit.author.date)
 }
 
+# Combine all requested pages of commits into one dataframe
 commit_sha_dates <- bind_rows(commit_sha_dates)
 
 added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
+  # For each commit in `temp_commits`, get a list of any modified files.
   print(commit_url)
   
   # Make API call for each commit sha
@@ -74,10 +89,10 @@ added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
   
   commit_files <- commit$files
   
-  # Return if no files listed (can happen with merges, e.g.)
+  # Return empty df if no files listed as modified (can happen with merges, e.g.)
   if ( identical(commit_files, list())) { return(data.frame()) }
   
-  # Else return changed file list for each + commit date
+  # Else return list of changed files for each commit
   commit_files %>% mutate(commit.date = commit$commit$author$date)
 }) %>% 
   bind_rows() %>%
@@ -96,18 +111,20 @@ added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
   ) %>%
   ungroup()
   
-# Parse forecaster name and date from filename
+# Get forecaster and date from filename
 filename_parts <- strsplit(added_modified_files$filename, "/")
 added_modified_files <- added_modified_files %>% 
   mutate(
-    forecaster = lapply(filename_parts, function(parts) {
-      parts[[2]]
-    }) %>%
-      unlist(),
-    forecast.date = lapply(filename_parts, function(parts) {
-      substr(parts[[3]], start=1, stop=10)
-    }) %>%
-      unlist()
+    forecaster = lapply(
+      filename_parts, function(parts) {
+        parts[[2]]
+      }) %>%
+        unlist(),
+    forecast.date = lapply(
+      filename_parts, function(parts) {
+        substr(parts[[3]], start=1, stop=10)
+      }) %>%
+        unlist()
   ) %>% 
   filter(forecaster %in% forecasters)
 
@@ -139,8 +156,8 @@ predictions_cards <- predictions_cards %>%
   filter(!is.na(target_end_date)) %>%
   filter(target_end_date < today())
 
-# For hospitalizations, drop all US territories except Puerto Rico and the
-# Virgin Islands; HHS does not report data for any territories except these two.
+# For hospitalizations, drop all US territories except Puerto Rico (pr) and the
+# Virgin Islands (vi); HHS does not report data for any territories except these two.
 territories <- c("as", "gu", "mp", "fm", "mh", "pw", "um")
 predictions_cards <- predictions_cards %>%
   filter(!(geo_value %in% territories & data_source == "hhs"))
@@ -156,6 +173,7 @@ predictions_cards <- predictions_cards %>%
   )
 
 # Load old predictions cards.
+## TODO: instead of `today()` use saved timestamp from `datetime_created_utc.rds`.
 old_predictions_cards <- readRDS(prediction_cards_filepath) %>% 
   mutate(creation_date = today() - 1)
 

@@ -139,6 +139,8 @@ for (signal_name in signals) {
   check_for_missing_forecasters(state_predictions, forecasters, "state", signal_name, output_dir)
 }
 
+save_score_errors <- list()
+
 ## Score predictions
 print("Evaluating state forecasts")
 geo_type <- "state"
@@ -147,8 +149,6 @@ state_scores <- evaluate_covid_predictions(state_predictions,
   geo_type = geo_type
 )
 
-save_score_errors <- list()
-
 for (signal_name in signals) {
   status <- save_score_cards_wrapper(state_scores, geo_type, signal_name, output_dir)
   if (status != 0) {
@@ -156,11 +156,14 @@ for (signal_name in signals) {
   }
 }
 
+rm(state_scores)
+gc()
+
 print("Evaluating national forecasts")
 # TODO: When this function was created, COVIDcast did not return national level
 # data, and CovidHubUtils was used instead. We could now switch to COVIDcast,
 # but COVIDcast and CovidHubUtils don't produce exactly the same data. This
-# requires more investigation. Also using CovidHubUtils might be faster.
+# requires more investigation. Not using `evalcast` is also faster.
 geo_type <- "nation"
 nation_scores <- evaluate_chu(nation_predictions, signals, err_measures)
 

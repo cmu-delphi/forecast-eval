@@ -98,12 +98,10 @@ sidebar <- tags$div(
     tags$p(id = "missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
     div(
       id = "showForecastsCheckbox",
-      disabled(
-        checkboxInput(
-          "showForecasts",
-          "Show Forecasters' Predictions",
-          value = FALSE,
-        )
+      checkboxInput(
+        "showForecasts",
+        "Show Forecasters' Predictions",
+        value = FALSE
       )
     ),
     tags$hr(),

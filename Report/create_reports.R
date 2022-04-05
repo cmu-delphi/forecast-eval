@@ -214,22 +214,34 @@ predictions_cards <- predictions_cards %>%
   )
 
 # Load old predictions cards.
-old_predictions_cards <- readRDS(prediction_cards_filepath) %>%
-  mutate(updated_cards_flag = 0)
+if (file.exists(prediction_cards_filepath)) {
+  old_predictions_cards <- readRDS(prediction_cards_filepath) %>%
+    mutate(updated_cards_flag = 0)
+} else {
+  warning("Could not find prediction cards at ", prediction_cards_filepath)
+  old_predictions_cards <- data.frame()
+}
 
-# Merge old and updated predictions cards. If multiple forecasts were made for a
-# given set of characteristics, keep the new version of the forecast
+
+# Merge old and new predictions cards.
 predictions_cards <- bind_rows(
   mutate(predictions_cards, updated_cards_flag = 1),
   old_predictions_cards
 ) %>%
+  # If a given forecast appears in both old and new prediction cards, keep the new one.
   group_by(forecaster, geo_value, target_end_date, quantile, ahead, signal) %>%
   filter(
-    forecast_date == max(forecast_date),
     updated_cards_flag == max(updated_cards_flag)
   ) %>%
   ungroup() %>%
-  select(-updated_cards_flag)
+  select(-updated_cards_flag) %>%
+  # If multiple forecasts were made for a given set of characteristics, keep the
+  # newest version of the forecast.
+  group_by(forecaster, geo_value, target_end_date, quantile, ahead, signal) %>%
+  filter(
+    forecast_date == max(forecast_date)
+  ) %>%
+  ungroup()
 class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
 
 print("Saving predictions...")

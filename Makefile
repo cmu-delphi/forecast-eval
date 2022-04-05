@@ -23,6 +23,7 @@ score_forecast: r_build dist pull_data
 		-v ${PWD}/Report:/var/forecast-eval \
 		-v ${PWD}/dist:/var/dist \
 		-w /var/forecast-eval \
+		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
 		forecast-eval-build \
 		Rscript create_reports.R --dir /var/dist
 

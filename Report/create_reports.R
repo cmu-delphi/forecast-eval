@@ -7,12 +7,6 @@ library("jsonlite")
 library("httr")
 
 
-# Set up GitHub API authentication
-## TODO: setup for Github Actions, so can pass token info into script
-uname <- ""
-token <- ""
-
-
 # TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
 # Redefines overprediction, underprediction and sharpness
 source("error_measures.R")
@@ -30,12 +24,18 @@ option_list <- list(
 )
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
+
 output_dir <- opt$dir
 prediction_cards_filename <- "predictions_cards.rds"
 prediction_cards_filepath <- case_when(
   !is.null(output_dir) ~ file.path(output_dir, prediction_cards_filename),
   TRUE ~ prediction_cards_filename
 )
+
+github_token <- Sys.getenv("GITHUB_TOKEN")
+if (github_token == "") {
+  stop("Token is not set or is not able to be fetched from the environment")
+}
 
 data_pull_timestamp <- now(tzone = "UTC")
 
@@ -83,8 +83,8 @@ while ( !exists("temp_commits") || nrow(temp_commits) == 100 ) {
   page <- page + 1
   # Construct the URL
   commits_url <- sprintf(BASE_URL, BRANCH, ITEMS_PER_PAGE, since_date, page)
-
-  request <- GET(commits_url, authenticate(uname, token))
+  
+  request <- GET(commits_url, add_headers(Authorization = paste("Bearer", github_token)))
   # Convert any HTTP errors to R errors automatically.
   stop_for_status(request)
   
@@ -106,7 +106,7 @@ added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
   print(commit_url)
 
   # Make API call for each commit sha
-  request <- GET(commit_url, authenticate(uname, token))
+  request <- GET(commit_url, add_headers(Authorization = paste("Bearer", github_token)))
   stop_for_status(request)
   commit <- content(request, as = "text") %>%
     fromJSON(simplifyDataFrame = TRUE, flatten=TRUE)

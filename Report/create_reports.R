@@ -88,15 +88,14 @@ while ( !exists("temp_commits") || nrow(temp_commits) == 100 ) {
   # Convert any HTTP errors to R errors automatically.
   stop_for_status(request)
   
-  # Convert results from nested JSON/list to dataframe
+  # Convert results from nested JSON/list to dataframe. If no results returned,
+  # `temp_commits` will be an empty list.
   temp_commits <- content(request, as = "text") %>%
     fromJSON(simplifyDataFrame = TRUE, flatten=TRUE)
 
-  ## TODO: will this stop the loop consistently? Aren't we converting
-  #  temp_commits to a dataframe above?
   if ( identical(temp_commits, list()) ) { break }
 
-  commit_sha_dates[[page]] <- select(temp_commits, sha, url, commit.author.date)
+  commit_sha_dates[[page]] <- select(temp_commits, sha, url)
 }
 
 # Combine all requested pages of commits into one dataframe
@@ -118,10 +117,10 @@ added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
   if ( identical(commit_files, list())) { return(data.frame()) }
 
   # Else return list of changed files for each commit
-  commit_files %>% mutate(commit.date = commit$commit$author$date)
+  commit_files %>% mutate(commit_date = commit$commit$author$date)
 }) %>%
   bind_rows() %>%
-  select(filename, status, commit.date) %>%
+  select(filename, status, commit_date) %>%
   # File must be in data-processed dir somewhere and be a csv with expected name
   # format. We're only interested in added or modified files (not deleted,
   # renamed, copied, etc).
@@ -133,11 +132,11 @@ added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
   group_by(filename) %>%
   # Keep most recent reference to a given file. Implicitly deduplicates by filename.
   filter(
-    commit.date == max(commit.date)
+    commit_date == max(commit_date)
   ) %>%
   ungroup()
 
-# Get forecaster and date from filename
+# Get forecaster name and date from filename
 filename_parts <- strsplit(added_modified_files$filename, "/")
 added_modified_files <- added_modified_files %>%
   mutate(
@@ -154,7 +153,6 @@ added_modified_files <- added_modified_files %>%
   ) %>%
   filter(forecaster %in% forecasters)
 
-
 locations <- covidHubUtils::hub_locations
 
 # also includes "us", which is national level data
@@ -167,17 +165,31 @@ signals <- c(
   "confirmed_admissions_covid_1d"
 )
 
-
-predictions_cards <- get_covidhub_predictions(
+# Since forecast dates are shared across all forecasters, if a new forecaster
+# is added that backfills forecast dates, we will end up requesting all those
+# dates for forecasters we've already seen before. To prevent that, make a new
+# call to `get_covidhub_predictions` for each forecaster with its own dates.
+predictions_cards <- lapply(
   unique(added_modified_files$forecaster),
-  signal = signals,
-  ahead = 1:28,
-  geo_values = state_geos,
-  forecast_dates = unique(added_modified_files$forecast.date),
-  verbose = TRUE,
-  use_disk = TRUE
+  function(forecaster_name) {
+    fetch_dates <- added_modified_files %>%
+      filter(forecaster == forecaster_name) %>%
+      distinct(forecast.date) %>%
+      pull()
+    
+    get_covidhub_predictions(
+      forecaster_name,
+      signal = signals,
+      ahead = 1:28,
+      geo_values = state_geos,
+      forecast_dates = fetch_dates,
+      verbose = TRUE,
+      use_disk = TRUE
+    ) %>%
+      filter(!(incidence_period == "epiweek" & ahead > 4))
+  }
 ) %>%
-  filter(!(incidence_period == "epiweek" & ahead > 4))
+  bind_rows()
 
 options(warn = 0)
 

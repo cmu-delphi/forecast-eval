@@ -71,7 +71,7 @@ BRANCH <- "master"
 # details.
 previous_run_ts <- readRDS(file.path(output_dir, "datetime_created_utc.rds")) %>%
   pull(datetime)
-since_date <- strftime(previous_run_ts - days(1), "%Y-%m-%dT%H:%M:%SZ", tz="UTC")
+since_date <- strftime(previous_run_ts - days(1), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
 
 page <- 0
 commit_sha_dates <- list()
@@ -79,21 +79,23 @@ commit_sha_dates <- list()
 # Fetch list of commits from API, one page at a time. Each page contains up to
 # 100 commits. If a page contains 100 commits, assume that there are more
 # results and fetch the next page.
-while ( !exists("temp_commits") || nrow(temp_commits) == 100 ) {
+while (!exists("temp_commits") || nrow(temp_commits) == 100) {
   page <- page + 1
   # Construct the URL
   commits_url <- sprintf(BASE_URL, BRANCH, ITEMS_PER_PAGE, since_date, page)
-  
+
   request <- GET(commits_url, add_headers(Authorization = paste("Bearer", github_token)))
   # Convert any HTTP errors to R errors automatically.
   stop_for_status(request)
-  
+
   # Convert results from nested JSON/list to dataframe. If no results returned,
   # `temp_commits` will be an empty list.
   temp_commits <- content(request, as = "text") %>%
-    fromJSON(simplifyDataFrame = TRUE, flatten=TRUE)
+    fromJSON(simplifyDataFrame = TRUE, flatten = TRUE)
 
-  if ( identical(temp_commits, list()) ) { break }
+  if (identical(temp_commits, list())) {
+    break
+  }
 
   commit_sha_dates[[page]] <- select(temp_commits, sha, url)
 }
@@ -109,12 +111,14 @@ added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
   request <- GET(commit_url, add_headers(Authorization = paste("Bearer", github_token)))
   stop_for_status(request)
   commit <- content(request, as = "text") %>%
-    fromJSON(simplifyDataFrame = TRUE, flatten=TRUE)
+    fromJSON(simplifyDataFrame = TRUE, flatten = TRUE)
 
   commit_files <- commit$files
 
   # Return empty df if no files listed as modified (can happen with merges, e.g.)
-  if ( identical(commit_files, list())) { return(data.frame()) }
+  if (identical(commit_files, list())) {
+    return(data.frame())
+  }
 
   # Else return list of changed files for each commit
   commit_files %>% mutate(commit_date = commit$commit$author$date)
@@ -143,13 +147,15 @@ added_modified_files <- added_modified_files %>%
     forecaster = lapply(
       filename_parts, function(parts) {
         parts[[2]]
-      }) %>%
-        unlist(),
+      }
+    ) %>%
+      unlist(),
     forecast.date = lapply(
       filename_parts, function(parts) {
-        substr(parts[[3]], start=1, stop=10)
-      }) %>%
-        unlist()
+        substr(parts[[3]], start = 1, stop = 10)
+      }
+    ) %>%
+      unlist()
   ) %>%
   filter(forecaster %in% forecasters)
 
@@ -176,7 +182,7 @@ predictions_cards <- lapply(
       filter(forecaster == forecaster_name) %>%
       distinct(forecast.date) %>%
       pull()
-    
+
     get_covidhub_predictions(
       forecaster_name,
       signal = signals,

@@ -100,6 +100,7 @@ server <- function(input, output, session) {
   HOSP_CURRENT <- resolveCurrentHospDay()
 
   PREV_AS_OF_DATA <- reactiveVal(NULL)
+  PREV_TARGET <- reactiveVal(NULL)
   AS_OF_CHOICES <- reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
 
@@ -607,7 +608,12 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
-    CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
+    
+    if(!is.null(PREV_TARGET) && PREV_TARGET!="Hospitalization"){
+      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
+      currentFetch = (input$asOf)
+      }
+    
     if (input$targetVariable == "Deaths") {
       df <- df %>% filter(signal == DEATH_FILTER)
     } else if (input$targetVariable == "Cases") {
@@ -615,13 +621,17 @@ server <- function(input, output, session) {
     } else {
       df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
       CURRENT_WEEK_END_DATE(HOSP_CURRENT)
+      currentFetch = HOSP_CURRENT
     }
 
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
-    updateAsOfData()
+    updateAsOfData(fetchDate=currentFetch)
+    
+    #storing the last target
+    PREV_TARGET(isolate(input$targetVariable))
   })
 
   observeEvent(input$scoreType, {
@@ -725,7 +735,7 @@ server <- function(input, output, session) {
     }
   })
 
-  updateAsOfData <- function() {
+  updateAsOfData <- function(fetchDate = input$asOf) {
     dataSource <- "jhu-csse"
     if (input$targetVariable == "Cases") {
       targetSignal <- "confirmed_incidence_num"
@@ -741,10 +751,10 @@ server <- function(input, output, session) {
     } else {
       location <- "state"
     }
-    if (input$asOf == "") {
+    if (fetchDate == "") {
       return()
     }
-    if (input$asOf < CURRENT_WEEK_END_DATE()) {
+    if (fetchDate < CURRENT_WEEK_END_DATE()) {
       hideElement("truthPlot")
       hideElement("notes")
       hideElement("scoringDisclaimer")
@@ -755,7 +765,7 @@ server <- function(input, output, session) {
 
       # Since as_of matches to the issue date in covidcast (rather than the time_value)
       # we need to add one extra day to get the as of we want.
-      fetchDate <- as.Date(input$asOf) + 1
+      fetchDate <- as.Date(fetchDate) + 1
 
       # Covidcast API call
       asOfTruthData <- covidcast_signal_mem(
@@ -777,7 +787,7 @@ server <- function(input, output, session) {
         return()
       }
       summaryPlot(reRenderTruth = TRUE, asOfData = asOfTruthData)
-    } else if (input$asOf == CURRENT_WEEK_END_DATE()) {
+    } else if (fetchDate == CURRENT_WEEK_END_DATE()) {
       summaryPlot(reRenderTruth = TRUE)
     }
   }

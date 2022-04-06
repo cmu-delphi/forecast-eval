@@ -25,7 +25,7 @@ score_forecast: r_build dist pull_data
 		-w /var/forecast-eval \
 		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
 		forecast-eval-build \
-		Rscript create_reports.R --dir /var/dist
+		Rscript create_reports.R --dir /var/dist --exhaustive-download --exhaustive-scoring
 
 deploy: score_forecast
 	aws s3 cp dist/ $(S3_BUCKET)/ --recursive --exclude "*" --include "*rds" --acl public-read

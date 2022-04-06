@@ -20,8 +20,26 @@ option_list <- list(
     default = ".",
     help = "Directory to read/write data",
     metavar = "character"
-  )
+  ),
+  make_option(
+    c("--exhaustive-download"),
+    type = "boolean",
+    default = FALSE,
+    help = "Download full history of predictions",
+    metavar = "boolean"
+  ),
+  make_option(
+    c("--exhaustive-scoring"),
+    type = "boolean",
+    default = TRUE,
+    help = "Score full history of predictions",
+    metavar = "boolean"
+  ),
 )
+
+
+Rscript create_reports.R --dir /var/dist --exhaustive-download --exhaustive-scoring
+
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
 

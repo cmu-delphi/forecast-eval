@@ -30,9 +30,18 @@ prediction_cards_filepath <- case_when(
 
 options(warn = 1)
 
-# Note: CDDEP-ABM is not longer available and causes some warnings when trying
-# to download its data. Defer to `get_covidhub_forecaster_names` and underlying
-# Reich Lab utilities as to which forecasters to include.
+# Requested forecasters that do not get included in final scores:
+#    Auquan-SEIR: Only predicts cumulative deaths
+#    CDDEP-ABM: No longer on Forecast Hub. Causes some warnings when trying to download.
+#    CDDEP-SEIR_MCMC: County-level predictions only
+#    CUBoulder-COVIDLSTM: County-level predictions only
+#    FAIR-NRAR: County-level predictions only
+#    HKUST-DNN: Only predicts cumulative deaths
+#    ISUandPKU-vSEIdR: Folder but no forecasts on Forecast Hub
+#    PandemicCentral-COVIDForest: County-level predictions only
+#    UT_GISAG-SPDM: County-level predictions only
+#    WalmartLabsML-LogForecasting: Only predicts cumulative deaths
+#    Yu_Group-CLEP: County-level predictions only
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"
@@ -49,6 +58,7 @@ signals <- c(
   "confirmed_admissions_covid_1d"
 )
 
+data_pull_timestamp <- now(tzone = "UTC")
 predictions_cards <- get_covidhub_predictions(forecasters,
   signal = signals,
   ahead = 1:28,
@@ -60,9 +70,9 @@ predictions_cards <- get_covidhub_predictions(forecasters,
 
 options(warn = 0)
 
+# Includes predictions for future dates, which will not be scored.
 predictions_cards <- predictions_cards %>%
-  filter(!is.na(target_end_date)) %>%
-  filter(target_end_date < today())
+  filter(!is.na(target_end_date))
 
 # For hospitalizations, drop all US territories except Puerto Rico and the
 # Virgin Islands; HHS does not report data for any territories except PR and VI.
@@ -129,6 +139,8 @@ for (signal_name in signals) {
   check_for_missing_forecasters(state_predictions, forecasters, "state", signal_name, output_dir)
 }
 
+save_score_errors <- list()
+
 ## Score predictions
 print("Evaluating state forecasts")
 geo_type <- "state"
@@ -139,8 +151,6 @@ state_scores <- evaluate_covidcast(
   geo_type = geo_type
 )
 
-save_score_errors <- list()
-
 for (signal_name in signals) {
   status <- save_score_cards_wrapper(state_scores, geo_type, signal_name, output_dir)
   if (status != 0) {
@@ -148,11 +158,14 @@ for (signal_name in signals) {
   }
 }
 
+rm(state_scores)
+gc()
+
 print("Evaluating national forecasts")
 # TODO: When this function was created, COVIDcast did not return national level
 # data, and CovidHubUtils was used instead. We could now switch to COVIDcast,
 # but COVIDcast and CovidHubUtils don't produce exactly the same data. This
-# requires more investigation. Also using CovidHubUtils might be faster.
+# requires more investigation. Not using `evalcast` is also faster.
 geo_type <- "nation"
 nation_scores <- evaluate_chu(nation_predictions, signals, err_measures)
 
@@ -167,4 +180,5 @@ if (length(save_score_errors) > 0) {
   stop(paste(save_score_errors, collapse = "\n"))
 }
 
+saveRDS(data.frame(datetime = c(data_pull_timestamp)), file = file.path(output_dir, "datetime_created_utc.rds"))
 print("Done")

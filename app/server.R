@@ -109,7 +109,9 @@ server <- function(input, output, session) {
 
 
   # Get scores
-  df <- loadData()
+  loaded <- loadData()
+  df <- loaded$df
+  dataCreationDate <- loaded$dataCreationDate
   DATA_LOADED <- TRUE
 
   # Prepare input choices
@@ -163,7 +165,7 @@ server <- function(input, output, session) {
 
     # Totaling over all locations
     if (SUMMARIZING_OVER_ALL_LOCATIONS()) {
-      filteredScoreDfAndIntersections <- filterOverAllLocations(filteredScoreDf, input$scoreType, !is.null(asOfData))
+      filteredScoreDfAndIntersections <- filterOverAllLocations(filteredScoreDf, input$scoreType, !is.null(asOfData), filterDate = dataCreationDate)
       filteredScoreDf <- filteredScoreDfAndIntersections[[1]]
       locationsIntersect <- filteredScoreDfAndIntersections[[2]]
       if (input$showForecasts) {
@@ -238,7 +240,6 @@ server <- function(input, output, session) {
     output$truthPlot <- renderPlotly({
       truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
     })
-
     # If we are just re-rendering the truth plot with as of data
     # we don't need to re-render the score plot
     if (reRenderTruth) {
@@ -268,7 +269,7 @@ server <- function(input, output, session) {
       }
     }
 
-    # Title plot
+    # Set plot title
     if (input$scoreType == "wis") {
       plotTitle <- "Weighted Interval Score"
     } else if (input$scoreType == "sharpness") {
@@ -318,6 +319,14 @@ server <- function(input, output, session) {
       theme_bw() +
       theme(panel.spacing = unit(0.5, "lines"))
 
+    if (input$showForecasts) {
+      maxLim <- if_else(
+        as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
+        as.Date(input$asOf) + 7 * 4,
+        as.Date(NA)
+      )
+      p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
+    }
     if (input$scoreType == "coverage") {
       p <- p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
     }
@@ -363,13 +372,14 @@ server <- function(input, output, session) {
         group_by(Week_End_Date) %>%
         summarize(Forecaster = Forecaster, Reported_Incidence = actual, Reported_As_Of_Incidence = as_of_actual) %>%
         distinct()
-      if (input$showForecasts) {
-        filteredDf <- filterForecastData(filteredDf, dfWithForecasts)
-      }
     } else {
       filteredDf <- filteredDf %>%
         group_by(Week_End_Date) %>%
-        summarize(Reported_Incidence = actual)
+        summarize(Forecaster = Forecaster, Reported_Incidence = actual) %>%
+        distinct()
+    }
+    if (input$showForecasts) {
+      filteredDf <- filterForecastData(filteredDf, dfWithForecasts, hasAsOfData)
     }
 
     finalPlot <- ggplot(filteredDf, aes(x = Week_End_Date)) +
@@ -385,14 +395,21 @@ server <- function(input, output, session) {
         geom_point(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
         geom_line(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence")) +
         geom_point(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence"))
-      if (input$showForecasts) {
-        finalPlot <- finalPlot +
-          geom_line(aes(y = Quantile_50, color = Forecaster)) +
-          geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster))
-      }
     } else {
       finalPlot <- finalPlot + geom_line(aes(y = Reported_Incidence)) +
         geom_point(aes(y = Reported_Incidence))
+    }
+    if (input$showForecasts) {
+      maxLim <- if_else(
+        as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
+        as.Date(input$asOf) + 7 * 4,
+        as.Date(NA)
+      )
+
+      finalPlot <- finalPlot +
+        geom_line(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
+        geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
+        scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
     finalPlot <- ggplotly(finalPlot, tooltip = c("shape", "x", "y")) %>%
       layout(
@@ -433,21 +450,27 @@ server <- function(input, output, session) {
       filteredScoreDf <- filterHospitalizationsAheads(filteredScoreDf)
     }
     if (input$scoreType == "wis" || input$scoreType == "sharpness") {
-      # Only show WIS or Sharpness for forecasts that have all intervals
+      # Only show WIS or Sharpness for forecasts that have all intervals or are for future dates
       filteredScoreDf <- filteredScoreDf %>%
-        filter(!is.na(`50`)) %>%
-        filter(!is.na(`80`)) %>%
-        filter(!is.na(`95`))
+        filter((
+          !is.na(`50`) &
+            !is.na(`80`) &
+            !is.na(`95`)
+        ) |
+          target_end_date >= dataCreationDate)
       if (input$targetVariable == "Deaths") {
         filteredScoreDf <- filteredScoreDf %>%
-          filter(!is.na(`10`)) %>%
-          filter(!is.na(`20`)) %>%
-          filter(!is.na(`30`)) %>%
-          filter(!is.na(`40`)) %>%
-          filter(!is.na(`60`)) %>%
-          filter(!is.na(`70`)) %>%
-          filter(!is.na(`90`)) %>%
-          filter(!is.na(`98`))
+          filter((
+            !is.na(`10`) &
+              !is.na(`20`) &
+              !is.na(`30`) &
+              !is.na(`40`) &
+              !is.na(`60`) &
+              !is.na(`70`) &
+              !is.na(`90`) &
+              !is.na(`98`)
+          ) |
+            target_end_date >= dataCreationDate)
       }
     }
     filteredScoreDf <- renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)
@@ -500,7 +523,7 @@ server <- function(input, output, session) {
     return(asOfData)
   }
 
-  filterForecastData <- function(filteredDf, dfWithForecasts) {
+  filterForecastData <- function(filteredDf, dfWithForecasts, hasAsOfData) {
     dfWithForecasts <- dfWithForecasts %>%
       rename(Week_End_Date = target_end_date, Forecaster = forecaster, Quantile_50 = value_50)
     if (!SUMMARIZING_OVER_ALL_LOCATIONS()) {
@@ -511,17 +534,32 @@ server <- function(input, output, session) {
         group_by(Forecaster, forecast_date, Week_End_Date, ahead) %>%
         summarize(Quantile_50 = sum(Quantile_50))
     }
-    # We want the forecasts to be later than latest as of date with data
-    lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
-    dfWithForecasts <- dfWithForecasts %>%
-      filter(forecast_date >= lastEndDate) %>%
-      group_by(Week_End_Date) %>%
-      summarize(Forecaster, forecast_date, Quantile_50)
+
+    if (hasAsOfData) {
+      # We want the forecasts to be later than latest as of date with data
+      lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
+      dfWithForecasts <- dfWithForecasts %>%
+        filter(forecast_date >= lastEndDate) %>%
+        group_by(Week_End_Date) %>%
+        summarize(Forecaster, forecast_date, Quantile_50)
+    } else {
+      # Get the latest predictions for each forecaster
+      dfWithForecasts <- dfWithForecasts %>%
+        group_by(Forecaster) %>%
+        filter(forecast_date == max(forecast_date)) %>%
+        ungroup() %>%
+        group_by(Week_End_Date) %>%
+        summarize(Forecaster, forecast_date, Quantile_50) %>%
+        filter(Week_End_Date > CURRENT_WEEK_END_DATE())
+    }
 
     # Get the next as of choice available in dropdown menu
     dfWithForecasts <- dfWithForecasts[order(dfWithForecasts$forecast_date), ]
     AS_OF_CHOICES(sort(AS_OF_CHOICES() %>% unique()))
-    nextAsOfInList <- AS_OF_CHOICES()[which.min(abs(AS_OF_CHOICES() - dfWithForecasts$forecast_date[1])) + 1]
+    nextAsOfInList <- AS_OF_CHOICES()[which.min(abs(AS_OF_CHOICES() - min(dfWithForecasts$forecast_date))) + 1]
+    if (!hasAsOfData) {
+      nextAsOfInList <- NA
+    }
 
     # Take only those forecasts with a forecast date before the next as of date in dropdown
     # aka within the week after the current as of shown
@@ -540,9 +578,14 @@ server <- function(input, output, session) {
         group_by(Forecaster) %>%
         filter(forecast_date == first(forecast_date))
     }
+
+    keepCols <- c("Quantile_50", "Forecaster", "Reported_Incidence")
+    if (hasAsOfData) {
+      keepCols <- c(keepCols, "Reported_As_Of_Incidence")
+    }
     filteredDf <- merge(filteredDf, dfWithForecasts, by = c("Week_End_Date", "Forecaster"), all = TRUE) %>%
       group_by(Week_End_Date) %>%
-      select(Quantile_50, Forecaster, Reported_Incidence, Reported_As_Of_Incidence)
+      select(keepCols)
     # Remove rows of NAs
     filteredDf <- filteredDf %>% filter(!is.null(Forecaster))
     filteredDf <- filteredDf %>%
@@ -598,11 +641,6 @@ server <- function(input, output, session) {
       updateAsOfData()
     }
 
-    if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      disable("showForecasts")
-    } else {
-      enable("showForecasts")
-    }
     if (input$scoreType == "wis") {
       showElement("wisExplanation")
       hideElement("sharpnessExplanation")
@@ -647,22 +685,10 @@ server <- function(input, output, session) {
 
   observeEvent(input$location, {
     updateAsOfData()
-    # Only show forecast check box option if we are showing as of data
-    if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      disable("showForecasts")
-    } else {
-      enable("showForecasts")
-    }
   })
 
   observeEvent(input$asOf, {
     updateAsOfData()
-    # Only show forecast check box option if we are showing as of data
-    if (input$asOf != "" && input$asOf == CURRENT_WEEK_END_DATE()) {
-      disable("showForecasts")
-    } else {
-      enable("showForecasts")
-    }
   })
 
   # The following checks ensure the minimum necessary input selections
@@ -757,7 +783,10 @@ server <- function(input, output, session) {
   }
 
   updateAsOfChoices <- function(session, truthDf) {
-    asOfChoices <- truthDf$Week_End_Date
+    asOfChoices <- truthDf %>%
+      select(Week_End_Date) %>%
+      filter(Week_End_Date <= CURRENT_WEEK_END_DATE()) %>%
+      pull()
     selectedAsOf <- isolate(input$asOf)
     if (input$targetVariable == "Hospitalizations") {
       minChoice <- MIN_AVAIL_HOSP_AS_OF_DATE

@@ -8,7 +8,7 @@ updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
   if (scoreType == "ae") {
     df <- df %>% filter(!is.na(ae))
   }
-  forecasterChoices <- unique(df$forecaster)
+  forecasterChoices <- df %>% select(forecaster) %>% distinct() %>% pull()
   updateSelectInput(session, "forecasters",
     choices = forecasterChoices,
     selected = forecasterInput
@@ -37,7 +37,8 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
 
 updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
   df <- df %>% filter(forecaster %in% forecasterChoices)
-  locationChoices <- unique(toupper(df$geo_value))
+  #locationChoices <- unique(toupper(df$geo_value))
+  locationChoices <- df %>% select(geo_value) %>% distinct() %>% pull() %>% toupper()
 
   # Move US to front of list
   locationChoices <- locationChoices[c(length(locationChoices), seq_len(length(locationChoices) - 1))]
@@ -116,7 +117,10 @@ server <- function(input, output, session) {
   DATA_LOADED <- TRUE
 
   # Prepare input choices
-  forecasterChoices <- sort(unique(df$forecaster))
+  #forecasterChoices <- sort(unique(df$forecaster))
+  forecasterChoices <- sort(df %>% select(forecaster) %>%
+                              distinct() %>% pull())
+  
   updateForecasterChoices(session, df, forecasterChoices, "wis")
 
 
@@ -229,8 +233,10 @@ server <- function(input, output, session) {
 
     # Set forecaster colors for plot
     set.seed(COLOR_SEED())
-    forecasterRand <- sample(unique(df$forecaster))
-    colorPalette <- setNames(object = viridis(length(unique(df$forecaster))), nm = forecasterRand)
+    forcasters_unique <- df %>% select(forecaster) %>% distinct() %>% pull()
+    forecasterRand <- sample(forcasters_unique)
+    colorPalette <- setNames(object = viridis(length(unique(forcasters_unique))),
+                             nm = forecasterRand)
     if (!is.null(asOfData)) {
       colorPalette["Reported_Incidence"] <- "grey"
       colorPalette["Reported_As_Of_Incidence"] <- "black"
@@ -608,20 +614,35 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
+    #browser()
+    #Will just be used when loading the app for the first time
+    if(is.null(PREV_TARGET())){
+      PREV_TARGET(isolate(input$targetVariable))
+    }
     
-    if(!is.null(PREV_TARGET) && PREV_TARGET!="Hospitalization"){
-      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
-      currentFetch = (input$asOf)
-      }
-    
-    if (input$targetVariable == "Deaths") {
-      df <- df %>% filter(signal == DEATH_FILTER)
-    } else if (input$targetVariable == "Cases") {
-      df <- df %>% filter(signal == CASE_FILTER)
+    ##Definying Filter
+    if(input$targetVariable=="Deaths"){
+      FILTER = DEATH_FILTER
+    } else if (input$targetVariable=="Cases"){
+      FILTER = CASE_FILTER
     } else {
-      df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
+      FILTER = HOSPITALIZATIONS_FILTER
+    }
+    
+    # Filtering DF
+    df <- df %>% filter(signal == FILTER)
+    #From deaths and cases to Hospitalization
+    if(PREV_TARGET()%in%c("Deaths","Cases") && input$targetVariable%in%c("Deaths","Cases")){
+      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
+      currentFetch = input$asOf
+    }
+    else if(PREV_TARGET()%in%c("Deaths","Cases") && input$targetVariable=='Hospitalizations'){
       CURRENT_WEEK_END_DATE(HOSP_CURRENT)
       currentFetch = HOSP_CURRENT
+    }
+    else if(PREV_TARGET()=='Hospitalizations' && input$targetVariable%in%c("Deaths","Cases")){
+      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
+      currentFetch = CASES_DEATHS_CURRENT
     }
 
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
@@ -751,7 +772,7 @@ server <- function(input, output, session) {
     } else {
       location <- "state"
     }
-    if (fetchDate == "") {
+    if (as.character(fetchDate) == "") {
       return()
     }
     if (fetchDate < CURRENT_WEEK_END_DATE()) {

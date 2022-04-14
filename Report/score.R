@@ -135,7 +135,7 @@ evaluate_covidcast <- function(predictions, signals, err_measures, geo_type) {
       setdiff(signals, allowed_signals)
     )
   )
-  
+
   source_map <- list(
     "confirmed_incidence_num" = "jhu-csse",
     "deaths_incidence_num" = "jhu-csse",
@@ -159,7 +159,7 @@ evaluate_covidcast <- function(predictions, signals, err_measures, geo_type) {
     )
     scores[[signal_name]] <- signal_scores
   }
-  
+
   scores <- bind_rows(scores) %>%
     arrange(ahead, geo_value, forecaster, forecast_date, data_source, signal, target_end_date, incidence_period) %>%
     select(ahead, geo_value, forecaster, forecast_date, data_source, signal, target_end_date, incidence_period, everything())
@@ -210,7 +210,7 @@ get_covidcast_period_actuals <- function(response, source, signal_name, geo_type
       group_by(.data$geo_value, .data$start, .data$target_end_date) %>%
       summarize(num = n(), .groups = "drop") %>%
       filter(num < 7)
-    
+
     if (nrow(check_count) != 0) {
       warning(paste0(
         "Some or all data missing for the following target periods: ",

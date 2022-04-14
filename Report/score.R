@@ -135,7 +135,7 @@ evaluate_covidcast <- function(predictions, signals, err_measures, geo_type) {
       setdiff(signals, allowed_signals)
     )
   )
-
+  
   source_map <- list(
     "confirmed_incidence_num" = "jhu-csse",
     "deaths_incidence_num" = "jhu-csse",
@@ -146,7 +146,7 @@ evaluate_covidcast <- function(predictions, signals, err_measures, geo_type) {
     preds_signal <- predictions %>%
       filter(signal == signal_name)
     source <- source_map[[signal_name]]
-    covidcast_truth <- get_covidcast_period_actuals(preds_signal)
+    covidcast_truth <- get_covidcast_period_actuals(preds_signal, source, signal_name, geo_type)
     signal_scores <- evaluate_predictions(preds_signal,
       truth_data = covidcast_truth,
       err_measures,
@@ -159,15 +159,15 @@ evaluate_covidcast <- function(predictions, signals, err_measures, geo_type) {
     )
     scores[[signal_name]] <- signal_scores
   }
-
+  
   scores <- bind_rows(scores) %>%
     arrange(ahead, geo_value, forecaster, forecast_date, data_source, signal, target_end_date, incidence_period) %>%
-    select(ahead, geo_value, forecaster, forecast_date, data_source, signal, target_end_date, incidence_period, everything)
+    select(ahead, geo_value, forecaster, forecast_date, data_source, signal, target_end_date, incidence_period, everything())
   return(scores)
 }
 
 
-get_covidcast_period_actuals <- function(response) {
+get_covidcast_period_actuals <- function(response, source, signal_name, geo_type) {
   # Get start/end dates of each period we want to sum truth values over.
   target_periods <- response %>%
     select(.data$forecast_date, .data$incidence_period, .data$ahead) %>%
@@ -194,7 +194,7 @@ get_covidcast_period_actuals <- function(response) {
     select(data_source, signal, geo_value, time_value, value)
 
   # Expand out each period by day so easier to join on.
-  target_periods <- target_periods %>% pmap_dfr(function(start_date, end_date) {
+  target_periods <- target_periods %>% purrr::pmap_dfr(function(start_date, end_date) {
     tibble(
       start = start_date,
       target_end_date = end_date,
@@ -204,20 +204,23 @@ get_covidcast_period_actuals <- function(response) {
 
   period_truth <- full_join(covidcast_truth, target_periods, by = c("time_value" = "day"))
 
-  check_count <- period_truth %>%
-    group_by(.data$geo_value, .data$start, .data$target_end_date) %>%
-    summarize(num = n(), .groups = "drop") %>%
-    filter(num < 7)
-
-  if (nrow(check_count) != 0) {
-    warning(paste0(
-      "Some or all data missing for the following target periods: ",
-      paste(
-        paste(period_truth$start, period_truth$target_end_date, sep = "-"),
-        collapse = ", "
-      ),
-      "."
-    ))
+  if (signal_name != "confirmed_admissions_covid_1d") {
+    # For deaths and cases, expect each truth data period to cover a week
+    check_count <- period_truth %>%
+      group_by(.data$geo_value, .data$start, .data$target_end_date) %>%
+      summarize(num = n(), .groups = "drop") %>%
+      filter(num < 7)
+    
+    if (nrow(check_count) != 0) {
+      warning(paste0(
+        "Some or all data missing for the following target periods: ",
+        paste(
+          paste(period_truth$start, period_truth$target_end_date, sep = "-"),
+          collapse = ", "
+        ),
+        "."
+      ))
+    }
   }
 
   period_truth <- period_truth %>%

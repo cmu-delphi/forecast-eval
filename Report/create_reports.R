@@ -18,30 +18,26 @@ option_list <- list(
     c("-d", "--dir"),
     type = "character",
     default = ".",
-    help = "Directory to read/write data",
-    metavar = "character"
+    help = "Directory to read/write data"
   ),
   make_option(
     c("--exhaustive-download"),
-    type = "boolean",
+    type = "logical",
     default = FALSE,
-    help = "Download full history of predictions",
-    metavar = "boolean"
+    help = "Download full history of predictions?"
   ),
   make_option(
     c("--exhaustive-scoring"),
-    type = "boolean",
+    type = "logical",
     default = TRUE,
-    help = "Score full history of predictions",
-    metavar = "boolean"
-  ),
+    help = "Score full history of predictions?"
+  )
 )
 
 
-Rscript create_reports.R --dir /var/dist --exhaustive-download --exhaustive-scoring
-
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
+browser()
 
 output_dir <- opt$dir
 prediction_cards_filename <- "predictions_cards.rds"
@@ -75,6 +71,9 @@ forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"
 ))
+
+
+# if
 
 ## Get list of new and modified files to download
 # The `path` field filters commits to only those that modifying the listed dir

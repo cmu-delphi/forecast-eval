@@ -2,6 +2,11 @@
 S3_URL=https://forecast-eval.s3.us-east-2.amazonaws.com
 S3_BUCKET=s3://forecast-eval
 
+# defaults; override using `make -e`, e.g.
+# EXHAUSTIVE_DOWNLOAD=true EXHAUSTIVE_SCORING=true make -e score_forecast
+EXHAUSTIVE_DOWNLOAD:=false
+EXHAUSTIVE_SCORING:=true
+
 build: build_dashboard
 
 r_build:
@@ -25,7 +30,7 @@ score_forecast: r_build dist pull_data
 		-w /var/forecast-eval \
 		-e GITHUB_TOKEN=${GITHUB_TOKEN} \
 		forecast-eval-build \
-		Rscript create_reports.R --dir /var/dist --exhaustive-download --exhaustive-scoring
+		Rscript create_reports.R --dir /var/dist --exhaustive-download ${EXHAUSTIVE_DOWNLOAD} --exhaustive-scoring ${EXHAUSTIVE_SCORING}
 
 deploy: score_forecast
 	aws s3 cp dist/ $(S3_BUCKET)/ --recursive --exclude "*" --include "*rds" --acl public-read

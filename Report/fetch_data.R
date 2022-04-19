@@ -108,6 +108,7 @@ download_recent_forecasts <- function(forecasters, state_geos, github_token) {
 	      pull()
 	  }
 	)
+	names(fetch_dates) <- forecasters
 
 	predictions_cards <- download_forecasts(forecasters, fetch_dates, state_geos)
 

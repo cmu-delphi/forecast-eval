@@ -108,6 +108,7 @@ predictions_cards <- predictions_cards %>%
 
 class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
 
+stop("we didn't change anything about scoring, so can skip that bit")
 print("Saving predictions...")
 saveRDS(predictions_cards,
   file = prediction_cards_filepath,

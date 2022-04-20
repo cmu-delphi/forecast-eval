@@ -44,10 +44,12 @@ download_recent_forecasts <- function(forecasters, state_geos, github_token) {
 
 	# Combine all requested pages of commits into one dataframe
 	commit_sha_dates <- bind_rows(commit_sha_dates)
-
-    # For each commit in `temp_commits`, get a list of any modified files.
-	added_modified_files <- lapply(commit_sha_dates$url, function(commit_url) {
+	
+    # For each commit in `temp_commits`, list any modified files.
+	added_modified_files <- lapply(seq_along(commit_sha_dates$url), function(commit_ind) {
+	  commit_url <- commit_sha_dates$url[commit_ind]
 	  # Make API call for each commit sha
+	  print(paste0(commit_ind, "/", nrow(commit_sha_dates), ": fetching new and modified files for ", commit_url))
 	  request <- GET(commit_url, add_headers(Authorization = paste("Bearer", github_token)))
 	  stop_for_status(request)
 	  commit <- content(request, as = "text") %>%
@@ -99,7 +101,7 @@ download_recent_forecasts <- function(forecasters, state_geos, github_token) {
 	  ) %>%
 	  filter(forecaster %in% forecasters)
 
-	 forecasters <- unique(added_modified_files$forecaster)
+	forecasters <- unique(added_modified_files$forecaster)
 
 	fetch_dates <- lapply(forecasters, function(forecaster_name) {
 		added_modified_files %>%
@@ -126,9 +128,12 @@ download_forecasts <- function(forecasters, fetch_dates, state_geos) {
 	# is added that backfills forecast dates, we will end up requesting all those
 	# dates for forecasters we've already seen before. To prevent that, make a new
 	# call to `get_covidhub_predictions` for each forecaster with its own dates.
+  print(paste0("Getting forecasts for ", length(forecasters), " forecasters"))
 	predictions_cards <- lapply(
-	  forecasters,
-	  function(forecaster_name) {
+	  seq_along(forecasters),
+	  function(forecaster_ind) {
+	    forecaster_name <- forecasters[forecaster_ind]
+	    print(paste0(forecaster_ind, "/", length(forecasters), ": ", forecaster_name, "..."))
 	    get_covidhub_predictions(
 	      forecaster_name,
 	      signal = signals,
@@ -136,7 +141,7 @@ download_forecasts <- function(forecasters, fetch_dates, state_geos) {
 	      geo_values = state_geos,
 	      # fetch_dates returns NULL if requested item doesn't exist in the list.
 	      forecast_dates = fetch_dates[[forecaster_name]],
-	      verbose = TRUE,
+	      verbose = FALSE,
 	      use_disk = TRUE
 	    ) %>%
 	      filter(!(incidence_period == "epiweek" & ahead > 4))

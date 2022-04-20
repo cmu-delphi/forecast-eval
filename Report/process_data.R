@@ -23,6 +23,7 @@ filter_predictions <- function(predictions_cards) {
 }
 
 merge_new_old_predictions <- function(predictions_cards, prediction_cards_filepath) {
+  print("combining recent and old predictions cards")
 	# Load old predictions cards.
 	if (file.exists(prediction_cards_filepath)) {
 	  old_predictions_cards <- readRDS(prediction_cards_filepath) %>%

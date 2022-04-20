@@ -20,7 +20,7 @@ option_list <- list(
   make_option(
     c("-d", "--dir"),
     type = "character",
-    default = ".",
+    default = "dist",
     help = "Directory to read/write data"
   ),
   make_option(
@@ -95,7 +95,9 @@ if (opt[["exhaustive-download"]]) {
 options(warn = 0)
 
 predictions_cards <- filter_predictions(predictions_cards)
-predictions_cards <- merge_new_old_predictions(predictions_cards, prediction_cards_filepath)
+if (!opt[["exhaustive-download"]]) {
+  predictions_cards <- merge_new_old_predictions(predictions_cards, prediction_cards_filepath)
+}
 
 predictions_cards <- predictions_cards %>%
   # If multiple forecasts were made for a given set of characteristics, keep the

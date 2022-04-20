@@ -111,13 +111,13 @@ predictions_cards <- predictions_cards %>%
 
 class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
 
-stop("we didn't change anything about scoring, so can skip that bit")
 message("Saving predictions...")
 saveRDS(predictions_cards,
   file = prediction_cards_filepath,
   compress = "xz"
 )
 message("Predictions saved")
+stop("we didn't change anything about scoring, so can skip that bit")
 
 ## Create error measure functions
 central_intervals <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)

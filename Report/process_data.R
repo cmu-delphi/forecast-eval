@@ -1,10 +1,13 @@
 filter_predictions <- function(predictions_cards) {
+  print("filtering to only valid predictions")
    # Includes predictions for future dates, which will not be scored.
+  print("by target end date")
 	predictions_cards <- predictions_cards %>%
 	  filter(!is.na(target_end_date))
 
 	# For hospitalizations, drop all US territories except Puerto Rico (pr) and the
 	# Virgin Islands (vi); HHS does not report data for any territories except these two.
+	print("drop territories")
 	territories <- c("as", "gu", "mp", "fm", "mh", "pw", "um")
 	predictions_cards <- predictions_cards %>%
 	  filter(!(geo_value %in% territories & data_source == "hhs"))
@@ -13,6 +16,7 @@ filter_predictions <- function(predictions_cards) {
 	# target_end_date is the date of the last day (Saturday) in the epiweek
 	# For daily predictions, accept any forecast where the target_end_date is later
 	# than the forecast_date.
+	print("by forecast date day of week")
 	predictions_cards <- predictions_cards %>%
 	  filter(
 	    (incidence_period == "epiweek" & target_end_date - (forecast_date + 7 * ahead) >= -2) |
@@ -25,6 +29,7 @@ filter_predictions <- function(predictions_cards) {
 merge_new_old_predictions <- function(predictions_cards, prediction_cards_filepath) {
   print("combining recent and old predictions cards")
 	# Load old predictions cards.
+  print("loading old predictions cards")
 	if (file.exists(prediction_cards_filepath)) {
 	  old_predictions_cards <- readRDS(prediction_cards_filepath) %>%
 	    mutate(updated_cards_flag = 0)
@@ -33,6 +38,7 @@ merge_new_old_predictions <- function(predictions_cards, prediction_cards_filepa
 	  old_predictions_cards <- data.frame()
 	}
 
+  print("binding together and deduping")
 	predictions_cards <- bind_rows(
 	  mutate(predictions_cards, updated_cards_flag = 1),
 	  old_predictions_cards

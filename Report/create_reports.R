@@ -99,6 +99,7 @@ if (!opt[["exhaustive-download"]]) {
   predictions_cards <- merge_new_old_predictions(predictions_cards, prediction_cards_filepath)
 }
 
+print("keeping most recent version of a given forecast")
 predictions_cards <- predictions_cards %>%
   # If multiple forecasts were made for a given set of characteristics, keep the
   # newest version of the forecast.

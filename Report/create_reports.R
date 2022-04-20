@@ -99,7 +99,7 @@ if (!opt[["exhaustive-download"]]) {
   predictions_cards <- merge_new_old_predictions(predictions_cards, prediction_cards_filepath)
 }
 
-print("keeping most recent version of a given forecast")
+message("keeping most recent version of a given forecast")
 predictions_cards <- predictions_cards %>%
   # If multiple forecasts were made for a given set of characteristics, keep the
   # newest version of the forecast.
@@ -112,12 +112,12 @@ predictions_cards <- predictions_cards %>%
 class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
 
 stop("we didn't change anything about scoring, so can skip that bit")
-print("Saving predictions...")
+message("Saving predictions...")
 saveRDS(predictions_cards,
   file = prediction_cards_filepath,
   compress = "xz"
 )
-print("Predictions saved")
+message("Predictions saved")
 
 ## Create error measure functions
 central_intervals <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98)
@@ -157,7 +157,7 @@ for (signal_name in signals) {
 ## Score predictions
 save_score_errors <- list()
 
-print("Evaluating state forecasts")
+message("Evaluating state forecasts")
 geo_type <- "state"
 state_scores <- evaluate_covid_predictions(
   state_predictions, err_measures, geo_type = geo_type
@@ -170,7 +170,7 @@ for (signal_name in signals) {
   }
 }
 
-print("Evaluating national forecasts")
+message("Evaluating national forecasts")
 # TODO: When this function was created, COVIDcast did not return national level
 # data, and CovidHubUtils was used instead. We could now switch to COVIDcast,
 # but COVIDcast and CovidHubUtils don't produce exactly the same data. This
@@ -192,4 +192,4 @@ if (length(save_score_errors) > 0) {
 }
 
 saveRDS(data.frame(datetime = c(data_pull_timestamp)), file = file.path(output_dir, "datetime_created_utc.rds"))
-print("Done")
+message("Done")

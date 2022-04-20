@@ -46,10 +46,11 @@ download_recent_forecasts <- function(forecasters, state_geos, github_token) {
 	commit_sha_dates <- bind_rows(commit_sha_dates)
 	
     # For each commit in `temp_commits`, list any modified files.
+    message("Getting new and modified files for ", nrow(commit_sha_dates), " commits")
 	added_modified_files <- lapply(seq_along(commit_sha_dates$url), function(commit_ind) {
 	  commit_url <- commit_sha_dates$url[commit_ind]
 	  # Make API call for each commit sha
-	  print(paste0(commit_ind, "/", nrow(commit_sha_dates), ": fetching new and modified files for ", commit_url))
+	  message(commit_ind, "/", nrow(commit_sha_dates), ": ", commit_url, "...")
 	  request <- GET(commit_url, add_headers(Authorization = paste("Bearer", github_token)))
 	  stop_for_status(request)
 	  commit <- content(request, as = "text") %>%
@@ -128,12 +129,12 @@ download_forecasts <- function(forecasters, fetch_dates, state_geos) {
 	# is added that backfills forecast dates, we will end up requesting all those
 	# dates for forecasters we've already seen before. To prevent that, make a new
 	# call to `get_covidhub_predictions` for each forecaster with its own dates.
-  print(paste0("Getting forecasts for ", length(forecasters), " forecasters"))
+  message("Getting forecasts for ", length(forecasters), " forecasters")
 	predictions_cards <- lapply(
 	  seq_along(forecasters),
 	  function(forecaster_ind) {
 	    forecaster_name <- forecasters[forecaster_ind]
-	    print(paste0(forecaster_ind, "/", length(forecasters), ": ", forecaster_name, "..."))
+	    message(forecaster_ind, "/", length(forecasters), ": ", forecaster_name, "...")
 	    get_covidhub_predictions(
 	      forecaster_name,
 	      signal = signals,

@@ -51,6 +51,8 @@ merge_new_old_predictions <- function(predictions_cards, prediction_cards_filepa
 	  ungroup() %>%
 	  select(-updated_cards_flag)
 
+	rm(old_predictions_cards)
+
 	return(predictions_cards)
 }
 

@@ -74,7 +74,6 @@ updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, a
     hideElement("horizon-disclaimer")
   }
   aheadChoices <- Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
-  CURRENT_AHEAD_OPTION <<- aheadOptions
   # Ensure previsouly selected options are still allowed
   if (!is.null(aheads) && aheads %in% aheadChoices) {
     selectedAheads <- aheads
@@ -86,10 +85,10 @@ updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, a
     selectedAheads <- aheadOptions[1]
   }
   updateCheckboxGroupInput(session, "aheads",
-    title,
-    choices = aheadChoices,
-    selected = selectedAheads,
-    inline = TRUE
+                           title,
+                           choices = aheadChoices,
+                           selected = selectedAheads,
+                           inline = TRUE
   )
 }
 # All data is fully loaded from AWS
@@ -126,8 +125,7 @@ server <- function(input, output, session) {
   # CREATE MAIN PLOT
   ##################
   summaryPlot <- function(reRenderTruth = FALSE, asOfData = NULL, renderTruth = TRUE) {
-    
-    #browser()
+    browser()
     ###checking if aheads options matches with the target variable:
     ###if not, return()
     ### if(input$targetVariable%in%c("Deaths","Cases") &&
@@ -797,7 +795,7 @@ server <- function(input, output, session) {
   })
 
   updateAsOfData <- function(fetchDate = input$asOf) {
-    #browser()
+    browser()
     if (as.character(fetchDate) == "") {
       return()
     }

@@ -29,6 +29,12 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
   HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21
 )
 
+# Current Aheads
+CURRENT_AHEAD_OPTION <- AHEAD_OPTIONS
+
+# Sets the previous target to be the same as the first one, Deaths
+PREV_TARGET <- "Deaths"
+
 # Earliest 'as of' date available from covidcast API
 MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2020-04-02")
 MIN_AVAIL_HOSP_AS_OF_DATE <- as.Date("2020-11-16")

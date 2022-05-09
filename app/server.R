@@ -107,7 +107,6 @@ server <- function(input, output, session) {
 
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
 
-
   # Get scores
   loaded <- loadData()
   df <- loaded$df
@@ -120,12 +119,17 @@ server <- function(input, output, session) {
   
   updateForecasterChoices(session, df, forecasterChoices, "wis")
 
-
   ##################
   # CREATE MAIN PLOT
   ##################
-  summaryPlot <- function(reRenderTruth = FALSE, asOfData = NULL, renderTruth = TRUE) {
+  summaryPlot <- function(reRenderTruth = FALSE, asOfData = NULL) {
     browser()
+
+    ## input$location
+    if(input$location==''){
+      return()
+    }
+    
     ###checking if aheads options matches with the target variable:
     ###if not, return()
     ### if(input$targetVariable%in%c("Deaths","Cases") &&
@@ -145,16 +149,6 @@ server <- function(input, output, session) {
     } else if (input$targetVariable == "Hospitalizations") {
       targetSignal <- "confirmed_admissions_covid_1d"
     }
-    
-    ### Checking if PREV_AS_OF_DATA() matches with the current target variable
-    ### if(is.null(asOfData) &&
-    ###    !is.null(isolate(PREV_AS_OF_DATA())) && nrow(isolate(PREV_AS_OF_DATA())) != 0){
-    ###   if(isolate(PREV_AS_OF_DATA()) %>% select(signal) %>% distinct() %>% pull()!=targetSignal){
-    ###     #return()
-    ###     # still need to be fixed!
-    ###     renderTruth = FALSE
-    ###   }
-    ### }
     
     filteredScoreDf <- filterScoreDf()
     dfWithForecasts <- NULL
@@ -270,12 +264,21 @@ server <- function(input, output, session) {
     }
    
     # Render truth plot with observed values
+    ## this first condition is necessary when loading the dash
     truthDf <- filteredScoreDf
-    if(renderTruth){
-      output$truthPlot <- renderPlotly({
-        truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
-      })
+    if(input$asOf == ''){
+      TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
+      output$truthPlot <- renderPlotly({TRUTH_PLOT})
+    } else {
+      ## 
+      if(!RENDER_TRUTH && input$showForecasts==FALSE){
+        output$truthPlot <- renderPlotly({TRUTH_PLOT})
+      } else {
+        TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
+        output$truthPlot <- renderPlotly({TRUTH_PLOT})
+      }
     }
+    RENDER_TRUTH<<-TRUE
     # If we are just re-rendering the truth plot with as of data
     # we don't need to re-render the score plot
     if (reRenderTruth) {
@@ -284,12 +287,6 @@ server <- function(input, output, session) {
     # If we are re-rendering scoring plot with new inputs that were just selected
     # we need to make sure the as of input options are valid with those inputs
     updateAsOfChoices(session, truthDf)
-    
-    # If renderTruth = FALSE, filteredScoreDf has the previos
-    # target instead of the current one 
-    if(!renderTruth){
-      return()
-    }
 
     # Format and transform data for plot
     filteredScoreDf <- filteredScoreDf %>%
@@ -641,14 +638,12 @@ server <- function(input, output, session) {
 
   observeEvent(input$refreshColors, {
     COLOR_SEED(floor(runif(1, 1, 1000)))
-    output$summaryPlot <- renderPlotly({
-      summaryPlot()
-    })
+    RENDER_TRUTH <<- FALSE
   })
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
-    #browser()
+    browser()
     #removing previous asofData
     PREV_AS_OF_DATA(NULL)
     
@@ -664,32 +659,36 @@ server <- function(input, output, session) {
     ## Filtering DF
     df <- df %>% filter(signal == FILTER)
     
-    ## From deaths and cases to Hospitalization
-    if(PREV_TARGET %in%c("Deaths","Cases") && input$targetVariable%in%c("Deaths","Cases")){
-      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
-      currentFetch = input$asOf
-      updateAsOf <- TRUE
-    }
-    else if(PREV_TARGET %in% c("Deaths","Cases") && input$targetVariable=='Hospitalizations'){
-      CURRENT_WEEK_END_DATE(HOSP_CURRENT)
-      currentFetch = HOSP_CURRENT
-      updateAsOf <- FALSE
-    }
-    else if(PREV_TARGET=='Hospitalizations' && input$targetVariable%in%c("Deaths","Cases")){
-      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
-      currentFetch = CASES_DEATHS_CURRENT
-      updateAsOf <- FALSE
-    }
-    
+    ## Update available opitions
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
     
+    ## setting to not call updateAsOfData
+    updateAsOf <- FALSE
+    
+    ## Resolving dates
+    if(PREV_TARGET %in%c("Deaths","Cases") && input$targetVariable%in%c("Deaths","Cases")){
+      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
+      currentFetch = input$asOf
+      if(input$asOf != "" &&
+         CURRENT_WEEK_END_DATE()!=currentFetch){
+        updateAsOf <- TRUE
+      }
+    }
+    else if(PREV_TARGET %in% c("Deaths","Cases") && input$targetVariable=='Hospitalizations'){
+      CURRENT_WEEK_END_DATE(HOSP_CURRENT)
+    }
+    else if(PREV_TARGET=='Hospitalizations' && input$targetVariable%in%c("Deaths","Cases")){
+      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
+    }
+    
     ## Storing current target
     PREV_TARGET <<- input$targetVariable
+    
     if(updateAsOf){
-    updateAsOfData(fetchDate = currentFetch)
+      updateAsOfData(fetchDate = currentFetch)
     }
   })
   
@@ -734,6 +733,7 @@ server <- function(input, output, session) {
       hideElement("aeExplanation")
       showElement("coverageExplanation")
     }
+    RENDER_TRUTH <<- FALSE
   })
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from
@@ -746,18 +746,36 @@ server <- function(input, output, session) {
       df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
     }
     df <- df %>% filter(forecaster %in% input$forecasters)
-
+    
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, FALSE)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
+    RENDER_TRUTH <<- FALSE
   })
-
+  
+  observeEvent(input$scaleByBaseline, {
+    RENDER_TRUTH <<- FALSE
+  })
+  
+  observeEvent(input$logScale, {
+    RENDER_TRUTH <<- FALSE
+  })
+  
   observeEvent(input$location, {
-    updateAsOfData()
+    # call only if asOf selected is not the newest available.
+    if(input$asOf != '' && 
+       input$asOf<CURRENT_WEEK_END_DATE()){
+      updateAsOfData()
+    }
   })
 
   observeEvent(input$asOf, {
-    updateAsOfData()
+    ## We just need to call update as of data
+    ## when it is not the most recent one
+    if(input$asOf != '' && 
+       input$asOf<CURRENT_WEEK_END_DATE()){
+      updateAsOfData()
+    }
   })
 
   # The following checks ensure the minimum necessary input selections
@@ -799,7 +817,6 @@ server <- function(input, output, session) {
     if (as.character(fetchDate) == "") {
       return()
     }
-    
     dataSource <- "jhu-csse"
     if (input$targetVariable == "Cases") {
       targetSignal <- "confirmed_incidence_num"
@@ -884,7 +901,6 @@ server <- function(input, output, session) {
       selected = selectedAsOf
     )
   }
-
   exportScoresServer(
     "exportScores", shiny::reactive(generateExportFilename(input)),
     shiny::reactive(createExportScoresDataFrame(

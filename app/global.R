@@ -36,7 +36,11 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
 # Sets the previous target to be the same as the first one, Deaths
 PREV_TARGET <- "Deaths"
 
-# Sets 
+# When RE_RENDER_TRUTH = TRUE
+# summaryPlot will be called only to update TruthPlot
+RE_RENDER_TRUTH <- FALSE
+
+# RENDER_TRUTH indicates when it is not necessary to call truthPlot again
 RENDER_TRUTH <- TRUE
 
 # Earliest 'as of' date available from covidcast API

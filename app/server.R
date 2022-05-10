@@ -102,7 +102,7 @@ server <- function(input, output, session) {
   AS_OF_CHOICES <- reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
 
-  COLOR_SEED <- reactiveVal(503)
+  COLOR_SEED <- reactiveVal(915)
 
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
 
@@ -121,12 +121,12 @@ server <- function(input, output, session) {
   ##################
   # CREATE MAIN PLOT
   ##################
-  summaryPlot <- function(reRenderTruth = FALSE, asOfData = NULL) {
-    
+  summaryPlot <- function() {
+    browser()
     if(input$location==''){
       return()
     }
-    
+
     ## Setting target signal to be compared with asOfData
     if (input$targetVariable == "Cases") {
       targetSignal <- "confirmed_incidence_num"
@@ -150,16 +150,19 @@ server <- function(input, output, session) {
       ))
       return()
     }
-    if (is.null(asOfData)) {
-      if (!is.null(isolate(PREV_AS_OF_DATA())) && nrow(isolate(PREV_AS_OF_DATA())) != 0 &&
-        isolate(input$asOf) != "" && isolate(input$asOf) != isolate(CURRENT_WEEK_END_DATE())) {
-        asOfData <- isolate(PREV_AS_OF_DATA())
-      }
+    
+    asOfData <- NULL
+    ## fill asOfData with PREV_AS_OF_DATA()
+    if(!is.null(PREV_AS_OF_DATA()) &&
+       input$asOf!='' &&
+       nrow(PREV_AS_OF_DATA())!=0 &&
+       input$asOf < CURRENT_WEEK_END_DATE()){
+      asOfData<-PREV_AS_OF_DATA() %>%
+        rename(target_end_date = time_value, as_of_actual = value) %>% 
+        select(target_end_date,geo_value,as_of_actual)
     }
+    
     if (!is.null(asOfData) && nrow(asOfData) != 0) {
-      asOfData <- asOfData %>% rename(target_end_date = time_value, as_of_actual = value)
-      asOfData <- asOfData[c("target_end_date", "geo_value", "as_of_actual")]
-
       # Get the 'as of' dates that are the target_end_dates in the scoring df
       dateGroupDf <- asOfData %>% filter(asOfData$target_end_date %in% filteredScoreDf$target_end_date)
       if (nrow(dateGroupDf) != 0) {
@@ -241,12 +244,15 @@ server <- function(input, output, session) {
 
     # Set forecaster colors for plot
     set.seed(COLOR_SEED())
-    # forecasterRand <- sample(forecasterChoices) 
-    # colorPalette <- setNames(object = viridis(length(forecasterChoices)),
-    #                          nm = forecasterRand)
-    forecasterRand <- sample(input$forecasters)
-    colorPalette <- setNames(object = viridis(length(input$forecasters)),
-                                                       nm = forecasterRand)
+    forecasterRand <- input$forecasters
+    if(length(forecasterRand)<3){
+      nsample=4-length(forecasterRand)
+      forecasterRand <- c(forecasterRand,paste(1:nsample))
+    }
+    forecasterRand<-sample(forecasterRand)
+    colorPalette <- setNames(
+      object = viridis(length(forecasterRand),option = 'turbo'),
+      nm = forecasterRand)
     
     if (!is.null(asOfData)) {
       colorPalette["Reported_Incidence"] <- "grey"
@@ -271,7 +277,8 @@ server <- function(input, output, session) {
     RENDER_TRUTH<<-TRUE
     # If we are just re-rendering the truth plot with as of data
     # we don't need to re-render the score plot
-    if (reRenderTruth) {
+    if (RE_RENDER_TRUTH) {
+      RE_RENDER_TRUTH<<-FALSE
       return()
     }
     
@@ -801,6 +808,7 @@ server <- function(input, output, session) {
   })
 
   updateAsOfData <- function(fetchDate = input$asOf) {
+    browser()
     if (as.character(fetchDate) == "") {
       return()
     }
@@ -852,10 +860,9 @@ server <- function(input, output, session) {
       if (nrow(asOfTruthData) == 0) {
         return()
       }
-      summaryPlot(reRenderTruth = TRUE, asOfData = asOfTruthData)
     } else if (fetchDate == CURRENT_WEEK_END_DATE()) {
-      summaryPlot(reRenderTruth = TRUE)
-      #summaryPlot()
+      PREV_AS_OF_DATA(NULL)
+      RE_RENDER_TRUTH <<- TRUE
     }
   }
 

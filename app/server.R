@@ -122,7 +122,6 @@ server <- function(input, output, session) {
   # CREATE MAIN PLOT
   ##################
   summaryPlot <- function() {
-    browser()
     if(input$location==''){
       return()
     }
@@ -808,7 +807,6 @@ server <- function(input, output, session) {
   })
 
   updateAsOfData <- function(fetchDate = input$asOf) {
-    browser()
     if (as.character(fetchDate) == "") {
       return()
     }

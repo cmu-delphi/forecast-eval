@@ -33,7 +33,6 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
   )
 }
 
-
 updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
   df <- df %>% filter(forecaster %in% forecasterChoices)
   #locationChoices <- unique(toupper(df$geo_value))
@@ -91,6 +90,7 @@ updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, a
                            inline = TRUE
   )
 }
+
 # All data is fully loaded from AWS
 DATA_LOADED <- FALSE
 loadData <- createDataLoader()
@@ -125,21 +125,11 @@ server <- function(input, output, session) {
   summaryPlot <- function(reRenderTruth = FALSE, asOfData = NULL) {
     browser()
 
-    ## input$location
+    ## if input$location or input$asOf is ''
+    ## the app should not continue.
     if(input$location==''){
       return()
     }
-    
-    ###checking if aheads options matches with the target variable:
-    ###if not, return()
-    ### if(input$targetVariable%in%c("Deaths","Cases") &&
-    ###    !(setequal(AHEAD_OPTIONS,CURRENT_AHEAD_OPTION))){
-    ###   #renderTruth = FALSE
-    ### }
-    ### else if(input$targetVariable=='Hospitalizations' &&
-    ###         !(setequal(HOSPITALIZATIONS_AHEAD_OPTIONS,CURRENT_AHEAD_OPTION))){
-    ###   #renderTruth = FALSE
-    ### }
     
     ## Setting target signal to be compared with asOfData
     if (input$targetVariable == "Cases") {
@@ -264,16 +254,16 @@ server <- function(input, output, session) {
     }
    
     # Render truth plot with observed values
-    ## this first condition is necessary when loading the dash
     truthDf <- filteredScoreDf
-    if(input$asOf == ''){
+    
+    ## this first condition is necessary when loading the dash
+    if(input$asOf==''){
       TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
       output$truthPlot <- renderPlotly({TRUTH_PLOT})
-    } else {
-      ## 
+    }else{
       if(!RENDER_TRUTH && input$showForecasts==FALSE){
         output$truthPlot <- renderPlotly({TRUTH_PLOT})
-      } else {
+      }else{
         TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
         output$truthPlot <- renderPlotly({TRUTH_PLOT})
       }
@@ -284,6 +274,7 @@ server <- function(input, output, session) {
     if (reRenderTruth) {
       return()
     }
+    
     # If we are re-rendering scoring plot with new inputs that were just selected
     # we need to make sure the as of input options are valid with those inputs
     updateAsOfChoices(session, truthDf)
@@ -388,7 +379,6 @@ server <- function(input, output, session) {
         )
       ) %>%
       config(displayModeBar = F)
-
     return(finalPlot)
   }
 
@@ -639,7 +629,7 @@ server <- function(input, output, session) {
   observeEvent(input$refreshColors, {
     COLOR_SEED(floor(runif(1, 1, 1000)))
     RENDER_TRUTH <<- FALSE
-  })
+  },ignoreInit = TRUE)
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
@@ -734,7 +724,7 @@ server <- function(input, output, session) {
       showElement("coverageExplanation")
     }
     RENDER_TRUTH <<- FALSE
-  })
+  },ignoreInit=TRUE)
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from
   observeEvent(input$forecasters, {
@@ -767,16 +757,16 @@ server <- function(input, output, session) {
        input$asOf<CURRENT_WEEK_END_DATE()){
       updateAsOfData()
     }
-  })
+  },ignoreInit=TRUE)
 
   observeEvent(input$asOf, {
-    ## We just need to call update as of data
+    browser()
+    ## We just need to call updateAsOfData
     ## when it is not the most recent one
-    if(input$asOf != '' && 
-       input$asOf<CURRENT_WEEK_END_DATE()){
+    if(input$asOf<CURRENT_WEEK_END_DATE()){
       updateAsOfData()
     }
-  })
+  },ignoreInit=TRUE)
 
   # The following checks ensure the minimum necessary input selections
   observe({
@@ -895,7 +885,7 @@ server <- function(input, output, session) {
     if (length(asOfChoices) != 0 && nonValidAsOf) {
       selectedAsOf <- max(asOfChoices, na.rm = TRUE)
     }
-    isolate(AS_OF_CHOICES(sort(unique(asOfChoices))))
+    AS_OF_CHOICES(sort(unique(asOfChoices)))
     updateSelectInput(session, "asOf",
       choices = sort(asOfChoices),
       selected = selectedAsOf

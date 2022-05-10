@@ -8,7 +8,7 @@ updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
   if (scoreType == "ae") {
     df <- df %>% filter(!is.na(ae))
   }
-  forecasterChoices <- df %>% select(forecaster) %>% distinct() %>% pull()
+  forecasterChoices <- distinct(df,forecaster) %>% pull()
   updateSelectInput(session, "forecasters",
     choices = forecasterChoices,
     selected = forecasterInput
@@ -36,8 +36,7 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
 updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
   df <- df %>% filter(forecaster %in% forecasterChoices)
   #locationChoices <- unique(toupper(df$geo_value))
-  locationChoices <- df %>% select(geo_value) %>% distinct() %>% pull() %>% toupper()
-
+  locationChoices <- distinct(df,geo_value) %>% pull() %>% toupper()
   # Move US to front of list
   locationChoices <- locationChoices[c(length(locationChoices), seq_len(length(locationChoices) - 1))]
   # Add totaled states option to front of list
@@ -115,7 +114,7 @@ server <- function(input, output, session) {
 
   # Prepare input choices
   #forecasterChoices <- sort(unique(df$forecaster))
-  forecasterChoices <- sort(distinct(df,forecaster) %>% pull())
+  forecasterChoices <- distinct(df,forecaster) %>% pull()
   
   updateForecasterChoices(session, df, forecasterChoices, "wis")
 
@@ -123,10 +122,7 @@ server <- function(input, output, session) {
   # CREATE MAIN PLOT
   ##################
   summaryPlot <- function(reRenderTruth = FALSE, asOfData = NULL) {
-    browser()
-
-    ## if input$location or input$asOf is ''
-    ## the app should not continue.
+    
     if(input$location==''){
       return()
     }
@@ -245,9 +241,13 @@ server <- function(input, output, session) {
 
     # Set forecaster colors for plot
     set.seed(COLOR_SEED())
-    forecasterRand <- sample(forecasterChoices) 
-    colorPalette <- setNames(object = viridis(length(forecasterChoices)),
-                             nm = forecasterRand)
+    # forecasterRand <- sample(forecasterChoices) 
+    # colorPalette <- setNames(object = viridis(length(forecasterChoices)),
+    #                          nm = forecasterRand)
+    forecasterRand <- sample(input$forecasters)
+    colorPalette <- setNames(object = viridis(length(input$forecasters)),
+                                                       nm = forecasterRand)
+    
     if (!is.null(asOfData)) {
       colorPalette["Reported_Incidence"] <- "grey"
       colorPalette["Reported_As_Of_Incidence"] <- "black"
@@ -633,7 +633,6 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
-    browser()
     #removing previous asofData
     PREV_AS_OF_DATA(NULL)
     
@@ -760,7 +759,6 @@ server <- function(input, output, session) {
   },ignoreInit=TRUE)
 
   observeEvent(input$asOf, {
-    browser()
     ## We just need to call updateAsOfData
     ## when it is not the most recent one
     if(input$asOf<CURRENT_WEEK_END_DATE()){
@@ -803,7 +801,6 @@ server <- function(input, output, session) {
   })
 
   updateAsOfData <- function(fetchDate = input$asOf) {
-    browser()
     if (as.character(fetchDate) == "") {
       return()
     }
@@ -863,7 +860,6 @@ server <- function(input, output, session) {
   }
 
   updateAsOfChoices <- function(session, truthDf) {
-    #browser()
     asOfChoices <- truthDf %>%
       select(Week_End_Date) %>%
       filter(Week_End_Date <= CURRENT_WEEK_END_DATE()) %>%

@@ -7,6 +7,10 @@ library(lubridate)
 library(viridis)
 library(tsibble)
 library(covidcast)
+library(reactlog)
+
+#For debugging reasons you may want to use this function
+#reactlog_enable()
 
 appVersion <- "5.0.0"
 

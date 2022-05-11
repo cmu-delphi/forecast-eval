@@ -35,7 +35,6 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
 
 updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
   df <- df %>% filter(forecaster %in% forecasterChoices)
-  # locationChoices <- unique(toupper(df$geo_value))
   locationChoices <- distinct(df, geo_value) %>%
     pull() %>%
     toupper()
@@ -116,7 +115,7 @@ server <- function(input, output, session) {
 
   # Prepare input choices
   # forecasterChoices <- sort(unique(df$forecaster))
-  forecasterChoices <- distinct(df, forecaster) %>% pull()
+  forecasterChoices <- distinct(df, forecaster) %>% pull() %>% sort()
 
   updateForecasterChoices(session, df, forecasterChoices, "wis")
 
@@ -271,7 +270,7 @@ server <- function(input, output, session) {
         TRUTH_PLOT
       })
     } else {
-      if (!RENDER_TRUTH && input$showForecasts == FALSE) {
+      if (USE_CURR_TRUTH && input$showForecasts == FALSE) {
         output$truthPlot <- renderPlotly({
           TRUTH_PLOT
         })
@@ -282,7 +281,7 @@ server <- function(input, output, session) {
         })
       }
     }
-    RENDER_TRUTH <<- TRUE
+    USE_CURR_TRUTH <<- TRUE
     # If we are just re-rendering the truth plot with as of data
     # we don't need to re-render the score plot
     if (RE_RENDER_TRUTH) {
@@ -644,7 +643,7 @@ server <- function(input, output, session) {
   observeEvent(input$refreshColors,
     {
       COLOR_SEED(floor(runif(1, 1, 1000)))
-      RENDER_TRUTH <<- FALSE
+      USE_CURR_TRUTH <<- TRUE
     },
     ignoreInit = TRUE
   )
@@ -739,7 +738,7 @@ server <- function(input, output, session) {
         hideElement("aeExplanation")
         showElement("coverageExplanation")
       }
-      RENDER_TRUTH <<- FALSE
+      USE_CURR_TRUTH <<- TRUE
     },
     ignoreInit = TRUE
   )
@@ -758,15 +757,15 @@ server <- function(input, output, session) {
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, FALSE)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
-    RENDER_TRUTH <<- FALSE
+    USE_CURR_TRUTH <<- TRUE
   })
 
   observeEvent(input$scaleByBaseline, {
-    RENDER_TRUTH <<- FALSE
+    USE_CURR_TRUTH <<- TRUE
   })
 
   observeEvent(input$logScale, {
-    RENDER_TRUTH <<- FALSE
+    USE_CURR_TRUTH <<- TRUE
   })
 
   observeEvent(input$location,

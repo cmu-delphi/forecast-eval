@@ -36,8 +36,8 @@ PREV_TARGET <- "Deaths"
 # summaryPlot will be called only to update TruthPlot
 RE_RENDER_TRUTH <- FALSE
 
-# RENDER_TRUTH indicates when it is not necessary to call truthPlot again
-RENDER_TRUTH <- TRUE
+# USE_CURR_TRUTH indicates when we can use the previous TruthPlot 
+USE_CURR_TRUTH <- FALSE 
 
 # Earliest 'as of' date available from covidcast API
 MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2020-04-02")

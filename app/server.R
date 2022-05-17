@@ -103,7 +103,7 @@ server <- function(input, output, session) {
   AS_OF_CHOICES <- reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
 
-  COLOR_SEED <- reactiveVal(915)
+  COLOR_SEED <- reactiveVal(250)
 
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
 
@@ -114,9 +114,7 @@ server <- function(input, output, session) {
   DATA_LOADED <- TRUE
 
   # Prepare input choices
-  # forecasterChoices <- sort(unique(df$forecaster))
   forecasterChoices <- distinct(df, forecaster) %>% pull() %>% sort()
-
   updateForecasterChoices(session, df, forecasterChoices, "wis")
 
   ##################
@@ -242,17 +240,20 @@ server <- function(input, output, session) {
       Week_End_Date = target_end_date
     )
 
-    # Set forecaster colors for plot
+    ## Setting color for each forecaster
     set.seed(COLOR_SEED())
     forecasterRand <- input$forecasters
-    if (length(forecasterRand) < 3) {
-      nsample <- 4 - length(forecasterRand)
-      forecasterRand <- c(forecasterRand, paste(1:nsample))
+    ## If we have less then 5 forecaster selected
+    ## In order to get more different colors when recoloring
+    ## Lets input more forecasters on forecasterRand
+    if(length(forecasterRand)<6){
+      nForecast = 8 - length(forecasterRand)
+      forecasterRand <- c(forecasterRand,forecasterChoices[!forecasterChoices%in%forecasterRand][1:5])
     }
-    forecasterRand <- sample(forecasterRand)
+    
     colorPalette <- setNames(
       object = viridis(length(forecasterRand), option = "turbo"),
-      nm = forecasterRand
+      nm = sample(forecasterRand)
     )
 
     if (!is.null(asOfData)) {
@@ -271,6 +272,7 @@ server <- function(input, output, session) {
       })
     } else {
       if (USE_CURR_TRUTH && input$showForecasts == FALSE) {
+        # Render existing truth plot
         output$truthPlot <- renderPlotly({
           TRUTH_PLOT
         })
@@ -281,7 +283,7 @@ server <- function(input, output, session) {
         })
       }
     }
-    USE_CURR_TRUTH <<- TRUE
+    USE_CURR_TRUTH <<- FALSE
     # If we are just re-rendering the truth plot with as of data
     # we don't need to re-render the score plot
     if (RE_RENDER_TRUTH) {
@@ -650,9 +652,9 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
+    
     # removing previous asofData
     PREV_AS_OF_DATA(NULL)
-
     ## Defining Filter
     if (input$targetVariable == "Deaths") {
       FILTER <- DEATH_FILTER
@@ -675,6 +677,8 @@ server <- function(input, output, session) {
     updateAsOf <- FALSE
 
     ## Resolving dates
+    ### If going from Deaths|Cases to Deaths|Cases we will call updateAsOfData
+    ### only when 
     if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable %in% c("Deaths", "Cases")) {
       CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
       currentFetch <- input$asOf
@@ -682,6 +686,7 @@ server <- function(input, output, session) {
         CURRENT_WEEK_END_DATE() != currentFetch) {
         updateAsOf <- TRUE
       }
+      
     } else if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable == "Hospitalizations") {
       CURRENT_WEEK_END_DATE(HOSP_CURRENT)
     } else if (PREV_TARGET == "Hospitalizations" && input$targetVariable %in% c("Deaths", "Cases")) {

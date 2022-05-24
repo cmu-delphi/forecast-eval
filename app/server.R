@@ -103,7 +103,7 @@ server <- function(input, output, session) {
   AS_OF_CHOICES <- reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
 
-  COLOR_SEED <- reactiveVal(250)
+  COLOR_SEED <- reactiveVal(171)
 
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
 
@@ -114,7 +114,9 @@ server <- function(input, output, session) {
   DATA_LOADED <- TRUE
 
   # Prepare input choices
-  forecasterChoices <- distinct(df, forecaster) %>% pull() %>% sort()
+  forecasterChoices <- distinct(df, forecaster) %>%
+    pull() %>%
+    sort()
   updateForecasterChoices(session, df, forecasterChoices, "wis")
 
   ##################
@@ -246,11 +248,11 @@ server <- function(input, output, session) {
     ## If we have less then 5 forecaster selected
     ## In order to get more different colors when recoloring
     ## Lets input more forecasters on forecasterRand
-    if(length(forecasterRand)<6){
-      nForecast = 8 - length(forecasterRand)
-      forecasterRand <- c(forecasterRand,forecasterChoices[!forecasterChoices%in%forecasterRand][1:5])
+    if (length(forecasterRand) < 8) {
+      nForecast <- 8 - length(forecasterRand)
+      forecasterRand <- c(forecasterRand, forecasterChoices[!forecasterChoices %in% forecasterRand][1:5])
     }
-    
+
     colorPalette <- setNames(
       object = viridis(length(forecasterRand), option = "turbo"),
       nm = sample(forecasterRand)
@@ -652,7 +654,7 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
-    
+
     # removing previous asofData
     PREV_AS_OF_DATA(NULL)
     ## Defining Filter
@@ -673,12 +675,14 @@ server <- function(input, output, session) {
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
 
-    ## setting to not call updateAsOfData
+    ## updateAsOf sets if we need to call updateAsOfData
+    ## the only necessary case is when going from
+    ## cases, deaths -> cases,deaths
     updateAsOf <- FALSE
 
     ## Resolving dates
     ### If going from Deaths|Cases to Deaths|Cases we will call updateAsOfData
-    ### only when 
+    ### only when
     if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable %in% c("Deaths", "Cases")) {
       CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
       currentFetch <- input$asOf
@@ -686,7 +690,6 @@ server <- function(input, output, session) {
         CURRENT_WEEK_END_DATE() != currentFetch) {
         updateAsOf <- TRUE
       }
-      
     } else if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable == "Hospitalizations") {
       CURRENT_WEEK_END_DATE(HOSP_CURRENT)
     } else if (PREV_TARGET == "Hospitalizations" && input$targetVariable %in% c("Deaths", "Cases")) {
@@ -696,6 +699,8 @@ server <- function(input, output, session) {
     ## Storing current target
     PREV_TARGET <<- input$targetVariable
 
+    ## do calling the api if we need as of data
+    ## otherwise we don't need to call it
     if (updateAsOf) {
       updateAsOfData(fetchDate = currentFetch)
     }

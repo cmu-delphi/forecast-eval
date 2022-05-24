@@ -659,8 +659,8 @@ server <- function(input, output, session) {
     ## since it has wrong data information, it needs to be removed
     PREV_AS_OF_DATA(NULL)
     if (input$targetVariable == "Deaths") {
-    
-    ## Defining Filter
+
+      ## Defining Filter
       FILTER <- DEATH_FILTER
     } else if (input$targetVariable == "Cases") {
       FILTER <- CASE_FILTER

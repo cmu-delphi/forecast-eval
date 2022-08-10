@@ -84,16 +84,13 @@ getAllData <- function(loadFile) {
     covCols
   )
 
-  dfStateCases <- dfStateCases %>% select(all_of(expectedCols))
-  dfStateDeaths <- dfStateDeaths %>% select(all_of(expectedCols))
-  dfStateHospitalizations <- dfStateHospitalizations %>% select(all_of(expectedCols))
-  dfNationCases <- dfNationCases %>% select(all_of(expectedCols))
-  dfNationDeaths <- dfNationDeaths %>% select(all_of(expectedCols))
-  dfNationHospitalizations <- dfNationHospitalizations %>% select(all_of(expectedCols))
-
-  df <- rbind(
-    dfStateCases, dfStateDeaths, dfStateHospitalizations,
-    dfNationCases, dfNationDeaths, dfNationHospitalizations
+  df <- bind_rows(
+    dfStateCases %>% select(all_of(expectedCols)),
+    dfStateDeaths %>% select(all_of(expectedCols)),
+    dfStateHospitalizations %>% select(all_of(expectedCols)),
+    dfNationCases %>% select(all_of(expectedCols)),
+    dfNationDeaths %>% select(all_of(expectedCols)),
+    dfNationHospitalizations %>% select(all_of(expectedCols))
   )
   df <- df %>% rename(
     "10" = cov_10, "20" = cov_20, "30" = cov_30,

@@ -8,7 +8,7 @@ library(viridis)
 library(tsibble)
 library(covidcast)
 
-appVersion <- "5.0.1"
+appVersion <- "6.0.0"
 
 COVERAGE_INTERVALS <- c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 DEATH_FILTER <- "deaths_incidence_num"
@@ -28,6 +28,16 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
   HOSPITALIZATIONS_OFFSET, HOSPITALIZATIONS_OFFSET + 7,
   HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21
 )
+
+# Sets the previous target to be the same as the first one, Deaths
+PREV_TARGET <- "Deaths"
+
+# When RE_RENDER_TRUTH = TRUE
+# summaryPlot will be called only to update TruthPlot
+RE_RENDER_TRUTH <- FALSE
+
+# USE_CURR_TRUTH indicates when we can use the previous TruthPlot
+USE_CURR_TRUTH <- FALSE
 
 # Earliest 'as of' date available from covidcast API
 MIN_AVAIL_NATION_AS_OF_DATE <- as.Date("2020-04-02")

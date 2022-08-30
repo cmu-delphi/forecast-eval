@@ -1,6 +1,6 @@
 Package: forecasteval
 Title: Forecast Evaluation Dashboard
-Version: 5.0.1
+Version: 6.0.0
 Authors@R: c(person("Kate", "Harwood", email = "kharwood@andrew.cmu.edu", role = "cre"),
 	   person("Chris", "Scott", role = "ctb"),
 	   person("Jed", "Grabman", role = "ctb"))

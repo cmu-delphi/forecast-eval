@@ -144,7 +144,9 @@ save_score_errors <- list()
 ## Score predictions
 print("Evaluating state forecasts")
 geo_type <- "state"
-state_scores <- evaluate_covid_predictions(state_predictions,
+state_scores <- evaluate_covidcast(
+  state_predictions,
+  signals,
   err_measures,
   geo_type = geo_type
 )

@@ -147,18 +147,24 @@ geo_type <- "state"
 offline_signal_dir <- "signal_cache"
 start_ts <- Sys.time()
 # Take advantage of `evalcast`'s caching feature. Since data used for scoring is
-# fetched one day or week at a time, it would create a cache covering a very 
+# fetched one day or week at a time, it would create a cache covering a very
 # narrow date range. Explicitly pull the full date range for each signal used.
-download_signal(data_source="hhs", signal="confirmed_admissions_covid_1d",
-                geo_type="state", geo_values="*", offline_signal_dir = offline_signal_dir)
-download_signal(data_source="jhu-csse", signal="confirmed_incidence_num",
-                geo_type="state", geo_values="*", offline_signal_dir = offline_signal_dir)
-download_signal(data_source="jhu-csse", signal="deaths_incidence_num",
-                geo_type="state", geo_values="*", offline_signal_dir = offline_signal_dir)
+download_signal(
+  data_source = "hhs", signal = "confirmed_admissions_covid_1d",
+  geo_type = "state", geo_values = "*", offline_signal_dir = offline_signal_dir
+)
+download_signal(
+  data_source = "jhu-csse", signal = "confirmed_incidence_num",
+  geo_type = "state", geo_values = "*", offline_signal_dir = offline_signal_dir
+)
+download_signal(
+  data_source = "jhu-csse", signal = "deaths_incidence_num",
+  geo_type = "state", geo_values = "*", offline_signal_dir = offline_signal_dir
+)
 state_scores <- evaluate_covid_predictions(state_predictions,
-                                           err_measures,
-                                           geo_type = geo_type,
-                                           offline_signal_dir = offline_signal_dir
+  err_measures,
+  geo_type = geo_type,
+  offline_signal_dir = offline_signal_dir
 )
 print(Sys.time() - start_ts)
 

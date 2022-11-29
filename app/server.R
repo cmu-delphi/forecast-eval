@@ -654,12 +654,10 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
-
     ## summaryPlot will try to use PREV_AS_OF_DATA()
     ## since it has wrong data information, it needs to be removed
     PREV_AS_OF_DATA(NULL)
     if (input$targetVariable == "Deaths") {
-
       ## Defining Filter
       FILTER <- DEATH_FILTER
     } else if (input$targetVariable == "Cases") {

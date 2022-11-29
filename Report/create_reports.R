@@ -145,11 +145,20 @@ save_score_errors <- list()
 print("Evaluating state forecasts")
 geo_type <- "state"
 offline_signal_dir <- "signal_cache"
-start_ts <- Sys.time()
-# Take advantage of `evalcast`'s caching feature. Since data used for scoring is
-# fetched one day or week at a time, it would create a cache covering a very
-# narrow date range. Explicitly pull the full date range for each signal used.
-# Suppress output since we only care about generating the cache.
+# Take advantage of `evalcast`'s caching feature. Suppress output since we
+# only care about generating the cache.
+#
+# Since cache files are named using only the provided as-of date, the first
+# COVIDcast call for a given as-of will be used for all subsequent calls with
+# the same as-of, whether or not the cache actually contains all the desired
+# `time_value`s.
+#
+# Since data used for scoring is fetched one day or week at a time as-of
+# "today", the first such call would create a cache covering a very narrow
+# date range. Later API calls would attempt to use the incomplete cache file.
+#
+# Circumvent this by explicitly pulling the full date range and initializing a
+# complete cache for each signal used.
 invisible({
   download_signal(
     data_source = "hhs", signal = "confirmed_admissions_covid_1d",
@@ -169,7 +178,6 @@ state_scores <- evaluate_covid_predictions(state_predictions,
   geo_type = geo_type,
   offline_signal_dir = offline_signal_dir
 )
-print(Sys.time() - start_ts)
 
 for (signal_name in signals) {
   status <- save_score_cards_wrapper(state_scores, geo_type, signal_name, output_dir)

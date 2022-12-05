@@ -159,20 +159,22 @@ offline_signal_dir <- "signal_cache"
 #
 # Circumvent this by explicitly pulling the full date range and initializing a
 # complete cache for each signal used.
+sources <- list(
+  list(data_source = "hhs", signal = "confirmed_admissions_covid_1d"),
+  list(data_source = "jhu-csse", signal = "confirmed_incidence_num"),
+  list(data_source = "jhu-csse", signal = "deaths_incidence_num")
+)
 invisible({
-  download_signal(
-    data_source = "hhs", signal = "confirmed_admissions_covid_1d",
-    geo_type = "state", geo_values = "*", offline_signal_dir = offline_signal_dir
-  )
-  download_signal(
-    data_source = "jhu-csse", signal = "confirmed_incidence_num",
-    geo_type = "state", geo_values = "*", offline_signal_dir = offline_signal_dir
-  )
-  download_signal(
-    data_source = "jhu-csse", signal = "deaths_incidence_num",
-    geo_type = "state", geo_values = "*", offline_signal_dir = offline_signal_dir
-  )
+  for (source in sources) {
+    download_signal(
+      data_source = source$data_source, signal = source$signal,
+      # "us" can also be included in `states_geos`. Drop to avoid "Data not
+      # fetched for some geographies" error.
+      geo_type = "state", geo_values = setdiff(state_geos, "us"), offline_signal_dir = offline_signal_dir
+    )
+  }
 })
+
 state_scores <- evaluate_covid_predictions(state_predictions,
   err_measures,
   geo_type = geo_type,

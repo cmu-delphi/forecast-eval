@@ -144,9 +144,41 @@ save_score_errors <- list()
 ## Score predictions
 print("Evaluating state forecasts")
 geo_type <- "state"
+offline_signal_dir <- "signal_cache"
+# Take advantage of `evalcast`'s caching feature. Suppress output since we
+# only care about generating the cache.
+#
+# Since cache files are named using only the provided as-of date, the first
+# COVIDcast call for a given as-of will be used for all subsequent calls with
+# the same as-of, whether or not the cache actually contains all the desired
+# `time_value`s.
+#
+# Since data used for scoring is fetched one day or week at a time as-of
+# "today", the first such call would create a cache covering a very narrow
+# date range. Later API calls would attempt to use the incomplete cache file.
+#
+# Circumvent this by explicitly pulling the full date range and initializing a
+# complete cache for each signal used.
+sources <- list(
+  list(data_source = "hhs", signal = "confirmed_admissions_covid_1d"),
+  list(data_source = "jhu-csse", signal = "confirmed_incidence_num"),
+  list(data_source = "jhu-csse", signal = "deaths_incidence_num")
+)
+invisible({
+  for (source in sources) {
+    download_signal(
+      data_source = source$data_source, signal = source$signal,
+      # "us" can also be included in `states_geos`. Drop to avoid "Data not
+      # fetched for some geographies" error.
+      geo_type = "state", geo_values = setdiff(state_geos, "us"), offline_signal_dir = offline_signal_dir
+    )
+  }
+})
+
 state_scores <- evaluate_covid_predictions(state_predictions,
   err_measures,
-  geo_type = geo_type
+  geo_type = geo_type,
+  offline_signal_dir = offline_signal_dir
 )
 
 for (signal_name in signals) {

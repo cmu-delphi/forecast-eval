@@ -3,6 +3,8 @@ library("optparse")
 library("dplyr")
 library("evalcast")
 library("lubridate")
+library("bettermc")
+library("parallel")
 
 # TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
 # Redefines overprediction, underprediction and sharpness
@@ -59,14 +61,26 @@ signals <- c(
 )
 
 data_pull_timestamp <- now(tzone = "UTC")
-predictions_cards <- get_covidhub_predictions(forecasters,
-  signal = signals,
-  ahead = 1:28,
-  geo_values = state_geos,
-  verbose = TRUE,
-  use_disk = TRUE
-) %>%
-  filter(!(incidence_period == "epiweek" & ahead > 4))
+
+cores <- detectCores()
+if (is.na(cores)) {
+  warning("Could not detect the number of CPU cores; parallel mode disabled")
+  cores <- 1
+}
+options(mc.cores = max(floor(cores / 2), 1L))
+
+print(paste("Getting forecasts for", length(forecasters), "forecasters."))
+predictions_cards <- bettermc::mclapply(forecasters, function(forecaster) {
+  get_covidhub_predictions(forecaster,
+    signal = signals,
+    ahead = 1:28,
+    geo_values = state_geos,
+    verbose = TRUE,
+    use_disk = TRUE
+  ) %>%
+    filter(!(incidence_period == "epiweek" & ahead > 4))
+}) %>%
+  bind_rows()
 
 options(warn = 0)
 

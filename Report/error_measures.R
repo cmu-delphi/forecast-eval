@@ -83,7 +83,9 @@ underprediction <- function(quantile, value, actual_value) {
 #' @export
 weighted_interval_score <- function(quantile, value, actual_value) {
   score_func_param_checker(quantile, value, actual_value, "weighted_interval_score")
-  if (all(is.na(actual_value))) return(NA)
+  if (all(is.na(actual_value))) {
+    return(NA)
+  }
 
   # Already checking that actual_value is unique in score_func_param_checker
   actual_value <- actual_value[1]
@@ -101,12 +103,15 @@ weighted_interval_score <- function(quantile, value, actual_value) {
   #
   med <- value[find_quantile_match(quantile, 0.5)]
 
-  if (length(med) > 1L) return(NA)
+  if (length(med) > 1L) {
+    return(NA)
+  }
 
   wis <- 2 * mean(pmax(
     quantile * (actual_value - value),
     (1 - quantile) * (value - actual_value),
-    na.rm = TRUE))
+    na.rm = TRUE
+  ))
 
   return(wis)
 }
@@ -130,12 +135,18 @@ absolute_error <- function(quantile, value, actual_value) {
   score_func_param_checker(quantile, value, actual_value, "absolute_error")
   point_fcast <- which(is.na(quantile))
   ae <- abs(actual_value - value)
-  if (length(point_fcast) == 1L) return(ae[point_fcast])
+  if (length(point_fcast) == 1L) {
+    return(ae[point_fcast])
+  }
   point_fcast <- which(find_quantile_match(quantile, 0.5))
-  if (length(point_fcast) == 1L) return(ae[point_fcast])
-  warning(paste("Absolute error: Forecaster must return either a point forecast",
-                "with quantile == NA or a median with quantile == 0.5",
-                "Returning NA."))
+  if (length(point_fcast) == 1L) {
+    return(ae[point_fcast])
+  }
+  warning(paste(
+    "Absolute error: Forecaster must return either a point forecast",
+    "with quantile == NA or a median with quantile == 0.5",
+    "Returning NA."
+  ))
   return(NA)
 }
 
@@ -151,16 +162,18 @@ absolute_error <- function(quantile, value, actual_value) {
 interval_coverage <- function(coverage) {
   function(quantiles, value, actual_value) {
     score_func_param_checker(quantiles, value, actual_value, "interval_coverage")
-    value = value[!is.na(quantiles)]
-    quantiles = quantiles[!is.na(quantiles)]
-    alpha = 1 - coverage
-    lower_interval = alpha / 2
-    upper_interval = 1 - (alpha / 2)
+    value <- value[!is.na(quantiles)]
+    quantiles <- quantiles[!is.na(quantiles)]
+    alpha <- 1 - coverage
+    lower_interval <- alpha / 2
+    upper_interval <- 1 - (alpha / 2)
     if (!any(find_quantile_match(quantiles, lower_interval)) |
-        !any(find_quantile_match(quantiles, upper_interval))) {
-      warning(paste("Interval Coverage:",
-                    "Quantiles must cover an interval of specified width",
-                    "centered at 0.5. Returning NA."))
+      !any(find_quantile_match(quantiles, upper_interval))) {
+      warning(paste(
+        "Interval Coverage:",
+        "Quantiles must cover an interval of specified width",
+        "centered at 0.5. Returning NA."
+      ))
       return(NA)
     }
 
@@ -178,9 +191,9 @@ sharpness <- function(quantile, value, actual_value) {
 
 # Utility functions required from evalcast that are not exported
 
-is_symmetric <- function(x, tol=1e-8) {
+is_symmetric <- function(x, tol = 1e-8) {
   # Checking if `x` is sorted is much faster than trying to sort it again
-  if (is.unsorted(x, na.rm=TRUE)) {
+  if (is.unsorted(x, na.rm = TRUE)) {
     # Implicitly drops NA values
     x <- sort(x)
   } else {
@@ -215,29 +228,36 @@ get_quantile_prediction_factory <- function(val_to_match, tol = 1e-8) {
   return(get_quantile_prediction)
 }
 
-score_func_param_checker <- function(quantiles, values, actual_value, id = ""){
-  id_str = paste0(id, ": ")
+score_func_param_checker <- function(quantiles, values, actual_value, id = "") {
+  id_str <- paste0(id, ": ")
   if (length(actual_value) > 1) {
     if (length(actual_value) != length(values)) {
-      stop(paste0(id_str,
-                  "actual_value must be a scalar or the same length",
-                  " as values"))
+      stop(paste0(
+        id_str,
+        "actual_value must be a scalar or the same length",
+        " as values"
+      ))
     }
-    actual_value = unique(actual_value)
+    actual_value <- unique(actual_value)
   }
 
   if (length(actual_value) != 1) {
-    stop(paste0(id_str,
-                "actual_value must have exactly 1 unique value"))
+    stop(paste0(
+      id_str,
+      "actual_value must have exactly 1 unique value"
+    ))
   }
   if (length(quantiles) != length(values)) {
-    stop(paste0(id_str,
-                "quantiles and values must be of the same length"))
+    stop(paste0(
+      id_str,
+      "quantiles and values must be of the same length"
+    ))
   }
 
   if (anyDuplicated(quantiles)) {
-    stop(paste0(id_str,
-                "quantiles must be unique.")
-    )
+    stop(paste0(
+      id_str,
+      "quantiles must be unique."
+    ))
   }
 }

@@ -167,7 +167,7 @@ interval_coverage <- function(coverage) {
     alpha <- 1 - coverage
     lower_interval <- alpha / 2
     upper_interval <- 1 - (alpha / 2)
-    if (!any(find_quantile_match(quantiles, lower_interval)) |
+    if (!any(find_quantile_match(quantiles, lower_interval)) ||
       !any(find_quantile_match(quantiles, upper_interval))) {
       warning(paste(
         "Interval Coverage:",

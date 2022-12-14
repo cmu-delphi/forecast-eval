@@ -32,25 +32,39 @@ prediction_cards_filepath <- case_when(
 
 options(warn = 1)
 
-# Requested forecasters that do not get included in final scores:
-#    Auquan-SEIR: Only predicts cumulative deaths
-#    CDDEP-ABM: No longer on Forecast Hub. Causes some warnings when trying to download.
+# Ignore requested forecasters that do not get included in final scores:
+#    Auquan-SEIR: Cumulative deaths predictions only
+#    CDDEP-ABM: No longer on Forecast Hub. Trying to download causes errors and warnings.
 #    CDDEP-SEIR_MCMC: County-level predictions only
 #    CUBoulder-COVIDLSTM: County-level predictions only
 #    FAIR-NRAR: County-level predictions only
-#    HKUST-DNN: Only predicts cumulative deaths
+#    HKUST-DNN: Cumulative deaths predictions only
 #    ISUandPKU-vSEIdR: Folder but no forecasts on Forecast Hub
 #    PandemicCentral-COVIDForest: County-level predictions only
 #    UT_GISAG-SPDM: County-level predictions only
-#    WalmartLabsML-LogForecasting: Only predicts cumulative deaths
+#    WalmartLabsML-LogForecasting: Cumulative deaths predictions only
 #    Yu_Group-CLEP: County-level predictions only
+drop_forecasters <- c(
+  "Auquan-SEIR",
+  "CDDEP-ABM",
+  "CDDEP-SEIR_MCMC",
+  "CUBoulder-COVIDLSTM",
+  "FAIR-NRAR",
+  "HKUST-DNN",
+  "ISUandPKU-vSEIdR",
+  "PandemicCentral-COVIDForest",
+  "UT_GISAG-SPDM",
+  "WalmartLabsML-LogForecasting",
+  "Yu_Group-CLEP"
+)
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"
 ))
-locations <- covidHubUtils::hub_locations
+forecasters <- setdiff(forecasters, drop_forecasters)
 
 # also includes "us", which is national level data
+locations <- covidHubUtils::hub_locations
 state_geos <- locations %>%
   filter(nchar(.data$geo_value) == 2) %>%
   pull(.data$geo_value)

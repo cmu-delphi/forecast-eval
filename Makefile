@@ -1,3 +1,6 @@
+SHELL:=/bin/bash
+PWD=$(shell pwd)
+
 .DEFAULT_GOAL:=build
 S3_URL=https://forecast-eval.s3.us-east-2.amazonaws.com
 S3_BUCKET=s3://forecast-eval

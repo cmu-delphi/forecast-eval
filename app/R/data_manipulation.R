@@ -14,18 +14,18 @@ renameScoreCol <- function(filteredScoreDf, scoreType, coverageInterval) {
 
 filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FALSE, filterDate) {
   locationsIntersect <- list()
-  filteredScoreDf <- filteredScoreDf %>% filter(!is.na(Score) | target_end_date >= filterDate)
+  filteredScoreDf <- filter(filteredScoreDf, !is.na(Score) | target_end_date >= filterDate)
   # Create df with col for all locations across each unique date, ahead and forecaster combo
   locationDf <- filteredScoreDf %>%
     group_by(forecaster, target_end_date, ahead) %>%
     summarize(location_list = paste(sort(unique(geo_value)), collapse = ","))
-  locationDf <- locationDf %>% filter(location_list != c("us"))
+  locationDf <- filter(locationDf, location_list != c("us"))
   # Create a list containing each row's location list
   locationList <- sapply(locationDf$location_list, function(x) strsplit(x, ","))
   locationList <- lapply(locationList, function(x) x[x != "us"])
   # Get the intersection of all the locations in these lists
   locationsIntersect <- unique(Reduce(intersect, locationList))
-  filteredScoreDf <- filteredScoreDf %>% filter(geo_value %in% locationsIntersect)
+  filteredScoreDf <- filter(filteredScoreDf, geo_value %in% locationsIntersect)
   if (scoreType == "coverage") {
     if (hasAsOfData) {
       filteredScoreDf <- filteredScoreDf %>%
@@ -57,7 +57,7 @@ filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FAL
 # May change in the future
 filterHospitalizationsAheads <- function(scoreDf) {
   scoreDf["weekday"] <- weekdays(as.Date(scoreDf$target_end_date))
-  scoreDf <- scoreDf %>% filter(weekday == HOSPITALIZATIONS_TARGET_DAY)
+  scoreDf <- filter(scoreDf, weekday == HOSPITALIZATIONS_TARGET_DAY)
 
   oneAheadDf <- scoreDf %>%
     filter(ahead >= HOSPITALIZATIONS_OFFSET) %>%
@@ -68,26 +68,34 @@ filterHospitalizationsAheads <- function(scoreDf) {
 
   return(bind_rows(
     scoreDf %>%
-      filter(ahead >= HOSPITALIZATIONS_OFFSET) %>%
-      filter(ahead < 7 + HOSPITALIZATIONS_OFFSET) %>%
+      filter(
+        ahead >= HOSPITALIZATIONS_OFFSET,
+        ahead < 7 + HOSPITALIZATIONS_OFFSET
+      ) %>%
       group_by(target_end_date, forecaster) %>%
       filter(ahead == min(ahead)) %>%
       mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[1]),
     scoreDf %>%
-      filter(ahead >= 7 + HOSPITALIZATIONS_OFFSET) %>%
-      filter(ahead < 14 + HOSPITALIZATIONS_OFFSET) %>%
+      filter(
+        ahead >= 7 + HOSPITALIZATIONS_OFFSET,
+        ahead < 14 + HOSPITALIZATIONS_OFFSET
+      ) %>%
       group_by(target_end_date, forecaster) %>%
       filter(ahead == min(ahead)) %>%
       mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[2]),
     scoreDf %>%
-      filter(ahead >= 14 + HOSPITALIZATIONS_OFFSET) %>%
-      filter(ahead < 21 + HOSPITALIZATIONS_OFFSET) %>%
+      filter(
+        ahead >= 14 + HOSPITALIZATIONS_OFFSET,
+        ahead < 21 + HOSPITALIZATIONS_OFFSET
+      ) %>%
       group_by(target_end_date, forecaster) %>%
       filter(ahead == min(ahead)) %>%
       mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[3]),
     scoreDf %>%
-      filter(ahead >= 21 + HOSPITALIZATIONS_OFFSET) %>%
-      filter(ahead < 28 + HOSPITALIZATIONS_OFFSET) %>%
+      filter(
+        ahead >= 21 + HOSPITALIZATIONS_OFFSET,
+        ahead < 28 + HOSPITALIZATIONS_OFFSET
+      ) %>%
       group_by(target_end_date, forecaster) %>%
       filter(ahead == min(ahead)) %>%
       mutate(ahead = HOSPITALIZATIONS_AHEAD_OPTIONS[4])

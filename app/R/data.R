@@ -74,14 +74,20 @@ getAllData <- function(loadFile) {
   dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
   dfNationCases <- loadFile("score_cards_nation_cases.rds")
   dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
-  df <- bind_rows(
-    dfStateHospitalizations,
-    dfNationHospitalizations,
-    dfStateCases,
-    dfStateDeaths,
-    dfNationCases,
-    dfNationDeaths
-  )
+  df_list <- list(
+        "Deaths" = bind_rows(
+          dfStateDeaths,
+          dfNationDeaths
+        ),
+        "Cases" = bind_rows(
+          dfStateCases,
+          dfNationCases
+        ),
+        "Hospitalizations" = bind_rows(
+          dfStateHospitalizations,
+          dfNationHospitalizations
+        )
+      )
 
   # Pick out expected columns only
   expectedCols <- c(
@@ -89,20 +95,22 @@ getAllData <- function(loadFile) {
     "data_source", "signal", "target_end_date", "incidence_period",
     "actual", "wis", "sharpness", "ae", "value_50"
   )
-  df <- select(
-    df,
-    all_of(expectedCols),
-    "10" = cov_10, "20" = cov_20, "30" = cov_30,
-    "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
-    "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
+  df_list <- map(
+    df_list, ~select(
+      .x,
+      all_of(expectedCols),
+      "10" = cov_10, "20" = cov_20, "30" = cov_30,
+      "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
+      "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
+    )
   )
 
-  return(df)
+  return(df_list)
 }
 
 createS3DataLoader <- function() {
   s3bucket <- getS3Bucket()
-  df <- data.frame()
+  df_list <- list()
   dataCreationDate <- as.Date(NA)
 
   getRecentData <- function() {
@@ -115,16 +123,16 @@ createS3DataLoader <- function() {
     # names, sizes, and last modified timestamps). Ignores characteristics of
     # bucket and request, including bucket region, name, content type, request
     # date, request ID, etc.
-    if (nrow(df) == 0 || !identical(s3Contents, newS3Contents)) {
+    if (length(df_list) == 0 || !identical(s3Contents, newS3Contents)) {
       # Save new data and new bucket connection info to vars in env of
       # `getRecentDataHelper`. They persist between calls to `getRecentData` a
       # la https://stackoverflow.com/questions/1088639/static-variables-in-r
       s3bucket <<- newS3bucket
-      df <<- getAllData(createS3DataFactory(s3bucket))
+      df_list <<- getAllData(createS3DataFactory(s3bucket))
       dataCreationDate <<- getCreationDate(createS3DataFactory(s3bucket))
     }
 
-    return(list(df = df, dataCreationDate = dataCreationDate))
+    return(list(df_list = df_list, dataCreationDate = dataCreationDate))
   }
 
   return(getRecentData)
@@ -133,10 +141,10 @@ createS3DataLoader <- function() {
 
 #' create a data loader with fallback data only
 createFallbackDataLoader <- function() {
-  df <- getAllData(getFallbackData)
+  df_list <- getAllData(getFallbackData)
 
   dataLoader <- function() {
-    df
+    df_list
   }
   dataLoader
 }

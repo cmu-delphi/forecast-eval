@@ -114,15 +114,13 @@ server <- function(input, output, session) {
 
   # Get scores
   loaded <- loadData()
-  df <- loaded$df
+  df_list <- loaded$df_list
   dataCreationDate <- loaded$dataCreationDate
   DATA_LOADED <- TRUE
 
   # Prepare input choices
-  forecasterChoices <- distinct(df, forecaster) %>%
-    pull() %>%
-    sort()
-  updateForecasterChoices(session, df, forecasterChoices, "wis")
+  forecasterChoices <- sort(unique(df_list[["Cases"]][["forecaster"]]))
+  updateForecasterChoices(session, df_list[["Cases"]], forecasterChoices, "wis")
 
   ##################
   # CREATE MAIN PLOT
@@ -486,18 +484,12 @@ server <- function(input, output, session) {
 
   # Filter scoring df by inputs chosen (targetVariable, forecasters, aheads)
   filterScoreDf <- function() {
-    signalFilter <- CASE_FILTER
-    if (input$targetVariable == "Deaths") {
-      signalFilter <- DEATH_FILTER
-    }
-    if (input$targetVariable == "Hospitalizations") {
-      signalFilter <- HOSPITALIZATIONS_FILTER
-    }
-    filteredScoreDf <- df %>%
-      filter(signal == signalFilter) %>%
-      filter(forecaster %in% input$forecasters)
+    filteredScoreDf <- filter(
+      df_list[[input$targetVariable]],
+      forecaster %in% input$forecasters
+    )
 
-    if (signalFilter == HOSPITALIZATIONS_FILTER) {
+    if (input$targetVariable == "Hospitalizations") {
       filteredScoreDf <- filterHospitalizationsAheads(filteredScoreDf)
     }
     if (input$scoreType == "wis" || input$scoreType == "sharpness") {
@@ -681,17 +673,7 @@ server <- function(input, output, session) {
     ## summaryPlot will try to use PREV_AS_OF_DATA()
     ## since it has wrong data information, it needs to be removed
     PREV_AS_OF_DATA(NULL)
-    if (input$targetVariable == "Deaths") {
-      ## Defining Filter
-      FILTER <- DEATH_FILTER
-    } else if (input$targetVariable == "Cases") {
-      FILTER <- CASE_FILTER
-    } else {
-      FILTER <- HOSPITALIZATIONS_FILTER
-    }
-
-    ## Filtering DF
-    df <- df %>% filter(signal == FILTER)
+    df <- df_list[[input$targetVariable]]
 
     ## Update available options
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
@@ -729,16 +711,12 @@ server <- function(input, output, session) {
     }
   })
 
-  observeEvent(input$scoreType, {
-    if (input$targetVariable == "Deaths") {
-      df <- df %>% filter(signal == DEATH_FILTER)
-    } else if (input$targetVariable == "Cases") {
-      df <- df %>% filter(signal == CASE_FILTER)
-    } else {
-      df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
-    }
-    # Only show forecasters that have data for the score chosen
-    updateForecasterChoices(session, df, input$forecasters, input$scoreType)
+  observeEvent(input$scoreType,
+    {
+      df <- df_list[[input$targetVariable]]
+
+      # Only show forecasters that have data for the score chosen
+      updateForecasterChoices(session, df, input$forecasters, input$scoreType)
 
     # If we are switching between coverage and other score types we need to
     # update the as of data we have so it matches the correct locations shown
@@ -775,14 +753,10 @@ server <- function(input, output, session) {
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from
   observeEvent(input$forecasters, {
-    if (input$targetVariable == "Deaths") {
-      df <- df %>% filter(signal == DEATH_FILTER)
-    } else if (input$targetVariable == "Cases") {
-      df <- df %>% filter(signal == CASE_FILTER)
-    } else {
-      df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
-    }
-    df <- df %>% filter(forecaster %in% input$forecasters)
+    df <- filter(
+      df_list[[input$targetVariable]],
+      forecaster %in% input$forecasters
+    )
 
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, FALSE)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
@@ -943,7 +917,7 @@ server <- function(input, output, session) {
   exportScoresServer(
     "exportScores", shiny::reactive(generateExportFilename(input)),
     shiny::reactive(createExportScoresDataFrame(
-      df, input$targetVariable, input$scoreType, input$forecasters,
+      df_list, input$targetVariable, input$scoreType, input$forecasters,
       input$location, input$coverageInterval
     ))
   )

@@ -7,10 +7,10 @@ updateTargetChoices <- function(session, targetChoices) {
 
 updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
   if (scoreType == "wis") {
-    df <- df %>% filter(!is.na(wis))
+    df <- filter(df, !is.na(wis))
   }
   if (scoreType == "ae") {
-    df <- df %>% filter(!is.na(ae))
+    df <- filter(df, !is.na(ae))
   }
   forecasterChoices <- distinct(df, forecaster) %>% pull()
   updateSelectInput(session, "forecasters",
@@ -20,7 +20,7 @@ updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
 }
 
 updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices, coverageInput, output) {
-  df <- df %>% filter(forecaster %in% forecasterChoices)
+  df <- filter(df, forecaster %in% forecasterChoices)
   df <- Filter(function(x) !all(is.na(x)), df)
   coverageChoices <- intersect(colnames(df), COVERAGE_INTERVALS)
   # Ensure previously selected options are still allowed
@@ -38,7 +38,7 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
 }
 
 updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
-  df <- df %>% filter(forecaster %in% forecasterChoices)
+  df <- filter(df, forecaster %in% forecasterChoices)
   locationChoices <- distinct(df, geo_value) %>%
     pull() %>%
     toupper()
@@ -66,7 +66,7 @@ updateLocationChoices <- function(session, df, targetVariable, forecasterChoices
 }
 
 updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, aheads, targetVariableChange) {
-  df <- df %>% filter(forecaster %in% forecasterChoices)
+  df <- filter(df, forecaster %in% forecasterChoices)
   if (targetVariable == "Hospitalizations") {
     aheadOptions <- HOSPITALIZATIONS_AHEAD_OPTIONS
     title <- "Forecast Horizon (Days)"
@@ -170,7 +170,7 @@ server <- function(input, output, session) {
       dfWithForecasts <- filteredScoreDf
     }
     # Need to do this after setting dfWithForecasts to leave in aheads for forecasts
-    filteredScoreDf <- filteredScoreDf %>% filter(ahead %in% input$aheads)
+    filteredScoreDf <- filter(filteredScoreDf, ahead %in% input$aheads)
     if (nrow(filteredScoreDf) == 0) {
       output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText(paste0(
         "The selected forecasters do not have enough data ",
@@ -185,14 +185,15 @@ server <- function(input, output, session) {
       input$asOf != "" &&
       nrow(PREV_AS_OF_DATA()) != 0 &&
       input$asOf < CURRENT_WEEK_END_DATE()) {
-      asOfData <- PREV_AS_OF_DATA() %>%
-        rename(target_end_date = time_value, as_of_actual = value) %>%
-        select(target_end_date, geo_value, as_of_actual)
+      asOfData <- PREV_AS_OF_DATA()
+      asOfData$target_end_date <- asOfData$time_value
+      asOfData$as_of_actual <- asOfData$value
+      asOfData <- asOfData[, c("target_end_date", "geo_value", "as_of_actual")]
     }
 
     if (!is.null(asOfData) && nrow(asOfData) != 0) {
       # Get the 'as of' dates that are the target_end_dates in the scoring df
-      dateGroupDf <- asOfData %>% filter(asOfData$target_end_date %in% filteredScoreDf$target_end_date)
+      dateGroupDf <- filter(asOfData, asOfData$target_end_date %in% filteredScoreDf$target_end_date)
       if (nrow(dateGroupDf) != 0) {
         # Since cases and deaths are shown as weekly incidence, but the "as of" data from the covidcast API
         # is daily, we need to sum over the days leading up to the target_end_date of each week to get the
@@ -213,7 +214,7 @@ server <- function(input, output, session) {
       filteredScoreDf <- filteredScoreDfAndIntersections[[1]]
       locationsIntersect <- filteredScoreDfAndIntersections[[2]]
       if (input$showForecasts) {
-        dfWithForecasts <- dfWithForecasts %>% filter(geo_value %in% locationsIntersect)
+        dfWithForecasts <- filter(dfWithForecasts, geo_value %in% locationsIntersect)
       }
       aggregateText <- "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (input$scoreType == "coverage") {
@@ -325,19 +326,21 @@ server <- function(input, output, session) {
     updateAsOfChoices(session, truthDf)
 
     # Format and transform data for plot
-    filteredScoreDf <- filteredScoreDf %>%
-      filter(!is.na(Week_End_Date)) %>%
-      select(Forecaster, Forecast_Date, Week_End_Date, Score, ahead) %>%
-      mutate(across(where(is.numeric), ~ round(., 2)))
+    filteredScoreDf <- filter(filteredScoreDf, !is.na(Week_End_Date))
+    filteredScoreDf <- mutate(
+      filteredScoreDf[, c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")],
+      across(where(is.numeric), ~ round(., 2))
+    )
     if (input$scoreType != "coverage") {
       if (input$scaleByBaseline) {
-        baselineDf <- filteredScoreDf %>% filter(Forecaster %in% "COVIDhub-baseline")
-        filteredScoreDfMerged <- merge(filteredScoreDf, baselineDf, by = c("Week_End_Date", "ahead"))
-        # Scaling score by baseline forecaster
-        filteredScoreDfMerged$Score.x <- filteredScoreDfMerged$Score.x / filteredScoreDfMerged$Score.y
-        filteredScoreDf <- filteredScoreDfMerged %>%
-          rename(Forecaster = Forecaster.x, Score = Score.x, Forecast_Date = Forecast_Date.x) %>%
-          select(Forecaster, Forecast_Date, Week_End_Date, ahead, Score)
+        baselineDf <- filter(filteredScoreDf, Forecaster %in% "COVIDhub-baseline")
+        filteredScoreDf <- merge(filteredScoreDf, baselineDf, by = c("Week_End_Date", "ahead"))
+
+        # Scale score by baseline forecaster
+        filteredScoreDf$Score <- filteredScoreDf$Score.x / filteredScoreDf$Score.y
+        filteredScoreDf$Forecaster <- filteredScoreDf$Forecaster.x
+        filteredScoreDf$Forecast_Date <- filteredScoreDf$Forecast_Date.x
+        filteredScoreDf <- filteredScoreDf[, c("Forecaster", "Forecast_Date", "Week_End_Date", "ahead", "Score")]
       }
       if (input$logScale) {
         filteredScoreDf$Score <- log10(filteredScoreDf$Score)
@@ -519,16 +522,18 @@ server <- function(input, output, session) {
     }
     if (input$scoreType == "wis" || input$scoreType == "sharpness") {
       # Only show WIS or Sharpness for forecasts that have all intervals or are for future dates
-      filteredScoreDf <- filteredScoreDf %>%
-        filter((
+      filteredScoreDf <- filter(
+        filteredScoreDf,
+        (
           !is.na(`50`) &
             !is.na(`80`) &
             !is.na(`95`)
-        ) |
-          target_end_date >= dataCreationDate)
+        ) | target_end_date >= dataCreationDate
+      )
       if (input$targetVariable == "Deaths") {
-        filteredScoreDf <- filteredScoreDf %>%
-          filter((
+        filteredScoreDf <- filter(
+          filteredScoreDf,
+          (
             !is.na(`10`) &
               !is.na(`20`) &
               !is.na(`30`) &
@@ -537,8 +542,8 @@ server <- function(input, output, session) {
               !is.na(`70`) &
               !is.na(`90`) &
               !is.na(`98`)
-          ) |
-            target_end_date >= dataCreationDate)
+          ) | target_end_date >= dataCreationDate
+        )
       }
     }
     filteredScoreDf <- renameScoreCol(filteredScoreDf, input$scoreType, input$coverageInterval)
@@ -556,9 +561,11 @@ server <- function(input, output, session) {
 
       # Cut off the extra days on beginning and end of series so that when we sum the values we are only
       # summing over the weeks included in the score plot
-      asOfData <- asOfData %>%
-        filter(target_end_date >= min(filteredScoreDf$target_end_date) - 6) %>%
-        filter(target_end_date <= isolate(input$asOf))
+      asOfData <- filter(
+        asOfData,
+        target_end_date >= min(filteredScoreDf$target_end_date) - 6,
+        target_end_date <= isolate(input$asOf)
+      )
 
       # Fill in the date_group column with the target week end days for all intervening days
       asOfData <- asOfData %>%
@@ -567,7 +574,7 @@ server <- function(input, output, session) {
 
       # In the case where there are target week end days missing from the scoring or as of data
       # we don't want to end up summing values over multiple weeks so we make sure each date_group only spans one week
-      asOfData <- asOfData %>% filter(asOfData$date_group - asOfData$target_end_date < 7)
+      asOfData <- filter(asOfData, asOfData$date_group - asOfData$target_end_date < 7)
 
       asOfData <- asOfData[c("geo_value", "as_of_actual", "date_group")]
       # Sum over preceding week for all weekly target variables
@@ -583,10 +590,10 @@ server <- function(input, output, session) {
       # This is taken care of above for cases and deaths.
       minDate <- min(filteredScoreDf$target_end_date)
       if (!SUMMARIZING_OVER_ALL_LOCATIONS()) {
-        chosenLocationDf <- filteredScoreDf %>% filter(geo_value == tolower(input$location))
+        chosenLocationDf <- filter(filteredScoreDf, geo_value == tolower(input$location))
         minDate <- min(chosenLocationDf$target_end_date)
       }
-      asOfData <- asOfData %>% filter(target_end_date >= minDate)
+      asOfData <- filter(asOfData, target_end_date >= minDate)
     }
     return(asOfData)
   }
@@ -595,7 +602,7 @@ server <- function(input, output, session) {
     dfWithForecasts <- dfWithForecasts %>%
       rename(Week_End_Date = target_end_date, Forecaster = forecaster, Quantile_50 = value_50)
     if (!SUMMARIZING_OVER_ALL_LOCATIONS()) {
-      dfWithForecasts <- dfWithForecasts %>% filter(geo_value == tolower(input$location))
+      dfWithForecasts <- filter(dfWithForecasts, geo_value == tolower(input$location))
     } else {
       # Sum the predictions for all included locations
       dfWithForecasts <- dfWithForecasts %>%
@@ -605,7 +612,7 @@ server <- function(input, output, session) {
 
     if (hasAsOfData) {
       # We want the forecasts to be later than latest as of date with data
-      lastEndDate <- tail(filteredDf %>% filter(!is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
+      lastEndDate <- tail(filter(filteredDf, !is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
       dfWithForecasts <- dfWithForecasts %>%
         filter(forecast_date >= lastEndDate) %>%
         group_by(Week_End_Date) %>%
@@ -631,8 +638,7 @@ server <- function(input, output, session) {
     # Take only those forecasts with a forecast date before the next as of date in dropdown
     # aka within the week after the current as of shown
     if (length(nextAsOfInList) != 0 && !is.na(nextAsOfInList)) {
-      dfWithForecasts <- dfWithForecasts %>%
-        filter(forecast_date < nextAsOfInList)
+      dfWithForecasts <- filter(dfWithForecasts, forecast_date < nextAsOfInList)
     }
 
     # Hospitalizations will have multiple forecast dates within this target week
@@ -646,15 +652,14 @@ server <- function(input, output, session) {
         filter(forecast_date == first(forecast_date))
     }
 
-    keepCols <- c("Quantile_50", "Forecaster", "Reported_Incidence")
+    keepCols <- c("Week_End_Date", "Quantile_50", "Forecaster", "Reported_Incidence")
     if (hasAsOfData) {
       keepCols <- c(keepCols, "Reported_As_Of_Incidence")
     }
     filteredDf <- merge(filteredDf, dfWithForecasts, by = c("Week_End_Date", "Forecaster"), all = TRUE) %>%
-      group_by(Week_End_Date) %>%
-      select(keepCols)
+      group_by(Week_End_Date)
     # Remove rows of NAs
-    filteredDf <- filteredDf %>% filter(!is.null(Forecaster))
+    filteredDf <- filter(filteredDf[, keepCols], !is.null(Forecaster))
     filteredDf <- filteredDf %>%
       arrange(Week_End_Date) %>%
       fill(Reported_Incidence, .direction = "downup")

@@ -68,41 +68,44 @@ getCreationDate <- function(loadFile) {
 
 
 getAllData <- function(loadFile) {
-  dfStateCases <- loadFile("score_cards_state_cases.rds")
-  dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
-  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
-  dfNationCases <- loadFile("score_cards_nation_cases.rds")
-  dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
-  dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
-
+  df <- dash_type_toggle(
+    curr_val = {
+      dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
+      dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
+      
+      bind_rows(
+        dfStateHospitalizations,
+        dfNationHospitalizations
+      )
+      
+    },
+    arch_val = {
+      dfStateCases <- loadFile("score_cards_state_cases.rds")
+      dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
+      dfNationCases <- loadFile("score_cards_nation_cases.rds")
+      dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
+      
+      bind_rows(
+        dfStateCases,
+        dfStateDeaths,
+        dfNationCases,
+        dfNationDeaths
+      )
+    })
+  
   # Pick out expected columns only
-  covCols <- paste0("cov_", COVERAGE_INTERVALS)
   expectedCols <- c(
     "ahead", "geo_value", "forecaster", "forecast_date",
     "data_source", "signal", "target_end_date", "incidence_period",
-    "actual", "wis", "sharpness", "ae", "value_50",
-    covCols
+    "actual", "wis", "sharpness", "ae", "value_50"
   )
-
-  df <- dash_type_toggle(
-    curr_val = bind_rows(
-      dfStateHospitalizations %>% select(all_of(expectedCols)),
-      dfNationHospitalizations %>% select(all_of(expectedCols))
-    ),
-    arch_val = bind_rows(
-      dfStateCases %>% select(all_of(expectedCols)),
-      dfStateDeaths %>% select(all_of(expectedCols)),
-      dfNationCases %>% select(all_of(expectedCols)),
-      dfNationDeaths %>% select(all_of(expectedCols))
-    )
-  )
-  
-  df <- df %>% rename(
+  df <- select(
+    df,
+    all_of(expectedCols),
     "10" = cov_10, "20" = cov_20, "30" = cov_30,
     "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
     "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
   )
-
   return(df)
 }
 

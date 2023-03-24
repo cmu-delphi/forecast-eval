@@ -24,9 +24,9 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
   df <- Filter(function(x) !all(is.na(x)), df)
   coverageChoices <- intersect(colnames(df), COVERAGE_INTERVALS)
   # Ensure previously selected options are still allowed
-  if (coverageInput %in% coverageChoices) {
+  if (any(coverageInput == coverageChoices)) {
     selectedCoverage <- coverageInput
-  } else if ("95" %in% coverageChoices) {
+  } else if (any("95" == coverageChoices)) {
     selectedCoverage <- "95"
   } else {
     selectedCoverage <- coverageChoices[1]
@@ -54,7 +54,7 @@ updateLocationChoices <- function(session, df, targetVariable, forecasterChoices
   names(locationChoices)[unmatched] <- locationChoices[unmatched]
 
   # Ensure previously selected options are still allowed
-  if (locationInput %in% locationChoices) {
+  if (any(locationInput == locationChoices)) {
     selectedLocation <- locationInput
   } else {
     selectedLocation <- locationChoices[1]
@@ -193,7 +193,7 @@ server <- function(input, output, session) {
 
     if (!is.null(asOfData) && nrow(asOfData) != 0) {
       # Get the 'as of' dates that are the target_end_dates in the scoring df
-      dateGroupDf <- filter(asOfData, asOfData$target_end_date %in% filteredScoreDf$target_end_date)
+      dateGroupDf <- filter(asOfData, target_end_date %in% filteredScoreDf$target_end_date)
       if (nrow(dateGroupDf) != 0) {
         # Since cases and deaths are shown as weekly incidence, but the "as of" data from the covidcast API
         # is daily, we need to sum over the days leading up to the target_end_date of each week to get the
@@ -333,7 +333,7 @@ server <- function(input, output, session) {
     )
     if (input$scoreType != "coverage") {
       if (input$scaleByBaseline) {
-        baselineDf <- filter(filteredScoreDf, Forecaster %in% "COVIDhub-baseline")
+        baselineDf <- filter(filteredScoreDf, Forecaster == "COVIDhub-baseline")
         filteredScoreDf <- merge(filteredScoreDf, baselineDf, by = c("Week_End_Date", "ahead"))
 
         # Scale score by baseline forecaster
@@ -728,16 +728,16 @@ server <- function(input, output, session) {
     ## Resolving dates
     ### If going from Deaths|Cases to Deaths|Cases we will call updateAsOfData
     ### only when
-    if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable %in% c("Deaths", "Cases")) {
+    if (any(PREV_TARGET == c("Deaths", "Cases")) && any(input$targetVariable == c("Deaths", "Cases"))) {
       CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
       currentFetch <- input$asOf
       if (input$asOf != "" &&
         CURRENT_WEEK_END_DATE() != currentFetch) {
         updateAsOf <- TRUE
       }
-    } else if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable == "Hospitalizations") {
+    } else if (any(PREV_TARGET == c("Deaths", "Cases")) && input$targetVariable == "Hospitalizations") {
       CURRENT_WEEK_END_DATE(HOSP_CURRENT)
-    } else if (PREV_TARGET == "Hospitalizations" && input$targetVariable %in% c("Deaths", "Cases")) {
+    } else if (PREV_TARGET == "Hospitalizations" && any(input$targetVariable == c("Deaths", "Cases"))) {
       CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
     }
 
@@ -838,7 +838,7 @@ server <- function(input, output, session) {
       )
     }
     # Ensure COVIDhub-baseline is selected when scaling by baseline
-    if (input$scaleByBaseline && !("COVIDhub-baseline" %in% input$forecasters)) {
+    if (input$scaleByBaseline && !any("COVIDhub-baseline" == input$forecasters)) {
       updateSelectInput(session, "forecasters", selected = c(input$forecasters, "COVIDhub-baseline"))
     }
   })
@@ -915,13 +915,13 @@ server <- function(input, output, session) {
     } else if (input$location == "US" && input$scoreType != "coverage") {
       minChoice <- MIN_AVAIL_NATION_AS_OF_DATE
       asOfChoices <- asOfChoices[asOfChoices >= minChoice]
-    } else if (input$location %in% TERRITORIES || input$location == TOTAL_LOCATIONS || input$scoreType == "coverage") {
+    } else if (any(input$location == TERRITORIES) || input$location == TOTAL_LOCATIONS || input$scoreType == "coverage") {
       minChoice <- MIN_AVAIL_TERRITORY_AS_OF_DATE
       asOfChoices <- asOfChoices[asOfChoices >= minChoice]
     }
     asOfChoices <- c(asOfChoices, CURRENT_WEEK_END_DATE())
     # Make sure we have a valid as of selection
-    nonValidAsOf <- selectedAsOf == "" || !(as.Date(selectedAsOf) %in% asOfChoices)
+    nonValidAsOf <- selectedAsOf == "" || !any(as.Date(selectedAsOf) == asOfChoices)
     if (length(asOfChoices) != 0 && nonValidAsOf) {
       selectedAsOf <- max(asOfChoices)
     }

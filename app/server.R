@@ -669,7 +669,7 @@ server <- function(input, output, session) {
     ## Filtering DF
     df <- df %>% filter(signal == FILTER)
 
-    ## Update available opitions
+    ## Update available options
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
@@ -699,8 +699,7 @@ server <- function(input, output, session) {
     ## Storing current target
     PREV_TARGET <<- input$targetVariable
 
-    ## do calling the api if we need as of data
-    ## otherwise we don't need to call it
+    ## Call the API only if we need as of data
     if (updateAsOf) {
       updateAsOfData(fetchDate = currentFetch)
     }

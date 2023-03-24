@@ -17,10 +17,14 @@ sidebar <- tags$div(
   conditionalPanel(
     condition = "input.tabset == 'evaluations'",
     radioButtons("targetVariable", "Target Variable",
-      choices = list(
-        "Incident Deaths" = "Deaths",
-        "Incident Cases" = "Cases",
-        "Hospital Admissions" = "Hospitalizations"
+      choices = dash_type_toggle(
+        curr_val = list(
+          "Hospital Admissions" = "Hospitalizations"
+        ),
+        arch_val = list(
+          "Incident Deaths" = "Deaths",
+          "Incident Cases" = "Cases"
+        )
       )
     ),
     radioButtons("scoreType", "Scoring Metric",
@@ -49,9 +53,9 @@ sidebar <- tags$div(
     selectInput(
       "forecasters",
       tags$div("Forecasters", tags$div(id = "forecaster-input", "Type a name or select from dropdown")),
-      choices = c("COVIDhub-baseline", "COVIDhub-ensemble"),
+      choices = c("COVIDhub-baseline", "COVIDhub-4weekensemble"),
       multiple = TRUE,
-      selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
+      selected = c("COVIDhub-baseline", "COVIDhub-4_week_ensemble")
     ),
     tags$p(
       id = "missing-data-disclaimer",

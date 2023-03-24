@@ -48,4 +48,5 @@ deploy_dashboard: build_dashboard
 	docker push ghcr.io/cmu-delphi/forecast-eval:$(imageTag)
 
 start_dashboard: build_dashboard_dev
+	#--env GRB_LICENSE_FILE=$(GRB_LICENSE_FILE)
 	docker run --rm -p 3838:80 ghcr.io/cmu-delphi/forecast-eval:latest

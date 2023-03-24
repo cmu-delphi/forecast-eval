@@ -5,7 +5,7 @@ library(aws.s3)
 shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2, evict = "lru"))
 cache <- getShinyOption("cache")
 
-# Since covidcast data updates about once a day. Add date arg to
+# Since covidcast data updates about once a day, add date arg to
 # covidcast_signal so caches aren't used after that.
 covidcast_signal_mem <- function(..., date = Sys.Date()) {
   return(covidcast_signal(...))
@@ -84,14 +84,19 @@ getAllData <- function(loadFile) {
     covCols
   )
 
-  df <- bind_rows(
-    dfStateCases %>% select(all_of(expectedCols)),
-    dfStateDeaths %>% select(all_of(expectedCols)),
-    dfStateHospitalizations %>% select(all_of(expectedCols)),
-    dfNationCases %>% select(all_of(expectedCols)),
-    dfNationDeaths %>% select(all_of(expectedCols)),
-    dfNationHospitalizations %>% select(all_of(expectedCols))
+  df <- dash_type_toggle(
+    curr_val = bind_rows(
+      dfStateHospitalizations %>% select(all_of(expectedCols)),
+      dfNationHospitalizations %>% select(all_of(expectedCols))
+    ),
+    arch_val = bind_rows(
+      dfStateCases %>% select(all_of(expectedCols)),
+      dfStateDeaths %>% select(all_of(expectedCols)),
+      dfNationCases %>% select(all_of(expectedCols)),
+      dfNationDeaths %>% select(all_of(expectedCols))
+    )
   )
+  
   df <- df %>% rename(
     "10" = cov_10, "20" = cov_20, "30" = cov_30,
     "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,

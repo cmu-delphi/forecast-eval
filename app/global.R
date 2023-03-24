@@ -10,6 +10,8 @@ library(covidcast)
 
 appVersion <- "6.0.0"
 
+DASH_TYPE <- match.arg(Sys.getenv("DASH_TYPE"), c("current", "archive"))
+
 COVERAGE_INTERVALS <- c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 DEATH_FILTER <- "deaths_incidence_num"
 CASE_FILTER <- "confirmed_incidence_num"
@@ -73,4 +75,11 @@ resolveCurrentHospDay <- function() {
   # the most recent Saturday / Wednesday date even though the actual updated data won't be there yet)
   prevHospWeek <- seq(Sys.Date() - 10, Sys.Date() - 4, by = "day")
   prevHospWeek[weekdays(prevHospWeek) == HOSPITALIZATIONS_TARGET_DAY]
+}
+
+dash_type_toggle <- function(curr_val, arch_val) {
+  switch(DASH_TYPE,
+         current = curr_val,
+         archive = arch_val
+  )
 }

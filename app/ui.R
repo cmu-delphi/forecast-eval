@@ -53,7 +53,7 @@ sidebar <- tags$div(
     selectInput(
       "forecasters",
       tags$div("Forecasters", tags$div(id = "forecaster-input", "Type a name or select from dropdown")),
-      choices = c("COVIDhub-baseline", "COVIDhub-4weekensemble"),
+      choices = c("COVIDhub-baseline", "COVIDhub-4_week_ensemble"),
       multiple = TRUE,
       selected = c("COVIDhub-baseline", "COVIDhub-4_week_ensemble")
     ),

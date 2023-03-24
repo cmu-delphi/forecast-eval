@@ -392,7 +392,7 @@ server <- function(input, output, session) {
     )
 
     # Fill gaps so there are line breaks on weeks without data
-    # This is failing for CU-select on US deaths (https://github.com/cmu-delphi/forecast-eval/issues/157)
+    # TODO: This is failing for CU-select on US deaths (https://github.com/cmu-delphi/forecast-eval/issues/157)
     filteredScoreDf <- filteredScoreDf %>%
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, Forecast_Date, ahead) %>%
@@ -408,36 +408,61 @@ server <- function(input, output, session) {
       levels = horizonOptions,
       labels = horizonLabels
     )
-
-    p <- ggplot(
-      filteredScoreDf,
-      aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster, label = Forecast_Date)
-    ) +
-      geom_line() +
-      geom_point(size = 2) +
-      labs(x = "", y = "", title = titleText) +
-      scale_x_date(date_labels = "%b %Y") +
-      facet_wrap(~ahead, ncol = 1) +
-      scale_color_manual(values = colorPalette) +
-      theme_bw() +
-      theme(panel.spacing = unit(0.5, "lines"))
-
-    if (input$showForecasts) {
-      maxLim <- if_else(
-        as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
-        as.Date(input$asOf) + 7 * 4,
-        as.Date(NA)
-      )
-      p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
-    }
-    if (input$scoreType == "coverage") {
-      p <- p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
-    }
-    if (input$logScale) {
-      p <- p + scale_y_continuous(label = function(x) paste0("10^", x))
+    
+    finalPlot <- plot_ly(ungroup(filteredScoreDf), x = ~Week_End_Date)
+    
+    if (hasAsOfData) {
+      finalPlot <- finalPlot %>% 
+        add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", color = "Reported_Incidence", marker = list(size=5)) %>%
+        add_trace(y = ~Reported_As_Of_Incidence, type="scatter", mode = "lines+markers", color = "Reported_As_Of_Incidence", marker = list(size=5))
     } else {
-      p <- p + scale_y_continuous(limits = c(0, NA), labels = scales::comma)
+      finalPlot <- finalPlot %>%
+        add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", marker = list(size=5))
     }
+    if (input$showForecasts) {
+      finalPlot <- finalPlot %>%
+        add_trace(y = ~Quantile_50, type="scatter", mode = "lines+markers", color = ~Forecaster, symbol = ~Forecaster, marker = list(size=5))
+      # scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
+    }
+    
+    finalPlot <- layout(finalPlot,
+                        # hoverinfo = "shape+x+y",
+                        hovermode = "x unified",
+                        legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
+                        xaxis = list(title = list(text = NULL)),
+                        yaxis = list(title = list(text = NULL))
+    ) %>%
+      config(displayModeBar = FALSE)
+    
+    # p <- ggplot(
+    #   filteredScoreDf,
+    #   aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster, label = Forecast_Date)
+    # ) +
+    #   geom_line() +
+    #   geom_point(size = 2) +
+    #   labs(x = "", y = "", title = titleText) +
+    #   scale_x_date(date_labels = "%b %Y") +
+    #   facet_wrap(~ahead, ncol = 1) +
+    #   scale_color_manual(values = colorPalette) +
+    #   theme_bw() +
+    #   theme(panel.spacing = unit(0.5, "lines"))
+    # 
+    # if (input$showForecasts) {
+    #   maxLim <- if_else(
+    #     as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
+    #     as.Date(input$asOf) + 7 * 4,
+    #     as.Date(NA)
+    #   )
+    #   p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
+    # }
+    # if (input$scoreType == "coverage") {
+    #   p <- p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
+    # }
+    # if (input$logScale) {
+    #   p <- p + scale_y_continuous(label = function(x) paste0("10^", x))
+    # } else {
+    #   p <- p + scale_y_continuous(limits = c(0, NA), labels = scales::comma)
+    # }
     plotHeight <- 550 + (length(input$aheads) - 1) * 100
     finalPlot <-
       ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
@@ -483,48 +508,73 @@ server <- function(input, output, session) {
     if (input$showForecasts) {
       filteredDf <- filterForecastData(filteredDf, dfWithForecasts, hasAsOfData)
     }
-
-    finalPlot <- ggplot(filteredDf, aes(x = Week_End_Date)) +
-      labs(x = "", y = "", title = titleText) +
-      scale_y_continuous(limits = c(0, NA), labels = scales::comma) +
-      scale_x_date(date_labels = "%b %Y") +
-      scale_color_manual(values = colorPalette) +
-      theme_bw()
-
+    
+    finalPlot <- plot_ly(ungroup(filteredDf), x = ~Week_End_Date)
+    
     if (hasAsOfData) {
-      finalPlot <- finalPlot +
-        geom_line(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
-        geom_point(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
-        geom_line(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence")) +
-        geom_point(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence"))
+      finalPlot <- finalPlot %>% 
+        add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", color = "Reported_Incidence", marker = list(size=5)) %>%
+        add_trace(y = ~Reported_As_Of_Incidence, type="scatter", mode = "lines+markers", color = "Reported_As_Of_Incidence", marker = list(size=5))
     } else {
-      finalPlot <- finalPlot + geom_line(aes(y = Reported_Incidence)) +
-        geom_point(aes(y = Reported_Incidence))
+      finalPlot <- finalPlot %>%
+        add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", marker = list(size=5))
     }
     if (input$showForecasts) {
-      maxLim <- if_else(
-        as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
-        as.Date(input$asOf) + 7 * 4,
-        as.Date(NA)
-      )
-
-      finalPlot <- finalPlot +
-        geom_line(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
-        geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
-        scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
+      finalPlot <- finalPlot %>%
+        add_trace(y = ~Quantile_50, type="scatter", mode = "lines+markers", color = ~Forecaster, symbol = ~Forecaster, marker = list(size=5))
+        # scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
-    finalPlot <- ggplotly(finalPlot, tooltip = c("shape", "x", "y")) %>%
-      layout(
+    
+    finalPlot <- layout(finalPlot,
+        # hoverinfo = "shape+x+y",
         hovermode = "x unified",
-        legend = list(orientation = "h", y = -0.1, title = list(text = NULL))
+        legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
+        xaxis = list(title = list(text = NULL)),
+        yaxis = list(title = list(text = NULL))
       ) %>%
       config(displayModeBar = FALSE)
-    # Remove the extra grouping from the legend: "(___,1)"
-    for (i in seq_along(finalPlot$x$data)) {
-      if (!is.null(finalPlot$x$data[[i]]$name)) {
-        finalPlot$x$data[[i]]$name <- gsub("\\(", "", stringr::str_split(finalPlot$x$data[[i]]$name, ",")[[1]][1])
-      }
-    }
+    
+    # finalPlot <- ggplot(filteredDf, aes(x = Week_End_Date)) +
+    #   labs(x = "", y = "", title = titleText) +
+    #   scale_y_continuous(limits = c(0, NA), labels = scales::comma) +
+    #   scale_x_date(date_labels = "%b %Y") +
+    #   scale_color_manual(values = colorPalette) +
+    #   theme_bw()
+    # 
+    # if (hasAsOfData) {
+    #   finalPlot <- finalPlot +
+    #     geom_line(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
+    #     geom_point(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
+    #     geom_line(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence")) +
+    #     geom_point(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence"))
+    # } else {
+    #   finalPlot <- finalPlot + geom_line(aes(y = Reported_Incidence)) +
+    #     geom_point(aes(y = Reported_Incidence))
+    # }
+    # if (input$showForecasts) {
+    #   maxLim <- if_else(
+    #     as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
+    #     as.Date(input$asOf) + 7 * 4,
+    #     as.Date(NA)
+    #   )
+    # 
+    #   finalPlot <- finalPlot +
+    #     geom_line(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
+    #     geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
+    #     scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
+    # }
+    # finalPlot <- ggplotly(finalPlot, tooltip = c("shape", "x", "y")) %>%
+    #   layout(
+    #     hovermode = "x unified",
+    #     legend = list(orientation = "h", y = -0.1, title = list(text = NULL))
+    #   ) %>%
+    #   config(displayModeBar = FALSE)
+    # # Remove the extra grouping from the legend: "(___,1)"
+    # for (i in seq_along(finalPlot$x$data)) {
+    #   if (!is.null(finalPlot$x$data[[i]]$name)) {
+    #     finalPlot$x$data[[i]]$name <- gsub("\\(", "", stringr::str_split(finalPlot$x$data[[i]]$name, ",")[[1]][1])
+    #   }
+    # }
     return(finalPlot)
   }
 

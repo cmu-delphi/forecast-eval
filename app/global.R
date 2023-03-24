@@ -8,6 +8,7 @@ library(lubridate)
 library(viridis)
 library(tsibble)
 library(covidcast)
+library(vctrs)
 
 appVersion <- "6.1.0"
 

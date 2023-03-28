@@ -113,7 +113,7 @@ server <- function(input, output, session) {
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
 
   # Get scores
-  loaded <- loadData()
+  loaded <- loadData("Hospitalizations") # Starting targetVariable.
   df_list <- loaded$df_list
   dataCreationDate <- loaded$dataCreationDate
   DATA_LOADED <- TRUE
@@ -670,9 +670,16 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
+    DATA_LOADED <<- FALSE
+
     ## summaryPlot will try to use PREV_AS_OF_DATA()
     ## since it has wrong data information, it needs to be removed
     PREV_AS_OF_DATA(NULL)
+    
+    loaded <<- loadData(input$targetVariable)
+    df_list <<- loaded$df_list
+    dataCreationDate <<- loaded$dataCreationDate
+    DATA_LOADED <<- TRUE
     df <- df_list[[input$targetVariable]]
 
     ## Update available options

@@ -67,45 +67,38 @@ getCreationDate <- function(loadFile) {
 }
 
 
-getAllData <- function(loadFile) {
-  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
-  dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
-  dfStateCases <- loadFile("score_cards_state_cases.rds")
-  dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
-  dfNationCases <- loadFile("score_cards_nation_cases.rds")
-  dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
-  df_list <- list(
-        "Deaths" = bind_rows(
-          dfStateDeaths,
-          dfNationDeaths
-        ),
-        "Cases" = bind_rows(
-          dfStateCases,
-          dfNationCases
-        ),
-        "Hospitalizations" = bind_rows(
-          dfStateHospitalizations,
-          dfNationHospitalizations
-        )
-      )
-
+getAllData <- function(loadFile, targetVariable) {
+  df <- switch(
+    targetVariable,
+    "Deaths" = bind_rows(
+      loadFile("score_cards_state_deaths.rds"),
+      loadFile("score_cards_nation_deaths.rds")
+    ),
+    "Cases" = bind_rows(
+      loadFile("score_cards_state_cases.rds"),
+      loadFile("score_cards_nation_cases.rds")
+    ),
+    "Hospitalizations" = bind_rows(
+      loadFile("score_cards_state_hospitalizations.rds"),
+      loadFile("score_cards_nation_hospitalizations.rds")
+    )
+  )
+  
   # Pick out expected columns only
   expectedCols <- c(
     "ahead", "geo_value", "forecaster", "forecast_date",
     "data_source", "signal", "target_end_date", "incidence_period",
     "actual", "wis", "sharpness", "ae", "value_50"
   )
-  df_list <- map(
-    df_list, ~select(
-      .x,
-      all_of(expectedCols),
-      "10" = cov_10, "20" = cov_20, "30" = cov_30,
-      "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
-      "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
-    )
+  df <- select(
+    df,
+    all_of(expectedCols),
+    "10" = cov_10, "20" = cov_20, "30" = cov_30,
+    "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
+    "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
   )
 
-  return(df_list)
+  return(df)
 }
 
 createS3DataLoader <- function() {
@@ -113,7 +106,9 @@ createS3DataLoader <- function() {
   df_list <- list()
   dataCreationDate <- as.Date(NA)
 
-  getRecentData <- function() {
+  getRecentData <- function(targetVariable = c("Deaths", "Cases", "Hospitalizations")) {
+    targetVariable <- match.arg(targetVariable)
+
     newS3bucket <- getS3Bucket()
 
     s3Contents <- s3bucket[attr(s3bucket, "names", exact = TRUE)]
@@ -123,12 +118,14 @@ createS3DataLoader <- function() {
     # names, sizes, and last modified timestamps). Ignores characteristics of
     # bucket and request, including bucket region, name, content type, request
     # date, request ID, etc.
-    if (length(df_list) == 0 || !identical(s3Contents, newS3Contents)) {
+    if (!(targetVariable %in% names(df_list)) ||
+        nrow(df_list[[targetVariable]]) == 0 ||
+        !identical(s3Contents, newS3Contents)) {
       # Save new data and new bucket connection info to vars in env of
-      # `getRecentDataHelper`. They persist between calls to `getRecentData` a
+      # `createS3DataLoader`. They persist between calls to `getRecentData` a
       # la https://stackoverflow.com/questions/1088639/static-variables-in-r
       s3bucket <<- newS3bucket
-      df_list <<- getAllData(createS3DataFactory(s3bucket))
+      df_list[[targetVariable]] <<- getAllData(createS3DataFactory(s3bucket), targetVariable)
       dataCreationDate <<- getCreationDate(createS3DataFactory(s3bucket))
     }
 

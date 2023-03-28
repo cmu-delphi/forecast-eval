@@ -144,7 +144,7 @@ server <- function(input, output, session) {
     # Need to do this after setting dfWithForecasts to leave in aheads for forecasts
     filteredScoreDf <- filteredScoreDf %>% filter(ahead %in% input$aheads)
     if (nrow(filteredScoreDf) == 0) {
-      output$renderWarningText <- renderText(paste0(
+      output$renderWarningText <- output$renderWarningText_archive <- renderText(paste0(
         "The selected forecasters do not have enough data ",
         "to display the selected scoring metric."
       ))
@@ -190,25 +190,25 @@ server <- function(input, output, session) {
       aggregateText <- "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (input$scoreType == "coverage") {
         aggregate <- "Averaged"
-        output$renderAggregateText <- renderText(paste(
+        output$renderAggregateText <- output$renderAggregateText_archive <- renderText(paste(
           aggregateText,
           " Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "
         ))
       } else {
         aggregate <- "Totaled"
-        output$renderAggregateText <- renderText(paste(aggregateText, " Locations included: "))
+        output$renderAggregateText <- output$renderAggregateText_archive <- renderText(paste(aggregateText, " Locations included: "))
       }
       if (length(locationsIntersect) == 0) {
-        output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common on all dates.")
-        output$renderLocations <- renderText("")
-        output$renderAggregateText <- renderText("")
+        output$renderWarningText <- output$renderWarningText_archive <- renderText("The selected forecasters do not have data for any locations in common on all dates.")
+        output$renderLocations <- output$renderLocations_archive <- renderText("")
+        output$renderAggregateText <- output$renderAggregateText_archive <- renderText("")
         hideElement("truthPlot")
         hideElement("refresh-colors")
         return()
       } else {
         locationSubtitleText <- paste0(", Location: ", aggregate, " over all states and territories common to these forecasters*")
-        output$renderLocations <- renderText(toupper(locationsIntersect))
-        output$renderWarningText <- renderText("")
+        output$renderLocations <- output$renderLocations_archive <- renderText(toupper(locationsIntersect))
+        output$renderWarningText <- output$renderWarningText_archive <- renderText("")
         showElement("truthPlot")
       }
       # Not totaling over all locations
@@ -225,9 +225,9 @@ server <- function(input, output, session) {
           summarize(Score = Score, actual = actual)
       }
       locationSubtitleText <- paste0(", Location: ", input$location)
-      output$renderAggregateText <- renderText("")
-      output$renderLocations <- renderText("")
-      output$renderWarningText <- renderText("")
+      output$renderAggregateText <- output$renderAggregateText_archive <- renderText("")
+      output$renderLocations <- output$renderLocations_archive <- renderText("")
+      output$renderWarningText <- output$renderWarningText_archive <- renderText("")
     }
 
     showElement("refresh-colors")
@@ -269,18 +269,18 @@ server <- function(input, output, session) {
     ## this first condition is necessary when loading the dash
     if (input$asOf == "") {
       TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
-      output$truthPlot <- renderPlotly({
+      output$truthPlot <- output$truthPlot_archive <- renderPlotly({
         TRUTH_PLOT
       })
     } else {
       if (USE_CURR_TRUTH && input$showForecasts == FALSE) {
         # Render existing truth plot
-        output$truthPlot <- renderPlotly({
+        output$truthPlot <- output$truthPlot_archive <- renderPlotly({
           TRUTH_PLOT
         })
       } else {
         TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
-        output$truthPlot <- renderPlotly({
+        output$truthPlot <- output$truthPlot_archive <- renderPlotly({
           TRUTH_PLOT
         })
       }
@@ -476,7 +476,7 @@ server <- function(input, output, session) {
   #############
   # PLOT OUTPUT
   #############
-  output$summaryPlot <- renderPlotly({
+  output$summaryPlot <- output$summaryPlot_archive <- renderPlotly({
     summaryPlot()
   })
 

@@ -68,30 +68,20 @@ getCreationDate <- function(loadFile) {
 
 
 getAllData <- function(loadFile) {
-  df <- dash_type_toggle(
-    curr_val = {
-      dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
-      dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
-      
-      bind_rows(
-        dfStateHospitalizations,
-        dfNationHospitalizations
-      )
-      
-    },
-    arch_val = {
-      dfStateCases <- loadFile("score_cards_state_cases.rds")
-      dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
-      dfNationCases <- loadFile("score_cards_nation_cases.rds")
-      dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
-      
-      bind_rows(
-        dfStateCases,
-        dfStateDeaths,
-        dfNationCases,
-        dfNationDeaths
-      )
-    })
+  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
+  dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
+  dfStateCases <- loadFile("score_cards_state_cases.rds")
+  dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
+  dfNationCases <- loadFile("score_cards_nation_cases.rds")
+  dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
+  df <- bind_rows(
+      dfStateHospitalizations,
+      dfNationHospitalizations,
+      dfStateCases,
+      dfStateDeaths,
+      dfNationCases,
+      dfNationDeaths
+    )
   
   # Pick out expected columns only
   expectedCols <- c(
@@ -106,6 +96,7 @@ getAllData <- function(loadFile) {
     "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
     "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
   )
+
   return(df)
 }
 

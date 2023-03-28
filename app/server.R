@@ -1,6 +1,10 @@
 ################
 # UTIL FUNCTIONS before server definition
 ################
+updateTargetChoices <- function(session, targetChoices) {
+  updateRadioButtons(session, "targetVariable", choices = targetChoices)
+}
+
 updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
   if (scoreType == "wis") {
     df <- df %>% filter(!is.na(wis))
@@ -643,6 +647,24 @@ server <- function(input, output, session) {
   ###################
   # EVENT OBSERVATION
   ###################
+
+  observeEvent(input$tabset,
+    {
+      if (input$tabset == "evaluations") {
+        choices <- list(
+          "Hospital Admissions" = "Hospitalizations"
+        )
+      } else if (input$tabset == "evaluations_archive") {
+        choices <- list(
+          "Incident Deaths" = "Deaths",
+          "Incident Cases" = "Cases"
+        )
+      }
+
+      updateTargetChoices(session, choices)
+    },
+    ignoreInit = TRUE
+  )
 
   observeEvent(input$refreshColors,
     {

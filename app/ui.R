@@ -58,14 +58,8 @@ sidebar <- tags$div(
   conditionalPanel(
     condition = "input.tabset == 'evaluations' | input.tabset == 'evaluations_archive'",
     radioButtons("targetVariable", "Target Variable",
-      choices = dash_type_toggle(
-        curr_val = list(
-          "Hospital Admissions" = "Hospitalizations"
-        ),
-        arch_val = list(
-          "Incident Deaths" = "Deaths",
-          "Incident Cases" = "Cases"
-        )
+      choices = list(
+        "Hospital Admissions" = "Hospitalizations"
       )
     ),
     radioButtons("scoreType", "Scoring Metric",

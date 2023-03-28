@@ -21,7 +21,7 @@ create_output_panel <- function(title, suffix) {
     fluidRow(
       column(11,
         offset = 1,
-        hidden(div(id = "refresh-colors", actionButton(inputId = paste0("refreshColors", suffix), label = "Recolor")))
+        hidden(div(id = paste0("refresh-colors", suffix), actionButton(inputId = paste0("refreshColors", suffix), label = "Recolor")))
       )
     ),
     tags$br(),
@@ -29,11 +29,11 @@ create_output_panel <- function(title, suffix) {
     fluidRow(
       column(11,
         offset = 1,
-        div(id = "data-loading-message", "DATA IS LOADING...(this may take a while)"),
+        div(id = paste0("data-loading-message", suffix), "DATA IS LOADING...(this may take a while)"),
         hidden(div(id = paste0("truth-plot-loading-message", suffix), "Fetching 'as of' data and loading observed values...")),
         hidden(div(id = paste0("notes", suffix), "About the Scores")),
         hidden(div(
-          id = "scoreExplanations",
+          id = paste0("scoreExplanations", suffix),
           hidden(div(id = paste0("wisExplanation", suffix), wisExplanation)),
           hidden(div(id = paste0("sharpnessExplanation", suffix), sharpnessExplanation)),
           hidden(div(id = paste0("aeExplanation", suffix), aeExplanation)),

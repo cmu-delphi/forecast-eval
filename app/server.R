@@ -23,7 +23,7 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
   df <- df %>% filter(forecaster %in% forecasterChoices)
   df <- Filter(function(x) !all(is.na(x)), df)
   coverageChoices <- intersect(colnames(df), COVERAGE_INTERVALS)
-  # Ensure previsouly selected options are still allowed
+  # Ensure previously selected options are still allowed
   if (coverageInput %in% coverageChoices) {
     selectedCoverage <- coverageInput
   } else if ("95" %in% coverageChoices) {
@@ -107,6 +107,7 @@ server <- function(input, output, session) {
   AS_OF_CHOICES <- reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
 
+  DASH_SUFFIX <- ""
   COLOR_SEED <- reactiveVal(171)
 
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
@@ -206,14 +207,14 @@ server <- function(input, output, session) {
         output$renderWarningText <- output$renderWarningText_archive <- renderText("The selected forecasters do not have data for any locations in common on all dates.")
         output$renderLocations <- output$renderLocations_archive <- renderText("")
         output$renderAggregateText <- output$renderAggregateText_archive <- renderText("")
-        hideElement("truthPlot")
-        hideElement("refresh-colors")
+        hideElement(paste0("truthPlot", DASH_SUFFIX))
+        hideElement(paste0("refresh-colors", DASH_SUFFIX))
         return()
       } else {
         locationSubtitleText <- paste0(", Location: ", aggregate, " over all states and territories common to these forecasters*")
         output$renderLocations <- output$renderLocations_archive <- renderText(toupper(locationsIntersect))
         output$renderWarningText <- output$renderWarningText_archive <- renderText("")
-        showElement("truthPlot")
+        showElement(paste0("truthPlot", DASH_SUFFIX))
       }
       # Not totaling over all locations
     } else {
@@ -234,7 +235,7 @@ server <- function(input, output, session) {
       output$renderWarningText <- output$renderWarningText_archive <- renderText("")
     }
 
-    showElement("refresh-colors")
+    showElement(paste0("refresh-colors", DASH_SUFFIX))
     if (nrow(filteredScoreDf) == 0) {
       # no data to show
       return()
@@ -654,11 +655,13 @@ server <- function(input, output, session) {
         choices <- list(
           "Hospital Admissions" = "Hospitalizations"
         )
+        DASH_SUFFIX <<- ""
       } else if (input$tabset == "evaluations_archive") {
         choices <- list(
           "Incident Deaths" = "Deaths",
           "Incident Cases" = "Cases"
         )
+        DASH_SUFFIX <<- "_archive"
       }
 
       updateTargetChoices(session, choices)
@@ -666,7 +669,7 @@ server <- function(input, output, session) {
     ignoreInit = TRUE
   )
 
-  observeEvent(input$refreshColors,
+  observeEvent(input$refreshColors | input$refreshColors_archive,
     {
       COLOR_SEED(floor(runif(1, 1, 1000)))
       USE_CURR_TRUTH <<- TRUE
@@ -746,32 +749,31 @@ server <- function(input, output, session) {
       }
 
       if (input$scoreType == "wis") {
-        showElement("wisExplanation")
-        hideElement("sharpnessExplanation")
-        hideElement("aeExplanation")
-        hideElement("coverageExplanation")
+        showElement(paste0("wisExplanation", DASH_SUFFIX))
+        hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+        hideElement(paste0("aeExplanation", DASH_SUFFIX))
+        hideElement(paste0("coverageExplanation", DASH_SUFFIX))
       }
       if (input$scoreType == "sharpness") {
-        showElement("sharpnessExplanation")
-        hideElement("wisExplanation")
-        hideElement("aeExplanation")
-        hideElement("coverageExplanation")
+        showElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+        hideElement(paste0("wisExplanation", DASH_SUFFIX))
+        hideElement(paste0("aeExplanation", DASH_SUFFIX))
+        hideElement(paste0("coverageExplanation", DASH_SUFFIX))
       }
       if (input$scoreType == "ae") {
-        hideElement("wisExplanation")
-        hideElement("sharpnessExplanation")
-        showElement("aeExplanation")
-        hideElement("coverageExplanation")
+        hideElement(paste0("wisExplanation", DASH_SUFFIX))
+        hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+        showElement(paste0("aeExplanation", DASH_SUFFIX))
+        hideElement(paste0("coverageExplanation", DASH_SUFFIX))
       }
       if (input$scoreType == "coverage") {
-        hideElement("wisExplanation")
-        hideElement("sharpnessExplanation")
-        hideElement("aeExplanation")
-        showElement("coverageExplanation")
+        hideElement(paste0("wisExplanation", DASH_SUFFIX))
+        hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+        hideElement(paste0("aeExplanation", DASH_SUFFIX))
+        showElement(paste0("coverageExplanation", DASH_SUFFIX))
       }
       USE_CURR_TRUTH <<- TRUE
-    },
-    ignoreInit = TRUE
+    }
   )
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from
@@ -825,11 +827,11 @@ server <- function(input, output, session) {
   observe({
     # Show data loading message and hide other messages until all data is loaded
     if (DATA_LOADED) {
-      hideElement("data-loading-message")
-      showElement("refresh-colors")
-      showElement("notes")
-      showElement("scoreExplanations")
-      showElement("scoringDisclaimer")
+      hideElement(paste0("data-loading-message", DASH_SUFFIX))
+      showElement(paste0("refresh-colors", DASH_SUFFIX))
+      showElement(paste0("notes", DASH_SUFFIX))
+      showElement(paste0("scoreExplanations", DASH_SUFFIX))
+      showElement(paste0("scoringDisclaimer", DASH_SUFFIX))
     }
     # Ensure there is always one ahead selected
     if (length(input$aheads) < 1) {
@@ -876,13 +878,13 @@ server <- function(input, output, session) {
     }
 
     if (fetchDate < CURRENT_WEEK_END_DATE()) {
-      hideElement("truthPlot")
-      hideElement("notes")
-      hideElement("scoringDisclaimer")
-      hideElement("scoreExplanations")
-      hideElement("renderAggregateText")
-      hideElement("renderLocations")
-      showElement("truth-plot-loading-message")
+      hideElement(paste0("truthPlot", DASH_SUFFIX))
+      hideElement(paste0("notes", DASH_SUFFIX))
+      hideElement(paste0("scoringDisclaimer", DASH_SUFFIX))
+      hideElement(paste0("scoreExplanations", DASH_SUFFIX))
+      hideElement(paste0("renderAggregateText", DASH_SUFFIX))
+      hideElement(paste0("renderLocations", DASH_SUFFIX))
+      showElement(paste0("truth-plot-loading-message", DASH_SUFFIX))
 
       # Since as_of matches to the issue date in covidcast (rather than the time_value)
       # we need to add one extra day to get the as of we want.
@@ -895,13 +897,13 @@ server <- function(input, output, session) {
         as_of = fetchDate,
         geo_type = location
       )
-      showElement("truthPlot")
-      showElement("notes")
-      showElement("scoringDisclaimer")
-      showElement("scoreExplanations")
-      showElement("renderAggregateText")
-      showElement("renderLocations")
-      hideElement("truth-plot-loading-message")
+      showElement(paste0("truthPlot", DASH_SUFFIX))
+      showElement(paste0("notes", DASH_SUFFIX))
+      showElement(paste0("scoringDisclaimer", DASH_SUFFIX))
+      showElement(paste0("scoreExplanations", DASH_SUFFIX))
+      showElement(paste0("renderAggregateText", DASH_SUFFIX))
+      showElement(paste0("renderLocations", DASH_SUFFIX))
+      hideElement(paste0("truth-plot-loading-message", DASH_SUFFIX))
       PREV_AS_OF_DATA(asOfTruthData)
 
       if (nrow(asOfTruthData) == 0) {

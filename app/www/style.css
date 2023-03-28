@@ -6,7 +6,7 @@
 #aboutContentArea{
     max-width: 70rem;
 }
-#notes {
+#notes, #notes_archive {
     font-weight: 600;
     font-size: 18px;
 }
@@ -25,11 +25,11 @@
 #drag-to-zoom {
     font-size:11px;
 }
-#data-loading-message {
+#data-loading-message, #data-loading-message_archive {
     font-style: italic;
     font-size: 18px;
 }
-#truth-plot-loading-message {
+#truth-plot-loading-message, #truth-plot-loading-message_archive {
     margin-top:50px;
     font-size: 18px;
     font-style:italic;

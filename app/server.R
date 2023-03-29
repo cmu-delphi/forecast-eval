@@ -411,74 +411,71 @@ server <- function(input, output, session) {
       labels = horizonLabels
     )
     
-    # finalPlot <- plot_ly(ungroup(filteredScoreDf), x = ~Week_End_Date)
-    # 
-    # if (hasAsOfData) {
-    #   finalPlot <- finalPlot %>% 
-    #     add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", color = "Reported_Incidence", marker = list(size=9)) %>%
-    #     add_trace(y = ~Reported_As_Of_Incidence, type="scatter", mode = "lines+markers", color = "Reported_As_Of_Incidence", marker = list(size=9))
-    # } else {
-    #   finalPlot <- finalPlot %>%
-    #     add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", marker = list(size=9))
-    # }
-    # if (input$showForecasts) {
-    #   finalPlot <- finalPlot %>%
-    #     add_trace(y = ~Quantile_50, type="scatter", mode = "lines+markers", color = ~Forecaster, symbol = ~Forecaster, marker = list(size=9))
-    #   # scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
-    # }
-    # 
-    # finalPlot <- layout(finalPlot,
-    #                     # hoverinfo = "shape+x+y",
-    #                     hovermode = "x unified",
-    #                     legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
-    #                     xaxis = list(title = list(text = NULL)),
-    #                     yaxis = list(title = list(text = NULL))
-    # ) %>%
-    #   config(displayModeBar = FALSE)
-    
-    p <- ggplot(
-      filteredScoreDf,
-      aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster, label = Forecast_Date)
-    ) +
-      geom_line() +
-      geom_point(size = 2) +
-      labs(x = "", y = "", title = titleText) +
-      scale_x_date(date_labels = "%b %Y") +
-      facet_wrap(~ahead, ncol = 1) +
-      scale_color_manual(values = colorPalette) +
-      theme_bw() +
-      theme(panel.spacing = unit(0.5, "lines"))
-
-    if (input$showForecasts) {
-      maxLim <- if_else(
-        as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
-        as.Date(input$asOf) + 7 * 4,
-        as.Date(NA)
-      )
-      p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
-    }
-    if (input$scoreType == "coverage") {
-      p <- p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
-    }
-    if (input$logScale) {
-      p <- p + scale_y_continuous(label = function(x) paste0("10^", x))
-    } else {
-      p <- p + scale_y_continuous(limits = c(0, NA), labels = scales::comma)
-    }
-    plotHeight <- 550 + (length(input$aheads) - 1) * 100
-    finalPlot <-
-      ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
-      layout(
-        height = plotHeight,
-        legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
-        margin = list(t = 90),
-        hovermode = "x unified",
-        xaxis = list(
-          title = list(text = "Target Date", standoff = 8L),
-          titlefont = list(size = 12)
+    make_plot <- function(data) {
+      p <- plot_ly(ungroup(data), x = ~Week_End_Date) %>% 
+        add_trace(
+          y = ~Score,
+          type="scatter", mode = "lines+markers",
+          symbol = ~Forecaster,
+          color = ~Forecaster %>% colorPalette[.] %>% I,
+          marker = list(size=9),
+          hovertemplate = "<br>Score: %{y}"
+          # label = Forecast_Date ??
         )
-      ) %>%
-      config(displayModeBar = FALSE)
+      
+      # x and y-axis settings
+      ax <- list(
+        title = list(text = NULL),
+        linecolor = "black",
+        showLine = TRUE,
+        ticks = "outside",
+        mirror = TRUE # Add border around plot area
+      )
+      ax_y <- ax
+      ax_x <- ax
+      ax_x[["title"]] <- list(
+        text = "Target Week End Date",
+        standoff = 0L,
+        titlefont = list(size = 12)
+      )
+      ax_x[["automargin"]] <- TRUE
+      
+      # facet_wrap(~ahead, ncol = 1) +
+      # theme(panel.spacing = unit(0.5, "lines"))
+      # tooltip = c("x", "y", "shape", "label")
+      
+      if (input$scoreType == "coverage") {
+        p <- p %>% add_hline(y = 0.01 * as.integer(input$coverageInterval))
+      }
+      if (input$logScale) {
+        ax_y[["type"]] <- "log"
+      } else {
+        ax_y[["rangemode"]] <- "tozero"
+      }
+      
+      plotHeight <- 550 + (length(input$aheads) - 1) * 100
+      
+      p <- layout(p,
+                  height = plotHeight,
+                  title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 90),
+                  hovermode = "x unified",
+                  hoverdistance = 1,
+                  legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
+                  xaxis = ax_x, yaxis = ax_y
+      ) %>% 
+        config(displayModeBar = FALSE)
+      
+      return(p)
+    }
+    
+    finalPlot <- filteredScoreDf %>%
+      group_by(ahead) %>%
+      do(p = make_plot(.)) %>%
+      subplot(nrows = NROW(.))
+    
+    if (length(input$aheads) > 1) {browser()}
+    
+
     return(finalPlot)
   }
 
@@ -564,14 +561,18 @@ server <- function(input, output, session) {
     ax <- list(
       title = list(text = NULL),
       linecolor = "black",
-      linewidth = 0.25,
+      showLine = TRUE,
       ticks = "outside",
       mirror = TRUE # Add border around plot area
     )
     ax_y <- ax
     ax_y[["rangemode"]] <- "tozero"
     ax_x <- ax
-    ax_x[["title"]] <- list(text = "Week End Date", standoff = 0)
+    ax_x[["title"]] <- list(
+      text = "Week End Date",
+      standoff = 0L,
+      titlefont = list(size = 12)
+    )
     ax_x[["automargin"]] <- TRUE
     
     finalPlot <- layout(finalPlot,

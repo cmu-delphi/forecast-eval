@@ -571,7 +571,8 @@ server <- function(input, output, session) {
     ax_y <- ax
     ax_y[["rangemode"]] <- "tozero"
     ax_x <- ax
-    ax_x[["title"]] <- "Week End Date"
+    ax_x[["title"]] <- list(text = "Week End Date", standoff = 0)
+    ax_x[["automargin"]] <- TRUE
     
     finalPlot <- layout(finalPlot,
         title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 55),

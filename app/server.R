@@ -539,6 +539,7 @@ server <- function(input, output, session) {
           type="scatter", mode = "lines+markers",
           color = I(colorPalette["Reported_Incidence"]),
           marker = list(size=9),
+          name = "Reported_Incidence", # For info in tooltip
           showlegend = FALSE
         )
     }

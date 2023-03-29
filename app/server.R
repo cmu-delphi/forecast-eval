@@ -516,6 +516,8 @@ server <- function(input, output, session) {
     
     finalPlot <- plot_ly(ungroup(filteredDf), x = ~Week_End_Date)
     
+    truth_template <- " %{y}"
+    
     if (hasAsOfData) {
       finalPlot <- finalPlot %>% 
         add_trace(
@@ -523,14 +525,16 @@ server <- function(input, output, session) {
           type="scatter", mode = "lines+markers",
           color = I(colorPalette["Reported_Incidence"]),
           marker = list(size=9),
-          name = "Reported_Incidence"
+          name = "Reported_Incidence",
+          hovertemplate = truth_template
         ) %>%
         add_trace(
           y = ~Reported_As_Of_Incidence,
           type="scatter", mode = "lines+markers",
           color = I(colorPalette["Reported_As_Of_Incidence"]),
           marker = list(size=9),
-          name = "Reported_As_Of_Incidence"
+          name = "Reported_As_Of_Incidence",
+          hovertemplate = truth_template
         )
     } else {
       finalPlot <- finalPlot %>%
@@ -539,8 +543,9 @@ server <- function(input, output, session) {
           type="scatter", mode = "lines+markers",
           color = I(colorPalette["Reported_Incidence"]),
           marker = list(size=9),
-          name = "Reported_Incidence", # For info in tooltip
-          showlegend = FALSE
+          name = "Reported_Incidence",
+          showlegend = FALSE,
+          hovertemplate = truth_template
         )
     }
     if (input$showForecasts) {
@@ -550,7 +555,8 @@ server <- function(input, output, session) {
           type="scatter", mode = "lines+markers",
           symbol = ~Forecaster,
           color = ~Forecaster %>% colorPalette[.] %>% I,
-          marker = list(size=9)
+          marker = list(size=9),
+          hovertemplate = "<br>Quantile_50: %{y}"
         )
     }
     
@@ -564,58 +570,18 @@ server <- function(input, output, session) {
     )
     ax_y <- ax
     ax_y[["rangemode"]] <- "tozero"
+    ax_x <- ax
+    ax_x[["title"]] <- "Week End Date"
     
     finalPlot <- layout(finalPlot,
-        title = list(text = titleText, x = 0.05, y = 0.93),
-        # hoverinfo = "shape+x+y",
+        title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 55),
         hovermode = "x unified",
+        hoverdistance = 1,
         legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
-        xaxis = ax, yaxis = ax_y
+        xaxis = ax_x, yaxis = ax_y
       ) %>% 
       config(displayModeBar = FALSE)
-    finalPlot$x$layout$margin$t <- 55
-    
-    # finalPlot <- ggplot(filteredDf, aes(x = Week_End_Date)) +
-    #   labs(x = "", y = "", title = titleText) +
-    #   scale_y_continuous(limits = c(0, NA), labels = scales::comma) +
-    #   scale_x_date(date_labels = "%b %Y") +
-    #   scale_color_manual(values = colorPalette) +
-    #   theme_bw()
-    # 
-    # if (hasAsOfData) {
-    #   finalPlot <- finalPlot +
-    #     geom_line(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
-    #     geom_point(aes(y = Reported_Incidence, color = "Reported_Incidence")) +
-    #     geom_line(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence")) +
-    #     geom_point(aes(y = Reported_As_Of_Incidence, color = "Reported_As_Of_Incidence"))
-    # } else {
-    #   finalPlot <- finalPlot + geom_line(aes(y = Reported_Incidence)) +
-    #     geom_point(aes(y = Reported_Incidence))
-    # }
-    # if (input$showForecasts) {
-    #   maxLim <- if_else(
-    #     as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
-    #     as.Date(input$asOf) + 7 * 4,
-    #     as.Date(NA)
-    #   )
-    # 
-    #   finalPlot <- finalPlot +
-    #     geom_line(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
-    #     geom_point(aes(y = Quantile_50, color = Forecaster, shape = Forecaster)) +
-    #     scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
-    # }
-    # finalPlot <- ggplotly(finalPlot, tooltip = c("shape", "x", "y")) %>%
-    #   layout(
-    #     hovermode = "x unified",
-    #     legend = list(orientation = "h", y = -0.1, title = list(text = NULL))
-    #   ) %>%
-    #   config(displayModeBar = FALSE)
-    # # Remove the extra grouping from the legend: "(___,1)"
-    # for (i in seq_along(finalPlot$x$data)) {
-    #   if (!is.null(finalPlot$x$data[[i]]$name)) {
-    #     finalPlot$x$data[[i]]$name <- gsub("\\(", "", stringr::str_split(finalPlot$x$data[[i]]$name, ",")[[1]][1])
-    #   }
-    # }
+
     return(finalPlot)
   }
 

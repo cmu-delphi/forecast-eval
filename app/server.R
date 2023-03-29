@@ -493,7 +493,10 @@ server <- function(input, output, session) {
     }
     titleText <- paste0("<b>Observed ", observation, "</b>")
     if (SUMMARIZING_OVER_ALL_LOCATIONS()) {
-      titleText <- paste0("<b>Observed ", observation, "</b>", " <br><sup>Totaled over all states and territories common to selected forecasters*</sup>")
+      titleText <- paste0(
+        "<b>Observed ", observation, "</b>",
+        " <br><sup>Totaled over all states and territories common to selected forecasters*</sup>"
+      )
     }
 
     if (hasAsOfData) {
@@ -511,8 +514,7 @@ server <- function(input, output, session) {
       filteredDf <- filterForecastData(filteredDf, dfWithForecasts, hasAsOfData)
     }
     
-    finalPlot <- plot_ly(ungroup(filteredDf), x = ~Week_End_Date) %>% 
-      layout(title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 55))
+    finalPlot <- plot_ly(ungroup(filteredDf), x = ~Week_End_Date)
     
     if (hasAsOfData) {
       finalPlot <- finalPlot %>% 
@@ -549,17 +551,28 @@ server <- function(input, output, session) {
           color = ~Forecaster %>% colorPalette[.] %>% I,
           marker = list(size=9)
         )
-        # scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
     
+    # x and y-axis settings
+    ax <- list(
+      title = list(text = NULL),
+      linecolor = "black",
+      linewidth = 0.25,
+      ticks = "outside",
+      mirror = TRUE # Add border around plot area
+    )
+    ax_y <- ax
+    ax_y[["rangemode"]] <- "tozero"
+    
     finalPlot <- layout(finalPlot,
+        title = list(text = titleText, x = 0.05, y = 0.93),
         # hoverinfo = "shape+x+y",
         hovermode = "x unified",
         legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
-        xaxis = list(title = list(text = NULL)),
-        yaxis = list(title = list(text = NULL))
-      ) %>%
+        xaxis = ax, yaxis = ax_y
+      ) %>% 
       config(displayModeBar = FALSE)
+    finalPlot$x$layout$margin$t <- 55
     
     # finalPlot <- ggplot(filteredDf, aes(x = Week_End_Date)) +
     #   labs(x = "", y = "", title = titleText) +

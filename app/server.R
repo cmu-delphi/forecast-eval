@@ -307,6 +307,8 @@ server <- function(input, output, session) {
     if (!is.null(asOfData)) {
       colorPalette["Reported_Incidence"] <- "grey"
       colorPalette["Reported_As_Of_Incidence"] <- "black"
+    } else {
+      colorPalette["Reported_Incidence"] <- "black"
     }
 
     # Render truth plot with observed values
@@ -409,60 +411,60 @@ server <- function(input, output, session) {
       labels = horizonLabels
     )
     
-    finalPlot <- plot_ly(ungroup(filteredScoreDf), x = ~Week_End_Date)
-    
-    if (hasAsOfData) {
-      finalPlot <- finalPlot %>% 
-        add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", color = "Reported_Incidence", marker = list(size=5)) %>%
-        add_trace(y = ~Reported_As_Of_Incidence, type="scatter", mode = "lines+markers", color = "Reported_As_Of_Incidence", marker = list(size=5))
-    } else {
-      finalPlot <- finalPlot %>%
-        add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", marker = list(size=5))
-    }
-    if (input$showForecasts) {
-      finalPlot <- finalPlot %>%
-        add_trace(y = ~Quantile_50, type="scatter", mode = "lines+markers", color = ~Forecaster, symbol = ~Forecaster, marker = list(size=5))
-      # scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
-    }
-    
-    finalPlot <- layout(finalPlot,
-                        # hoverinfo = "shape+x+y",
-                        hovermode = "x unified",
-                        legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
-                        xaxis = list(title = list(text = NULL)),
-                        yaxis = list(title = list(text = NULL))
-    ) %>%
-      config(displayModeBar = FALSE)
-    
-    # p <- ggplot(
-    #   filteredScoreDf,
-    #   aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster, label = Forecast_Date)
-    # ) +
-    #   geom_line() +
-    #   geom_point(size = 2) +
-    #   labs(x = "", y = "", title = titleText) +
-    #   scale_x_date(date_labels = "%b %Y") +
-    #   facet_wrap(~ahead, ncol = 1) +
-    #   scale_color_manual(values = colorPalette) +
-    #   theme_bw() +
-    #   theme(panel.spacing = unit(0.5, "lines"))
+    # finalPlot <- plot_ly(ungroup(filteredScoreDf), x = ~Week_End_Date)
     # 
-    # if (input$showForecasts) {
-    #   maxLim <- if_else(
-    #     as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
-    #     as.Date(input$asOf) + 7 * 4,
-    #     as.Date(NA)
-    #   )
-    #   p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
-    # }
-    # if (input$scoreType == "coverage") {
-    #   p <- p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
-    # }
-    # if (input$logScale) {
-    #   p <- p + scale_y_continuous(label = function(x) paste0("10^", x))
+    # if (hasAsOfData) {
+    #   finalPlot <- finalPlot %>% 
+    #     add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", color = "Reported_Incidence", marker = list(size=9)) %>%
+    #     add_trace(y = ~Reported_As_Of_Incidence, type="scatter", mode = "lines+markers", color = "Reported_As_Of_Incidence", marker = list(size=9))
     # } else {
-    #   p <- p + scale_y_continuous(limits = c(0, NA), labels = scales::comma)
+    #   finalPlot <- finalPlot %>%
+    #     add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", marker = list(size=9))
     # }
+    # if (input$showForecasts) {
+    #   finalPlot <- finalPlot %>%
+    #     add_trace(y = ~Quantile_50, type="scatter", mode = "lines+markers", color = ~Forecaster, symbol = ~Forecaster, marker = list(size=9))
+    #   # scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
+    # }
+    # 
+    # finalPlot <- layout(finalPlot,
+    #                     # hoverinfo = "shape+x+y",
+    #                     hovermode = "x unified",
+    #                     legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
+    #                     xaxis = list(title = list(text = NULL)),
+    #                     yaxis = list(title = list(text = NULL))
+    # ) %>%
+    #   config(displayModeBar = FALSE)
+    
+    p <- ggplot(
+      filteredScoreDf,
+      aes(x = Week_End_Date, y = Score, color = Forecaster, shape = Forecaster, label = Forecast_Date)
+    ) +
+      geom_line() +
+      geom_point(size = 2) +
+      labs(x = "", y = "", title = titleText) +
+      scale_x_date(date_labels = "%b %Y") +
+      facet_wrap(~ahead, ncol = 1) +
+      scale_color_manual(values = colorPalette) +
+      theme_bw() +
+      theme(panel.spacing = unit(0.5, "lines"))
+
+    if (input$showForecasts) {
+      maxLim <- if_else(
+        as.Date(input$asOf) + 7 * 4 > CURRENT_WEEK_END_DATE(),
+        as.Date(input$asOf) + 7 * 4,
+        as.Date(NA)
+      )
+      p <- p + scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
+    }
+    if (input$scoreType == "coverage") {
+      p <- p + geom_hline(yintercept = .01 * as.integer(input$coverageInterval))
+    }
+    if (input$logScale) {
+      p <- p + scale_y_continuous(label = function(x) paste0("10^", x))
+    } else {
+      p <- p + scale_y_continuous(limits = c(0, NA), labels = scales::comma)
+    }
     plotHeight <- 550 + (length(input$aheads) - 1) * 100
     finalPlot <-
       ggplotly(p, tooltip = c("x", "y", "shape", "label")) %>%
@@ -509,19 +511,44 @@ server <- function(input, output, session) {
       filteredDf <- filterForecastData(filteredDf, dfWithForecasts, hasAsOfData)
     }
     
-    finalPlot <- plot_ly(ungroup(filteredDf), x = ~Week_End_Date)
+    finalPlot <- plot_ly(ungroup(filteredDf), x = ~Week_End_Date) %>% 
+      layout(title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 55))
     
     if (hasAsOfData) {
       finalPlot <- finalPlot %>% 
-        add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", color = "Reported_Incidence", marker = list(size=5)) %>%
-        add_trace(y = ~Reported_As_Of_Incidence, type="scatter", mode = "lines+markers", color = "Reported_As_Of_Incidence", marker = list(size=5))
+        add_trace(
+          y = ~Reported_Incidence,
+          type="scatter", mode = "lines+markers",
+          color = I(colorPalette["Reported_Incidence"]),
+          marker = list(size=9),
+          name = "Reported_Incidence"
+        ) %>%
+        add_trace(
+          y = ~Reported_As_Of_Incidence,
+          type="scatter", mode = "lines+markers",
+          color = I(colorPalette["Reported_As_Of_Incidence"]),
+          marker = list(size=9),
+          name = "Reported_As_Of_Incidence"
+        )
     } else {
       finalPlot <- finalPlot %>%
-        add_trace(y = ~Reported_Incidence, type="scatter", mode = "lines+markers", marker = list(size=5))
+        add_trace(
+          y = ~Reported_Incidence,
+          type="scatter", mode = "lines+markers",
+          color = I(colorPalette["Reported_Incidence"]),
+          marker = list(size=9),
+          showlegend = FALSE
+        )
     }
     if (input$showForecasts) {
       finalPlot <- finalPlot %>%
-        add_trace(y = ~Quantile_50, type="scatter", mode = "lines+markers", color = ~Forecaster, symbol = ~Forecaster, marker = list(size=5))
+        add_trace(
+          y = ~Quantile_50,
+          type="scatter", mode = "lines+markers",
+          symbol = ~Forecaster,
+          color = ~Forecaster %>% colorPalette[.] %>% I,
+          marker = list(size=9)
+        )
         # scale_x_date(limits = c(as.Date(NA), maxLim), date_labels = "%b %Y")
     }
     

@@ -372,7 +372,6 @@ server <- function(input, output, session) {
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, Forecast_Date, ahead) %>%
       fill_gaps(.full = TRUE)
-    
     # Set labels for faceted horizon plots
     horizonOptions <- AHEAD_OPTIONS
     horizonLabels <- lapply(AHEAD_OPTIONS, function(x) paste0("Horizon: ", x, " Week(s)"))
@@ -569,8 +568,9 @@ server <- function(input, output, session) {
       )
 
       # Fill in the date_group column with the target week end days for all intervening days
-      asOfData <- arrange(asOfData, geo_value)
-      asOfData$date_group <- vec_fill_missing(asOfData$date_group, direction="up")
+      asOfData <- asOfData %>%
+        arrange(geo_value) %>%
+        fill(date_group, .direction = "up")
 
       # In the case where there are target week end days missing from the scoring or as of data
       # we don't want to end up summing values over multiple weeks so we make sure each date_group only spans one week
@@ -659,10 +659,10 @@ server <- function(input, output, session) {
     filteredDf <- merge(filteredDf, dfWithForecasts, by = c("Week_End_Date", "Forecaster"), all = TRUE) %>%
       group_by(Week_End_Date)
     # Remove rows of NAs
-    filteredDf <- filter(filteredDf[, keepCols], !is.null(Forecaster)) %>% 
-      arrange(Week_End_Date)
-    filteredDf$Reported_Incidence <- vec_fill_missing(filteredDf$Reported_Incidence, direction="downup")
-    
+    filteredDf <- filter(filteredDf[, keepCols], !is.null(Forecaster))
+    filteredDf <- filteredDf %>%
+      arrange(Week_End_Date) %>%
+      fill(Reported_Incidence, .direction = "downup")
     return(filteredDf)
   }
 

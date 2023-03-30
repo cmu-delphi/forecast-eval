@@ -455,8 +455,6 @@ server <- function(input, output, session) {
         ax_x[["ticks"]] <- "outside"
       }
       
-      # tooltip = c("x", "y", "shape", "label") ## TODO
-      
       if (input$scoreType == "coverage") {
         p <- p %>% add_hline(y = 0.01 * as.integer(input$coverageInterval)) ## TODO
       }
@@ -538,7 +536,7 @@ server <- function(input, output, session) {
           y = ~Reported_Incidence,
           type="scatter", mode = "lines+markers",
           color = I(colorPalette["Reported_Incidence"]),
-          marker = list(size=9),
+          marker = list(size=8),
           name = "Reported_Incidence",
           hovertemplate = truth_template
         ) %>%
@@ -546,7 +544,7 @@ server <- function(input, output, session) {
           y = ~Reported_As_Of_Incidence,
           type="scatter", mode = "lines+markers",
           color = I(colorPalette["Reported_As_Of_Incidence"]),
-          marker = list(size=9),
+          marker = list(size=8),
           name = "Reported_As_Of_Incidence",
           hovertemplate = truth_template
         )
@@ -556,7 +554,7 @@ server <- function(input, output, session) {
           y = ~Reported_Incidence,
           type="scatter", mode = "lines+markers",
           color = I(colorPalette["Reported_Incidence"]),
-          marker = list(size=9),
+          marker = list(size=8),
           name = "Reported_Incidence",
           showlegend = FALSE,
           hovertemplate = truth_template

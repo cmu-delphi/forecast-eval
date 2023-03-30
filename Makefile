@@ -5,12 +5,6 @@ PWD=$(shell pwd)
 S3_URL=https://forecast-eval.s3.us-east-2.amazonaws.com
 S3_BUCKET=s3://forecast-eval
 
-# Change dashboard type during `make` call via `make <command> DASH_TYPE="<type>"`
-#
-# DASH_TYPE can be set to "current" (for hosp forecasts) or "archive" (for death
-# and cases forecasts).
-DASH_TYPE="current"
-
 build: build_dashboard
 
 r_build:
@@ -58,7 +52,4 @@ deploy_dashboard: build_dashboard
 	docker push ghcr.io/cmu-delphi/forecast-eval:$(imageTag)
 
 start_dashboard: build_dashboard_dev
-	docker run --rm \
-		-p 3838:80 \
-		--env DASH_TYPE=$(DASH_TYPE) \
-		ghcr.io/cmu-delphi/forecast-eval:latest
+	docker run --rm -p 3838:80 ghcr.io/cmu-delphi/forecast-eval:latest

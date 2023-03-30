@@ -400,16 +400,12 @@ server <- function(input, output, session) {
       group_by(Forecaster, Forecast_Date, ahead) %>%
       fill_gaps(.full = TRUE)
     # Set labels for faceted horizon plots
-    horizonOptions <- AHEAD_OPTIONS
-    horizonLabels <- lapply(AHEAD_OPTIONS, function(x) paste0("Horizon: ", x, " Week(s)"))
     if (input$targetVariable == "Hospitalizations") {
       horizonOptions <- HOSPITALIZATIONS_AHEAD_OPTIONS
-      horizonLabels <- lapply(HOSPITALIZATIONS_AHEAD_OPTIONS, function(x) paste0("Horizon: ", x, " Days"))
+    } else {
+      horizonOptions <- AHEAD_OPTIONS
     }
-    filteredScoreDf$ahead <- factor(filteredScoreDf$ahead,
-      levels = horizonOptions,
-      labels = horizonLabels
-    )
+    horizonLabels <- setNames(paste0("Horizon: ", horizonOptions, " Days"), horizonOptions)
     
     make_plot <- function(data) {
       p <- plot_ly(ungroup(data), x = ~Week_End_Date) %>% 
@@ -420,7 +416,22 @@ server <- function(input, output, session) {
           color = ~Forecaster %>% colorPalette[.] %>% I,
           marker = list(size=9),
           hovertemplate = "<br>Score: %{y}"
-          # label = Forecast_Date ??
+          # label = Forecast_Date ?? ## TODO
+        ) %>% 
+        # Add title to each subplot.
+        add_annotations(
+          text = ~paste0("Horizon: ", unique(ahead), " Days"),
+          x = 0.5,
+          y = 1.1,
+          yref = "paper",
+          xref = "paper",
+          xanchor = "center",
+          yanchor = "top",
+          showarrow = FALSE,
+          font = list(size = 12),
+          bgcolor = "lightgray",
+          bordercolor = "black"
+          # width = 1000
         )
       
       # x and y-axis settings
@@ -433,19 +444,12 @@ server <- function(input, output, session) {
       )
       ax_y <- ax
       ax_x <- ax
-      ax_x[["title"]] <- list(
-        text = "Target Week End Date",
-        standoff = 0L,
-        titlefont = list(size = 12)
-      )
-      ax_x[["automargin"]] <- TRUE
+      ax_x[["ticks"]] <- ""
       
-      # facet_wrap(~ahead, ncol = 1) +
-      # theme(panel.spacing = unit(0.5, "lines"))
-      # tooltip = c("x", "y", "shape", "label")
+      # tooltip = c("x", "y", "shape", "label") ## TODO
       
       if (input$scoreType == "coverage") {
-        p <- p %>% add_hline(y = 0.01 * as.integer(input$coverageInterval))
+        p <- p %>% add_hline(y = 0.01 * as.integer(input$coverageInterval)) ## TODO
       }
       if (input$logScale) {
         ax_y[["type"]] <- "log"
@@ -457,10 +461,6 @@ server <- function(input, output, session) {
       
       p <- layout(p,
                   height = plotHeight,
-                  title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 90),
-                  hovermode = "x unified",
-                  hoverdistance = 1,
-                  legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
                   xaxis = ax_x, yaxis = ax_y
       ) %>% 
         config(displayModeBar = FALSE)
@@ -468,12 +468,29 @@ server <- function(input, output, session) {
       return(p)
     }
     
+    ax_x <- list(
+      title = list(
+        text = "Target Week End Date",
+        standoff = 0L,
+        titlefont = list(size = 12)
+      ),
+      ticks = "outside",
+      automargin = TRUE
+    )
+    
     finalPlot <- filteredScoreDf %>%
       group_by(ahead) %>%
       do(p = make_plot(.)) %>%
-      subplot(nrows = NROW(.))
+      subplot(nrows = NROW(.)) %>%
+      layout(
+        title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 90),
+        hovermode = "x unified",
+        hoverdistance = 1,
+        legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
+        xaxis = ax_x
+      )
     
-    if (length(input$aheads) > 1) {browser()}
+    # if (length(input$aheads) > 1) {browser()}
     
 
     return(finalPlot)

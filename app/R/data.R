@@ -75,14 +75,14 @@ getAllData <- function(loadFile) {
   dfNationCases <- loadFile("score_cards_nation_cases.rds")
   dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
   df <- bind_rows(
-      dfStateHospitalizations,
-      dfNationHospitalizations,
-      dfStateCases,
-      dfStateDeaths,
-      dfNationCases,
-      dfNationDeaths
-    )
-  
+    dfStateHospitalizations,
+    dfNationHospitalizations,
+    dfStateCases,
+    dfStateDeaths,
+    dfNationCases,
+    dfNationDeaths
+  )
+
   # Pick out expected columns only
   expectedCols <- c(
     "ahead", "geo_value", "forecaster", "forecast_date",

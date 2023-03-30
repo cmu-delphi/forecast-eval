@@ -730,51 +730,49 @@ server <- function(input, output, session) {
     }
   })
 
-  observeEvent(input$scoreType,
-    {
-      if (input$targetVariable == "Deaths") {
-        df <- df %>% filter(signal == DEATH_FILTER)
-      } else if (input$targetVariable == "Cases") {
-        df <- df %>% filter(signal == CASE_FILTER)
-      } else {
-        df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
-      }
-      # Only show forecasters that have data for the score chosen
-      updateForecasterChoices(session, df, input$forecasters, input$scoreType)
-
-      # If we are switching between coverage and other score types we need to
-      # update the as of data we have so it matches the correct locations shown
-      if (input$location == "US") {
-        updateAsOfData()
-      }
-
-      if (input$scoreType == "wis") {
-        showElement(paste0("wisExplanation", DASH_SUFFIX))
-        hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
-        hideElement(paste0("aeExplanation", DASH_SUFFIX))
-        hideElement(paste0("coverageExplanation", DASH_SUFFIX))
-      }
-      if (input$scoreType == "sharpness") {
-        showElement(paste0("sharpnessExplanation", DASH_SUFFIX))
-        hideElement(paste0("wisExplanation", DASH_SUFFIX))
-        hideElement(paste0("aeExplanation", DASH_SUFFIX))
-        hideElement(paste0("coverageExplanation", DASH_SUFFIX))
-      }
-      if (input$scoreType == "ae") {
-        hideElement(paste0("wisExplanation", DASH_SUFFIX))
-        hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
-        showElement(paste0("aeExplanation", DASH_SUFFIX))
-        hideElement(paste0("coverageExplanation", DASH_SUFFIX))
-      }
-      if (input$scoreType == "coverage") {
-        hideElement(paste0("wisExplanation", DASH_SUFFIX))
-        hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
-        hideElement(paste0("aeExplanation", DASH_SUFFIX))
-        showElement(paste0("coverageExplanation", DASH_SUFFIX))
-      }
-      USE_CURR_TRUTH <<- TRUE
+  observeEvent(input$scoreType, {
+    if (input$targetVariable == "Deaths") {
+      df <- df %>% filter(signal == DEATH_FILTER)
+    } else if (input$targetVariable == "Cases") {
+      df <- df %>% filter(signal == CASE_FILTER)
+    } else {
+      df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
     }
-  )
+    # Only show forecasters that have data for the score chosen
+    updateForecasterChoices(session, df, input$forecasters, input$scoreType)
+
+    # If we are switching between coverage and other score types we need to
+    # update the as of data we have so it matches the correct locations shown
+    if (input$location == "US") {
+      updateAsOfData()
+    }
+
+    if (input$scoreType == "wis") {
+      showElement(paste0("wisExplanation", DASH_SUFFIX))
+      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+      hideElement(paste0("aeExplanation", DASH_SUFFIX))
+      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
+    }
+    if (input$scoreType == "sharpness") {
+      showElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+      hideElement(paste0("wisExplanation", DASH_SUFFIX))
+      hideElement(paste0("aeExplanation", DASH_SUFFIX))
+      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
+    }
+    if (input$scoreType == "ae") {
+      hideElement(paste0("wisExplanation", DASH_SUFFIX))
+      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+      showElement(paste0("aeExplanation", DASH_SUFFIX))
+      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
+    }
+    if (input$scoreType == "coverage") {
+      hideElement(paste0("wisExplanation", DASH_SUFFIX))
+      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+      hideElement(paste0("aeExplanation", DASH_SUFFIX))
+      showElement(paste0("coverageExplanation", DASH_SUFFIX))
+    }
+    USE_CURR_TRUTH <<- TRUE
+  })
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from
   observeEvent(input$forecasters, {

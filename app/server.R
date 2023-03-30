@@ -400,7 +400,12 @@ server <- function(input, output, session) {
       group_by(Forecaster, Forecast_Date, ahead) %>%
       fill_gaps(.full = TRUE)
     
+    count <- 0
+    n_plots <- length(input$aheads)
+    
     make_plot <- function(data) {
+      count <<- count + 1
+      
       p <- plot_ly(ungroup(data), x = ~Week_End_Date) %>% 
         add_trace(
           y = ~Score,
@@ -408,7 +413,11 @@ server <- function(input, output, session) {
           symbol = ~Forecaster,
           color = ~Forecaster %>% colorPalette[.] %>% I,
           marker = list(size=9),
-          hovertemplate = "<br>Score: %{y}"
+          hovertemplate = "<br>Score: %{y}",
+          # Make sure that all subplots are "linked" to the same final legend
+          legendgroup = ~ahead,
+          # Only use legend from first subplot
+          showlegend = count == 1
           # label = Forecast_Date ?? ## TODO
         ) %>% 
         # Add title to each subplot.
@@ -422,26 +431,29 @@ server <- function(input, output, session) {
           yanchor = "top",
           showarrow = FALSE,
           font = list(size = 12),
-          bgcolor = "lightgray",
-          bordercolor = "black"
+          bgcolor = "lightgray"
         )
       
-      # x and y-axis settings
+      # Basic x and y-axis settings
       ax <- list(
         title = list(text = NULL),
         linecolor = "black",
         showLine = TRUE,
-        ticks = "outside",
         mirror = TRUE # Add border around plot area
       )
       ax_y <- ax
       ax_x <- ax
-      ax_x[["title"]] <- list(
-        text = "Target Week End Date",
-        standoff = 0L,
-        titlefont = list(size = 12)
-      )
-      ax_x[["automargin"]] <- TRUE
+      # Render axis labels for final plot only
+      ax_x[["showticklabels"]] <- count == n_plots
+      if (count == n_plots) {
+        ax_x[["title"]] <- list(
+          text = "Target Week End Date",
+          standoff = 0L,
+          titlefont = list(size = 12)
+        )
+        ax_x[["automargin"]] <- TRUE
+        ax_x[["ticks"]] <- "outside"
+      }
       
       # tooltip = c("x", "y", "shape", "label") ## TODO
       
@@ -454,10 +466,11 @@ server <- function(input, output, session) {
         ax_y[["rangemode"]] <- "tozero"
       }
       
-      plotHeight <- 550 + (length(input$aheads) - 1) * 100
+      plotHeight <- 550 + (n_plots - 1) * 100
       
       p <- layout(p,
                   height = plotHeight,
+                  legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
                   xaxis = ax_x, yaxis = ax_y
       ) %>% 
         config(displayModeBar = FALSE)
@@ -470,10 +483,9 @@ server <- function(input, output, session) {
       do(p = make_plot(.)) %>%
       subplot(nrows = NROW(.)) %>% 
       layout(
-        title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 90),
+        title = list(text = titleText, x = 0, y = 1, xref = "paper", yref = "paper", yanchor="bottom"), margin = list(t = 90),
         hovermode = "x unified",
-        hoverdistance = 1,
-        legend = list(orientation = "h", y = -0.1, title = list(text = NULL))
+        hoverdistance = 1
       )
     
     # if (length(input$aheads) > 1) {browser()}
@@ -579,7 +591,7 @@ server <- function(input, output, session) {
     ax_x[["automargin"]] <- TRUE
     
     finalPlot <- layout(finalPlot,
-        title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 55),
+        title = list(text = titleText, x = 0, y = 1, xref = "paper", yref = "paper", yanchor="bottom"), margin = list(t = 55),
         hovermode = "x unified",
         hoverdistance = 1,
         legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),

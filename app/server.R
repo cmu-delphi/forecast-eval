@@ -399,13 +399,6 @@ server <- function(input, output, session) {
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, Forecast_Date, ahead) %>%
       fill_gaps(.full = TRUE)
-    # Set labels for faceted horizon plots
-    if (input$targetVariable == "Hospitalizations") {
-      horizonOptions <- HOSPITALIZATIONS_AHEAD_OPTIONS
-    } else {
-      horizonOptions <- AHEAD_OPTIONS
-    }
-    horizonLabels <- setNames(paste0("Horizon: ", horizonOptions, " Days"), horizonOptions)
     
     make_plot <- function(data) {
       p <- plot_ly(ungroup(data), x = ~Week_End_Date) %>% 
@@ -450,9 +443,7 @@ server <- function(input, output, session) {
       )
       ax_x[["automargin"]] <- TRUE
       
-      # facet_wrap(~ahead, ncol = 1) +
-      # theme(panel.spacing = unit(0.5, "lines"))
-      # tooltip = c("x", "y", "shape", "label")
+      # tooltip = c("x", "y", "shape", "label") ## TODO
       
       if (input$scoreType == "coverage") {
         p <- p %>% add_hline(y = 0.01 * as.integer(input$coverageInterval)) ## TODO
@@ -467,10 +458,6 @@ server <- function(input, output, session) {
       
       p <- layout(p,
                   height = plotHeight,
-                  title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 90),
-                  hovermode = "x unified",
-                  hoverdistance = 1,
-                  legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
                   xaxis = ax_x, yaxis = ax_y
       ) %>% 
         config(displayModeBar = FALSE)
@@ -481,7 +468,13 @@ server <- function(input, output, session) {
     finalPlot <- filteredScoreDf %>%
       group_by(ahead) %>%
       do(p = make_plot(.)) %>%
-      subplot(nrows = NROW(.))
+      subplot(nrows = NROW(.)) %>% 
+      layout(
+        title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 90),
+        hovermode = "x unified",
+        hoverdistance = 1,
+        legend = list(orientation = "h", y = -0.1, title = list(text = NULL))
+      )
     
     # if (length(input$aheads) > 1) {browser()}
     

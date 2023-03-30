@@ -421,17 +421,16 @@ server <- function(input, output, session) {
         # Add title to each subplot.
         add_annotations(
           text = ~paste0("Horizon: ", unique(ahead), " Days"),
-          x = 0.5,
-          y = 1.1,
+          x = 0,
+          y = 1,
           yref = "paper",
           xref = "paper",
-          xanchor = "center",
+          xanchor = "left",
           yanchor = "top",
           showarrow = FALSE,
           font = list(size = 12),
           bgcolor = "lightgray",
           bordercolor = "black"
-          # width = 1000
         )
       
       # x and y-axis settings
@@ -444,9 +443,16 @@ server <- function(input, output, session) {
       )
       ax_y <- ax
       ax_x <- ax
-      ax_x[["ticks"]] <- ""
+      ax_x[["title"]] <- list(
+        text = "Target Week End Date",
+        standoff = 0L,
+        titlefont = list(size = 12)
+      )
+      ax_x[["automargin"]] <- TRUE
       
-      # tooltip = c("x", "y", "shape", "label") ## TODO
+      # facet_wrap(~ahead, ncol = 1) +
+      # theme(panel.spacing = unit(0.5, "lines"))
+      # tooltip = c("x", "y", "shape", "label")
       
       if (input$scoreType == "coverage") {
         p <- p %>% add_hline(y = 0.01 * as.integer(input$coverageInterval)) ## TODO
@@ -461,6 +467,10 @@ server <- function(input, output, session) {
       
       p <- layout(p,
                   height = plotHeight,
+                  title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 90),
+                  hovermode = "x unified",
+                  hoverdistance = 1,
+                  legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
                   xaxis = ax_x, yaxis = ax_y
       ) %>% 
         config(displayModeBar = FALSE)
@@ -468,27 +478,10 @@ server <- function(input, output, session) {
       return(p)
     }
     
-    ax_x <- list(
-      title = list(
-        text = "Target Week End Date",
-        standoff = 0L,
-        titlefont = list(size = 12)
-      ),
-      ticks = "outside",
-      automargin = TRUE
-    )
-    
     finalPlot <- filteredScoreDf %>%
       group_by(ahead) %>%
       do(p = make_plot(.)) %>%
-      subplot(nrows = NROW(.)) %>%
-      layout(
-        title = list(text = titleText, x = 0.05, y = 0.93), margin = list(t = 90),
-        hovermode = "x unified",
-        hoverdistance = 1,
-        legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),
-        xaxis = ax_x
-      )
+      subplot(nrows = NROW(.))
     
     # if (length(input$aheads) > 1) {browser()}
     

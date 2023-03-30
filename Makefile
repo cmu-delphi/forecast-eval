@@ -39,7 +39,6 @@ start_dev: r_build
 		-v ${PWD}/app:/var/forecast-eval-dashboard \
 		-v ${PWD}/dist:/var/dist \
 		-w /var/forecast-eval \
-		--env DASH_TYPE=$(DASH_TYPE) \
 		ghcr.io/cmu-delphi/forecast-eval:latest bash
 
 build_dashboard_dev: pull_data

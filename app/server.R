@@ -413,12 +413,12 @@ server <- function(input, output, session) {
           symbol = ~Forecaster,
           color = ~Forecaster %>% colorPalette[.] %>% I,
           marker = list(size=9),
-          hovertemplate = "<br>Score: %{y}",
+          hovertemplate = "<br>Score: %{y}<br>Forecast Date: %{text}",
           # Make sure that all subplots are "linked" to the same final legend
           legendgroup = ~ahead,
           # Only use legend from first subplot
-          showlegend = count == 1
-          # label = Forecast_Date ?? ## TODO
+          showlegend = count == 1,
+          text = ~Forecast_Date
         ) %>% 
         # Add title to each subplot.
         add_annotations(

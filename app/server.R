@@ -149,7 +149,7 @@ server <- function(input, output, session) {
     # Need to do this after setting dfWithForecasts to leave in aheads for forecasts
     filteredScoreDf <- filteredScoreDf %>% filter(ahead %in% input$aheads)
     if (nrow(filteredScoreDf) == 0) {
-      output$renderWarningText <- output$renderWarningText_archive <- renderText(paste0(
+      output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText(paste0(
         "The selected forecasters do not have enough data ",
         "to display the selected scoring metric."
       ))
@@ -195,25 +195,25 @@ server <- function(input, output, session) {
       aggregateText <- "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (input$scoreType == "coverage") {
         aggregate <- "Averaged"
-        output$renderAggregateText <- output$renderAggregateText_archive <- renderText(paste(
+        output[[paste0("renderAggregateText", DASH_SUFFIX)]] <- renderText(paste(
           aggregateText,
           " Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "
         ))
       } else {
         aggregate <- "Totaled"
-        output$renderAggregateText <- output$renderAggregateText_archive <- renderText(paste(aggregateText, " Locations included: "))
+        output[[paste0("renderAggregateText", DASH_SUFFIX)]] <- renderText(paste(aggregateText, " Locations included: "))
       }
       if (length(locationsIntersect) == 0) {
-        output$renderWarningText <- output$renderWarningText_archive <- renderText("The selected forecasters do not have data for any locations in common on all dates.")
-        output$renderLocations <- output$renderLocations_archive <- renderText("")
-        output$renderAggregateText <- output$renderAggregateText_archive <- renderText("")
+        output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText("The selected forecasters do not have data for any locations in common on all dates.")
+        output[[paste0("renderLocations", DASH_SUFFIX)]] <- renderText("")
+        output[[paste0("renderAggregateText", DASH_SUFFIX)]] <- renderText("")
         hideElement(paste0("truthPlot", DASH_SUFFIX))
         hideElement(paste0("refresh-colors", DASH_SUFFIX))
         return()
       } else {
         locationSubtitleText <- paste0(", Location: ", aggregate, " over all states and territories common to these forecasters*")
-        output$renderLocations <- output$renderLocations_archive <- renderText(toupper(locationsIntersect))
-        output$renderWarningText <- output$renderWarningText_archive <- renderText("")
+        output[[paste0("renderLocations", DASH_SUFFIX)]] <- renderText(toupper(locationsIntersect))
+        output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText("")
         showElement(paste0("truthPlot", DASH_SUFFIX))
       }
       # Not totaling over all locations
@@ -230,9 +230,9 @@ server <- function(input, output, session) {
           summarize(Score = Score, actual = actual)
       }
       locationSubtitleText <- paste0(", Location: ", input$location)
-      output$renderAggregateText <- output$renderAggregateText_archive <- renderText("")
-      output$renderLocations <- output$renderLocations_archive <- renderText("")
-      output$renderWarningText <- output$renderWarningText_archive <- renderText("")
+      output[[paste0("renderAggregateText", DASH_SUFFIX)]] <- renderText("")
+      output[[paste0("renderLocations", DASH_SUFFIX)]] <- renderText("")
+      output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText("")
     }
 
     showElement(paste0("refresh-colors", DASH_SUFFIX))
@@ -270,22 +270,21 @@ server <- function(input, output, session) {
 
     # Render truth plot with observed values
     truthDf <- filteredScoreDf
-
     ## this first condition is necessary when loading the dash
     if (input$asOf == "") {
       TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
-      output$truthPlot <- output$truthPlot_archive <- renderPlotly({
+      output[[paste0("truthPlot", DASH_SUFFIX)]] <- renderPlotly({
         TRUTH_PLOT
       })
     } else {
       if (USE_CURR_TRUTH && input$showForecasts == FALSE) {
         # Render existing truth plot
-        output$truthPlot <- output$truthPlot_archive <- renderPlotly({
+        output[[paste0("truthPlot", DASH_SUFFIX)]] <- renderPlotly({
           TRUTH_PLOT
         })
       } else {
         TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
-        output$truthPlot <- output$truthPlot_archive <- renderPlotly({
+        output[[paste0("truthPlot", DASH_SUFFIX)]] <- renderPlotly({
           TRUTH_PLOT
         })
       }
@@ -663,7 +662,6 @@ server <- function(input, output, session) {
         )
         DASH_SUFFIX <<- "_archive"
       }
-
       updateTargetChoices(session, choices)
     },
     ignoreInit = TRUE

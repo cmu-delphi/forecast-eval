@@ -1,4 +1,3 @@
-
 # create a common delphi header
 delphiHeaderUI <- function(id = "delphi-header", title = "My App") {
   # Get css file

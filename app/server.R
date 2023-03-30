@@ -481,9 +481,11 @@ server <- function(input, output, session) {
     finalPlot <- filteredScoreDf %>%
       group_by(ahead) %>%
       do(p = make_plot(.)) %>%
-      subplot(nrows = NROW(.)) %>% 
+      subplot(nrows = NROW(.), titleX = TRUE) %>% 
       layout(
-        title = list(text = titleText, x = 0, y = 1, xref = "paper", yref = "paper", yanchor="bottom"), margin = list(t = 90),
+        title = list(text = titleText, x = 0, xref = "paper"),
+        # This magic margin offset comes from the old ggplotly version of this plot.
+        margin = list(t = 49.5),
         hovermode = "x unified",
         hoverdistance = 1
       )
@@ -591,7 +593,9 @@ server <- function(input, output, session) {
     ax_x[["automargin"]] <- TRUE
     
     finalPlot <- layout(finalPlot,
-        title = list(text = titleText, x = 0, y = 1, xref = "paper", yref = "paper", yanchor="bottom"), margin = list(t = 55),
+        title = list(text = titleText, x = 0, xref = "paper"),
+        # This magic margin offset comes from the old ggplotly version of this plot.
+        margin = list(t = 37.9),
         hovermode = "x unified",
         hoverdistance = 1,
         legend = list(orientation = "h", y = -0.1, title = list(text = NULL)),

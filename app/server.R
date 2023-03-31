@@ -78,7 +78,7 @@ updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, a
   }
   aheadChoices <- Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
   # Ensure previsouly selected options are still allowed
-  if (!is.null(aheads) && aheads %in% aheadChoices) {
+  if (!is.null(aheads) && all(aheads %in% aheadChoices)) {
     selectedAheads <- aheads
   } else {
     selectedAheads <- aheadOptions[1]

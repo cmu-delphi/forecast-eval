@@ -118,10 +118,6 @@ server <- function(input, output, session) {
   dataCreationDate <- loaded$dataCreationDate
   DATA_LOADED <- TRUE
 
-  # Prepare input choices
-  forecasterChoices <- sort(unique(df_list[["Hospitalizations"]][["forecaster"]])) # First target var
-  updateForecasterChoices(session, df_list[["Hospitalizations"]], forecasterChoices, "wis") # First target var and score type
-
   ##################
   # CREATE MAIN PLOT
   ##################
@@ -129,7 +125,7 @@ server <- function(input, output, session) {
     if (input$location == "") {
       return()
     }
-
+  
     ## Setting target signal to be compared with asOfData
     if (input$targetVariable == "Cases") {
       targetSignal <- "confirmed_incidence_num"
@@ -245,15 +241,15 @@ server <- function(input, output, session) {
       Week_End_Date = target_end_date
     )
 
-    ## Setting color for each forecaster
+    ## Create color palette
     set.seed(COLOR_SEED())
     forecasterRand <- input$forecasters
-    ## If we have less then 5 forecaster selected
-    ## In order to get more different colors when recoloring
-    ## Lets input more forecasters on forecasterRand
-    if (length(forecasterRand) < 8) {
-      nForecast <- 8 - length(forecasterRand)
-      forecasterRand <- c(forecasterRand, forecasterChoices[!forecasterChoices %in% forecasterRand][1:5])
+    # Pad selected forecasters up to 8 items to get more-different colors for a
+    # small number of requested forecasters
+    minForecasters <- 8
+    if (length(forecasterRand) < minForecasters) {
+      nForecasters <- minForecasters - length(forecasterRand)
+      forecasterRand <- c(forecasterRand, paste0("blank_names", 1:nForecasters))
     }
 
     colorPalette <- setNames(
@@ -687,7 +683,7 @@ server <- function(input, output, session) {
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
-
+    
     ## updateAsOf sets if we need to call updateAsOfData
     ## the only necessary case is when going from
     ## cases, deaths -> cases,deaths

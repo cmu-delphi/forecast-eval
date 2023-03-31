@@ -105,7 +105,7 @@ createS3DataLoader <- function() {
   df_list <- list()
   dataCreationDate <- as.Date(NA)
 
-  getRecentData <- function(targetVariable = c("Deaths", "Cases", "Hospitalizations")) {
+  getRecentData <- function(targetVariable = TARGET_OPTIONS) {
     targetVariable <- match.arg(targetVariable)
 
     newS3bucket <- getS3Bucket()
@@ -137,12 +137,17 @@ createS3DataLoader <- function() {
 
 #' create a data loader with fallback data only
 createFallbackDataLoader <- function() {
-  df_list <- getAllData(getFallbackData)
+  df_list <- list()
+  for (targetVariable in TARGET_OPTIONS) {
+    df_list[[targetVariable]] <- getAllData(getFallbackData, targetVariable)
+  }
+  dataCreationDate <- getCreationDate(getFallbackData)
 
   dataLoader <- function() {
-    df_list
+    return(list(df_list = df_list, dataCreationDate = dataCreationDate))
   }
-  dataLoader
+
+  return(dataLoader)
 }
 
 

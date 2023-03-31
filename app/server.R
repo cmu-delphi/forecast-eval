@@ -113,7 +113,7 @@ server <- function(input, output, session) {
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
 
   # Get scores
-  loaded <- loadData("Hospitalizations") # Starting targetVariable.
+  loaded <- loadData(INIT_TARGET)
   df_list <- loaded$df_list
   dataCreationDate <- loaded$dataCreationDate
   DATA_LOADED <- TRUE

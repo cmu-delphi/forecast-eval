@@ -655,14 +655,15 @@ server <- function(input, output, session) {
           "Hospital Admissions" = "Hospitalizations"
         )
         DASH_SUFFIX <<- ""
+        updateTargetChoices(session, choices)
       } else if (input$tabset == "evaluations_archive") {
         choices <- list(
           "Incident Deaths" = "Deaths",
           "Incident Cases" = "Cases"
         )
         DASH_SUFFIX <<- "_archive"
+        updateTargetChoices(session, choices)
       }
-      updateTargetChoices(session, choices)
     },
     ignoreInit = TRUE
   )

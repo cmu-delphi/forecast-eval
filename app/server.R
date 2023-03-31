@@ -125,7 +125,7 @@ server <- function(input, output, session) {
     if (input$location == "") {
       return()
     }
-  
+
     ## Setting target signal to be compared with asOfData
     if (input$targetVariable == "Cases") {
       targetSignal <- "confirmed_incidence_num"
@@ -683,7 +683,7 @@ server <- function(input, output, session) {
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
-    
+
     ## updateAsOf sets if we need to call updateAsOfData
     ## the only necessary case is when going from
     ## cases, deaths -> cases,deaths

@@ -675,13 +675,13 @@ server <- function(input, output, session) {
     ## summaryPlot will try to use PREV_AS_OF_DATA()
     ## since it has wrong data information, it needs to be removed
     PREV_AS_OF_DATA(NULL)
-    
+
     loaded <<- loadData(input$targetVariable)
     df_list <<- loaded$df_list
     dataCreationDate <<- loaded$dataCreationDate
     DATA_LOADED <<- TRUE
     df <- df_list[[input$targetVariable]]
-    
+
     ## Update available options
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
@@ -718,12 +718,11 @@ server <- function(input, output, session) {
     }
   })
 
-  observeEvent(input$scoreType,
-    {
-      df <- df_list[[input$targetVariable]]
+  observeEvent(input$scoreType, {
+    df <- df_list[[input$targetVariable]]
 
-      # Only show forecasters that have data for the score chosen
-      updateForecasterChoices(session, df, input$forecasters, input$scoreType)
+    # Only show forecasters that have data for the score chosen
+    updateForecasterChoices(session, df, input$forecasters, input$scoreType)
 
     # If we are switching between coverage and other score types we need to
     # update the as of data we have so it matches the correct locations shown

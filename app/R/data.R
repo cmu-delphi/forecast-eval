@@ -68,8 +68,7 @@ getCreationDate <- function(loadFile) {
 
 
 getAllData <- function(loadFile, targetVariable) {
-  df <- switch(
-    targetVariable,
+  df <- switch(targetVariable,
     "Deaths" = bind_rows(
       loadFile("score_cards_state_deaths.rds"),
       loadFile("score_cards_nation_deaths.rds")
@@ -83,7 +82,7 @@ getAllData <- function(loadFile, targetVariable) {
       loadFile("score_cards_nation_hospitalizations.rds")
     )
   )
-  
+
   # Pick out expected columns only
   expectedCols <- c(
     "ahead", "geo_value", "forecaster", "forecast_date",
@@ -119,8 +118,8 @@ createS3DataLoader <- function() {
     # bucket and request, including bucket region, name, content type, request
     # date, request ID, etc.
     if (!(targetVariable %in% names(df_list)) ||
-        nrow(df_list[[targetVariable]]) == 0 ||
-        !identical(s3Contents, newS3Contents)) {
+      nrow(df_list[[targetVariable]]) == 0 ||
+      !identical(s3Contents, newS3Contents)) {
       # Save new data and new bucket connection info to vars in env of
       # `createS3DataLoader`. They persist between calls to `getRecentData` a
       # la https://stackoverflow.com/questions/1088639/static-variables-in-r

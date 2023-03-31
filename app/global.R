@@ -30,7 +30,7 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
   HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21
 )
 
-# Set the "previous" target to be the starting target variable
+# Set the "previous" target to be the same as the starting target variable
 PREV_TARGET <- INIT_TARGET
 
 # When RE_RENDER_TRUTH = TRUE

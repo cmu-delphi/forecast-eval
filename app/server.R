@@ -119,8 +119,8 @@ server <- function(input, output, session) {
   DATA_LOADED <- TRUE
 
   # Prepare input choices
-  forecasterChoices <- sort(unique(df_list[["Cases"]][["forecaster"]]))
-  updateForecasterChoices(session, df_list[["Cases"]], forecasterChoices, "wis")
+  forecasterChoices <- sort(unique(df_list[["Hospitalizations"]][["forecaster"]])) # First target var
+  updateForecasterChoices(session, df_list[["Hospitalizations"]], forecasterChoices, "wis") # First target var and score type
 
   ##################
   # CREATE MAIN PLOT
@@ -681,7 +681,7 @@ server <- function(input, output, session) {
     dataCreationDate <<- loaded$dataCreationDate
     DATA_LOADED <<- TRUE
     df <- df_list[[input$targetVariable]]
-
+    
     ## Update available options
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)

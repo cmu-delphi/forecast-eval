@@ -1,4 +1,3 @@
-
 exportScoresUI <- function(id = "exportScores") {
   ns <- shiny::NS(id)
   div(

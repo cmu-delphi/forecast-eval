@@ -1,4 +1,3 @@
-
 renameScoreCol <- function(filteredScoreDf, scoreType, coverageInterval) {
   if (scoreType == "wis") {
     filteredScoreDf <- filteredScoreDf %>% rename(Score = wis)

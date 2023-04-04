@@ -396,7 +396,7 @@ server <- function(input, output, session) {
           titlefont = list(size = 12)
         )
       ) %>%
-      config(displayModeBar = F)
+      config(displayModeBar = FALSE)
     return(finalPlot)
   }
 
@@ -463,7 +463,7 @@ server <- function(input, output, session) {
         hovermode = "x unified",
         legend = list(orientation = "h", y = -0.1, title = list(text = NULL))
       ) %>%
-      config(displayModeBar = F)
+      config(displayModeBar = FALSE)
     # Remove the extra grouping from the legend: "(___,1)"
     for (i in seq_along(finalPlot$x$data)) {
       if (!is.null(finalPlot$x$data[[i]]$name)) {
@@ -654,12 +654,10 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
-
     ## summaryPlot will try to use PREV_AS_OF_DATA()
     ## since it has wrong data information, it needs to be removed
     PREV_AS_OF_DATA(NULL)
     if (input$targetVariable == "Deaths") {
-
       ## Defining Filter
       FILTER <- DEATH_FILTER
     } else if (input$targetVariable == "Cases") {

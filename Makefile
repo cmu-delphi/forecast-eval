@@ -5,7 +5,7 @@ S3_BUCKET=s3://forecast-eval
 build: build_dashboard
 
 r_build:
-	docker build --no-cache --pull -t forecast-eval-build docker_build
+	docker build --no-cache --force-rm --pull -t forecast-eval-build docker_build
 
 %.rds: dist
 	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@

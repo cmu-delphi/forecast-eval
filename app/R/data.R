@@ -82,20 +82,17 @@ getAllData <- function(loadFile) {
     dfNationCases,
     dfNationDeaths
   )
-
-  # Pick out expected columns only
-  expectedCols <- c(
+  
+  # The names of the `covCols` elements become the new names of those columns
+  # when we use this vector in the `select` below.
+  covCols <- setNames(paste0("cov_", COVERAGE_INTERVALS), COVERAGE_INTERVALS)
+  keepCols <- c(
     "ahead", "geo_value", "forecaster", "forecast_date",
     "data_source", "signal", "target_end_date", "incidence_period",
-    "actual", "wis", "sharpness", "ae", "value_50"
+    "actual", "wis", "sharpness", "ae", "value_50",
+    covCols
   )
-  df <- select(
-    df,
-    all_of(expectedCols),
-    "10" = cov_10, "20" = cov_20, "30" = cov_30,
-    "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
-    "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
-  )
+  df <- select(df, all_of(keepCols))
 
   return(df)
 }

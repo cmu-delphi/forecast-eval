@@ -1,6 +1,10 @@
 ################
 # UTIL FUNCTIONS before server definition
 ################
+updateTargetChoices <- function(session, targetChoices) {
+  updateRadioButtons(session, "targetVariable", choices = targetChoices)
+}
+
 updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
   if (scoreType == "wis") {
     df <- df %>% filter(!is.na(wis))
@@ -19,7 +23,7 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
   df <- df %>% filter(forecaster %in% forecasterChoices)
   df <- Filter(function(x) !all(is.na(x)), df)
   coverageChoices <- intersect(colnames(df), COVERAGE_INTERVALS)
-  # Ensure previsouly selected options are still allowed
+  # Ensure previously selected options are still allowed
   if (coverageInput %in% coverageChoices) {
     selectedCoverage <- coverageInput
   } else if ("95" %in% coverageChoices) {
@@ -103,6 +107,7 @@ server <- function(input, output, session) {
   AS_OF_CHOICES <- reactiveVal(NULL)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
 
+  DASH_SUFFIX <- ""
   COLOR_SEED <- reactiveVal(171)
 
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
@@ -144,7 +149,7 @@ server <- function(input, output, session) {
     # Need to do this after setting dfWithForecasts to leave in aheads for forecasts
     filteredScoreDf <- filteredScoreDf %>% filter(ahead %in% input$aheads)
     if (nrow(filteredScoreDf) == 0) {
-      output$renderWarningText <- renderText(paste0(
+      output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText(paste0(
         "The selected forecasters do not have enough data ",
         "to display the selected scoring metric."
       ))
@@ -190,26 +195,26 @@ server <- function(input, output, session) {
       aggregateText <- "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (input$scoreType == "coverage") {
         aggregate <- "Averaged"
-        output$renderAggregateText <- renderText(paste(
+        output[[paste0("renderAggregateText", DASH_SUFFIX)]] <- renderText(paste(
           aggregateText,
           " Some forecasters may not have any data for the coverage interval chosen. Locations inlcuded: "
         ))
       } else {
         aggregate <- "Totaled"
-        output$renderAggregateText <- renderText(paste(aggregateText, " Locations included: "))
+        output[[paste0("renderAggregateText", DASH_SUFFIX)]] <- renderText(paste(aggregateText, " Locations included: "))
       }
       if (length(locationsIntersect) == 0) {
-        output$renderWarningText <- renderText("The selected forecasters do not have data for any locations in common on all dates.")
-        output$renderLocations <- renderText("")
-        output$renderAggregateText <- renderText("")
-        hideElement("truthPlot")
-        hideElement("refresh-colors")
+        output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText("The selected forecasters do not have data for any locations in common on all dates.")
+        output[[paste0("renderLocations", DASH_SUFFIX)]] <- renderText("")
+        output[[paste0("renderAggregateText", DASH_SUFFIX)]] <- renderText("")
+        hideElement(paste0("truthPlot", DASH_SUFFIX))
+        hideElement(paste0("refresh-colors", DASH_SUFFIX))
         return()
       } else {
         locationSubtitleText <- paste0(", Location: ", aggregate, " over all states and territories common to these forecasters*")
-        output$renderLocations <- renderText(toupper(locationsIntersect))
-        output$renderWarningText <- renderText("")
-        showElement("truthPlot")
+        output[[paste0("renderLocations", DASH_SUFFIX)]] <- renderText(toupper(locationsIntersect))
+        output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText("")
+        showElement(paste0("truthPlot", DASH_SUFFIX))
       }
       # Not totaling over all locations
     } else {
@@ -225,12 +230,12 @@ server <- function(input, output, session) {
           summarize(Score = Score, actual = actual)
       }
       locationSubtitleText <- paste0(", Location: ", input$location)
-      output$renderAggregateText <- renderText("")
-      output$renderLocations <- renderText("")
-      output$renderWarningText <- renderText("")
+      output[[paste0("renderAggregateText", DASH_SUFFIX)]] <- renderText("")
+      output[[paste0("renderLocations", DASH_SUFFIX)]] <- renderText("")
+      output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText("")
     }
 
-    showElement("refresh-colors")
+    showElement(paste0("refresh-colors", DASH_SUFFIX))
     if (nrow(filteredScoreDf) == 0) {
       # no data to show
       return()
@@ -265,22 +270,21 @@ server <- function(input, output, session) {
 
     # Render truth plot with observed values
     truthDf <- filteredScoreDf
-
     ## this first condition is necessary when loading the dash
     if (input$asOf == "") {
       TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
-      output$truthPlot <- renderPlotly({
+      output[[paste0("truthPlot", DASH_SUFFIX)]] <- renderPlotly({
         TRUTH_PLOT
       })
     } else {
       if (USE_CURR_TRUTH && input$showForecasts == FALSE) {
         # Render existing truth plot
-        output$truthPlot <- renderPlotly({
+        output[[paste0("truthPlot", DASH_SUFFIX)]] <- renderPlotly({
           TRUTH_PLOT
         })
       } else {
         TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
-        output$truthPlot <- renderPlotly({
+        output[[paste0("truthPlot", DASH_SUFFIX)]] <- renderPlotly({
           TRUTH_PLOT
         })
       }
@@ -476,7 +480,7 @@ server <- function(input, output, session) {
   #############
   # PLOT OUTPUT
   #############
-  output$summaryPlot <- renderPlotly({
+  output$summaryPlot <- output$summaryPlot_archive <- renderPlotly({
     summaryPlot()
   })
 
@@ -644,7 +648,27 @@ server <- function(input, output, session) {
   # EVENT OBSERVATION
   ###################
 
-  observeEvent(input$refreshColors,
+  observeEvent(input$tabset,
+    {
+      if (input$tabset == "evaluations") {
+        choices <- list(
+          "Hospital Admissions" = "Hospitalizations"
+        )
+        DASH_SUFFIX <<- ""
+        updateTargetChoices(session, choices)
+      } else if (input$tabset == "evaluations_archive") {
+        choices <- list(
+          "Incident Deaths" = "Deaths",
+          "Incident Cases" = "Cases"
+        )
+        DASH_SUFFIX <<- "_archive"
+        updateTargetChoices(session, choices)
+      }
+    },
+    ignoreInit = TRUE
+  )
+
+  observeEvent(input$refreshColors | input$refreshColors_archive,
     {
       COLOR_SEED(floor(runif(1, 1, 1000)))
       USE_CURR_TRUTH <<- TRUE
@@ -669,7 +693,7 @@ server <- function(input, output, session) {
     ## Filtering DF
     df <- df %>% filter(signal == FILTER)
 
-    ## Update available opitions
+    ## Update available options
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
@@ -699,59 +723,55 @@ server <- function(input, output, session) {
     ## Storing current target
     PREV_TARGET <<- input$targetVariable
 
-    ## do calling the api if we need as of data
-    ## otherwise we don't need to call it
+    ## Call the API only if we need as of data
     if (updateAsOf) {
       updateAsOfData(fetchDate = currentFetch)
     }
   })
 
-  observeEvent(input$scoreType,
-    {
-      if (input$targetVariable == "Deaths") {
-        df <- df %>% filter(signal == DEATH_FILTER)
-      } else if (input$targetVariable == "Cases") {
-        df <- df %>% filter(signal == CASE_FILTER)
-      } else {
-        df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
-      }
-      # Only show forecasters that have data for the score chosen
-      updateForecasterChoices(session, df, input$forecasters, input$scoreType)
+  observeEvent(input$scoreType, {
+    if (input$targetVariable == "Deaths") {
+      df <- df %>% filter(signal == DEATH_FILTER)
+    } else if (input$targetVariable == "Cases") {
+      df <- df %>% filter(signal == CASE_FILTER)
+    } else {
+      df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
+    }
+    # Only show forecasters that have data for the score chosen
+    updateForecasterChoices(session, df, input$forecasters, input$scoreType)
 
-      # If we are switching between coverage and other score types we need to
-      # update the as of data we have so it matches the correct locations shown
-      if (input$location == "US") {
-        updateAsOfData()
-      }
+    # If we are switching between coverage and other score types we need to
+    # update the as of data we have so it matches the correct locations shown
+    if (input$location == "US") {
+      updateAsOfData()
+    }
 
-      if (input$scoreType == "wis") {
-        showElement("wisExplanation")
-        hideElement("sharpnessExplanation")
-        hideElement("aeExplanation")
-        hideElement("coverageExplanation")
-      }
-      if (input$scoreType == "sharpness") {
-        showElement("sharpnessExplanation")
-        hideElement("wisExplanation")
-        hideElement("aeExplanation")
-        hideElement("coverageExplanation")
-      }
-      if (input$scoreType == "ae") {
-        hideElement("wisExplanation")
-        hideElement("sharpnessExplanation")
-        showElement("aeExplanation")
-        hideElement("coverageExplanation")
-      }
-      if (input$scoreType == "coverage") {
-        hideElement("wisExplanation")
-        hideElement("sharpnessExplanation")
-        hideElement("aeExplanation")
-        showElement("coverageExplanation")
-      }
-      USE_CURR_TRUTH <<- TRUE
-    },
-    ignoreInit = TRUE
-  )
+    if (input$scoreType == "wis") {
+      showElement(paste0("wisExplanation", DASH_SUFFIX))
+      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+      hideElement(paste0("aeExplanation", DASH_SUFFIX))
+      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
+    }
+    if (input$scoreType == "sharpness") {
+      showElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+      hideElement(paste0("wisExplanation", DASH_SUFFIX))
+      hideElement(paste0("aeExplanation", DASH_SUFFIX))
+      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
+    }
+    if (input$scoreType == "ae") {
+      hideElement(paste0("wisExplanation", DASH_SUFFIX))
+      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+      showElement(paste0("aeExplanation", DASH_SUFFIX))
+      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
+    }
+    if (input$scoreType == "coverage") {
+      hideElement(paste0("wisExplanation", DASH_SUFFIX))
+      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
+      hideElement(paste0("aeExplanation", DASH_SUFFIX))
+      showElement(paste0("coverageExplanation", DASH_SUFFIX))
+    }
+    USE_CURR_TRUTH <<- TRUE
+  })
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from
   observeEvent(input$forecasters, {
@@ -804,11 +824,11 @@ server <- function(input, output, session) {
   observe({
     # Show data loading message and hide other messages until all data is loaded
     if (DATA_LOADED) {
-      hideElement("data-loading-message")
-      showElement("refresh-colors")
-      showElement("notes")
-      showElement("scoreExplanations")
-      showElement("scoringDisclaimer")
+      hideElement(paste0("data-loading-message", DASH_SUFFIX))
+      showElement(paste0("refresh-colors", DASH_SUFFIX))
+      showElement(paste0("notes", DASH_SUFFIX))
+      showElement(paste0("scoreExplanations", DASH_SUFFIX))
+      showElement(paste0("scoringDisclaimer", DASH_SUFFIX))
     }
     # Ensure there is always one ahead selected
     if (length(input$aheads) < 1) {
@@ -855,13 +875,13 @@ server <- function(input, output, session) {
     }
 
     if (fetchDate < CURRENT_WEEK_END_DATE()) {
-      hideElement("truthPlot")
-      hideElement("notes")
-      hideElement("scoringDisclaimer")
-      hideElement("scoreExplanations")
-      hideElement("renderAggregateText")
-      hideElement("renderLocations")
-      showElement("truth-plot-loading-message")
+      hideElement(paste0("truthPlot", DASH_SUFFIX))
+      hideElement(paste0("notes", DASH_SUFFIX))
+      hideElement(paste0("scoringDisclaimer", DASH_SUFFIX))
+      hideElement(paste0("scoreExplanations", DASH_SUFFIX))
+      hideElement(paste0("renderAggregateText", DASH_SUFFIX))
+      hideElement(paste0("renderLocations", DASH_SUFFIX))
+      showElement(paste0("truth-plot-loading-message", DASH_SUFFIX))
 
       # Since as_of matches to the issue date in covidcast (rather than the time_value)
       # we need to add one extra day to get the as of we want.
@@ -874,13 +894,13 @@ server <- function(input, output, session) {
         as_of = fetchDate,
         geo_type = location
       )
-      showElement("truthPlot")
-      showElement("notes")
-      showElement("scoringDisclaimer")
-      showElement("scoreExplanations")
-      showElement("renderAggregateText")
-      showElement("renderLocations")
-      hideElement("truth-plot-loading-message")
+      showElement(paste0("truthPlot", DASH_SUFFIX))
+      showElement(paste0("notes", DASH_SUFFIX))
+      showElement(paste0("scoringDisclaimer", DASH_SUFFIX))
+      showElement(paste0("scoreExplanations", DASH_SUFFIX))
+      showElement(paste0("renderAggregateText", DASH_SUFFIX))
+      showElement(paste0("renderLocations", DASH_SUFFIX))
+      hideElement(paste0("truth-plot-loading-message", DASH_SUFFIX))
       PREV_AS_OF_DATA(asOfTruthData)
 
       if (nrow(asOfTruthData) == 0) {

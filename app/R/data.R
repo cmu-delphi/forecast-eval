@@ -5,7 +5,7 @@ library(aws.s3)
 shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2, evict = "lru"))
 cache <- getShinyOption("cache")
 
-# Since covidcast data updates about once a day. Add date arg to
+# Since covidcast data updates about once a day, add date arg to
 # covidcast_signal so caches aren't used after that.
 covidcast_signal_mem <- function(..., date = Sys.Date()) {
   return(covidcast_signal(...))
@@ -68,35 +68,31 @@ getCreationDate <- function(loadFile) {
 
 
 getAllData <- function(loadFile) {
+  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
+  dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
   dfStateCases <- loadFile("score_cards_state_cases.rds")
   dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
-  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
   dfNationCases <- loadFile("score_cards_nation_cases.rds")
   dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
-  dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
+  df <- bind_rows(
+    dfStateHospitalizations,
+    dfNationHospitalizations,
+    dfStateCases,
+    dfStateDeaths,
+    dfNationCases,
+    dfNationDeaths
+  )
 
-  # Pick out expected columns only
-  covCols <- paste0("cov_", COVERAGE_INTERVALS)
-  expectedCols <- c(
+  # The names of the `covCols` elements become the new names of those columns
+  # when we use this vector in the `select` below.
+  covCols <- setNames(paste0("cov_", COVERAGE_INTERVALS), COVERAGE_INTERVALS)
+  keepCols <- c(
     "ahead", "geo_value", "forecaster", "forecast_date",
     "data_source", "signal", "target_end_date", "incidence_period",
     "actual", "wis", "sharpness", "ae", "value_50",
     covCols
   )
-
-  df <- bind_rows(
-    dfStateCases %>% select(all_of(expectedCols)),
-    dfStateDeaths %>% select(all_of(expectedCols)),
-    dfStateHospitalizations %>% select(all_of(expectedCols)),
-    dfNationCases %>% select(all_of(expectedCols)),
-    dfNationDeaths %>% select(all_of(expectedCols)),
-    dfNationHospitalizations %>% select(all_of(expectedCols))
-  )
-  df <- df %>% rename(
-    "10" = cov_10, "20" = cov_20, "30" = cov_30,
-    "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
-    "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
-  )
+  df <- select(df, all_of(keepCols))
 
   return(df)
 }

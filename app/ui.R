@@ -13,13 +13,53 @@ aboutDashboardText <- includeMarkdown("assets/about-dashboard.md")
 # Layout
 ########
 
+create_output_panel <- function(title, suffix) {
+  tabPanel(title,
+    value = paste0("evaluations", suffix),
+    fluidRow(column(11, textOutput(paste0("renderWarningText", suffix)))),
+    plotlyOutput(outputId = paste0("summaryPlot", suffix), height = "auto"),
+    fluidRow(
+      column(11,
+        offset = 1,
+        hidden(div(id = paste0("refresh-colors", suffix), actionButton(inputId = paste0("refreshColors", suffix), label = "Recolor")))
+      )
+    ),
+    tags$br(),
+    plotlyOutput(outputId = paste0("truthPlot", suffix), height = "auto"),
+    fluidRow(
+      column(11,
+        offset = 1,
+        div(id = paste0("data-loading-message", suffix), "DATA IS LOADING...(this may take a while)"),
+        hidden(div(id = paste0("truth-plot-loading-message", suffix), "Fetching 'as of' data and loading observed values...")),
+        hidden(div(id = paste0("notes", suffix), "About the Scores")),
+        hidden(div(
+          id = paste0("scoreExplanations", suffix),
+          hidden(div(id = paste0("wisExplanation", suffix), wisExplanation)),
+          hidden(div(id = paste0("sharpnessExplanation", suffix), sharpnessExplanation)),
+          hidden(div(id = paste0("aeExplanation", suffix), aeExplanation)),
+          hidden(div(id = paste0("coverageExplanation", suffix), coverageExplanation))
+        )),
+        hidden(div(id = paste0("scoringDisclaimer", suffix), scoringDisclaimer))
+      )
+    ),
+    fluidRow(
+      column(11,
+        offset = 1,
+        textOutput(paste0("renderLocationText", suffix)),
+        textOutput(paste0("renderAggregateText", suffix)),
+        textOutput(paste0("renderLocations", suffix)),
+        tags$br()
+      )
+    )
+  )
+}
+
 sidebar <- tags$div(
   conditionalPanel(
-    condition = "input.tabset == 'evaluations'",
+    # NB conditions are written in JavaScript!!
+    condition = "input.tabset.startsWith('evaluations')",
     radioButtons("targetVariable", "Target Variable",
       choices = list(
-        "Incident Deaths" = "Deaths",
-        "Incident Cases" = "Cases",
         "Hospital Admissions" = "Hospitalizations"
       )
     ),
@@ -49,9 +89,9 @@ sidebar <- tags$div(
     selectInput(
       "forecasters",
       tags$div("Forecasters", tags$div(id = "forecaster-input", "Type a name or select from dropdown")),
-      choices = c("COVIDhub-baseline", "COVIDhub-ensemble"),
+      choices = c("COVIDhub-baseline", "COVIDhub-4_week_ensemble"),
       multiple = TRUE,
-      selected = c("COVIDhub-baseline", "COVIDhub-ensemble")
+      selected = c("COVIDhub-baseline", "COVIDhub-4_week_ensemble")
     ),
     tags$p(
       id = "missing-data-disclaimer",
@@ -136,44 +176,8 @@ main <- tabsetPanel(
       tags$br()
     )),
   ),
-  tabPanel("Evaluation Plots",
-    value = "evaluations",
-    fluidRow(column(11, textOutput("renderWarningText"))),
-    plotlyOutput(outputId = "summaryPlot", height = "auto"),
-    fluidRow(
-      column(11,
-        offset = 1,
-        hidden(div(id = "refresh-colors", actionButton(inputId = "refreshColors", label = "Recolor")))
-      )
-    ),
-    tags$br(),
-    plotlyOutput(outputId = "truthPlot", height = "auto"),
-    fluidRow(
-      column(11,
-        offset = 1,
-        div(id = "data-loading-message", "DATA IS LOADING...(this may take a while)"),
-        hidden(div(id = "truth-plot-loading-message", "Fetching 'as of' data and loading observed values...")),
-        hidden(div(id = "notes", "About the Scores")),
-        hidden(div(
-          id = "scoreExplanations",
-          hidden(div(id = "wisExplanation", wisExplanation)),
-          hidden(div(id = "sharpnessExplanation", sharpnessExplanation)),
-          hidden(div(id = "aeExplanation", aeExplanation)),
-          hidden(div(id = "coverageExplanation", coverageExplanation))
-        )),
-        hidden(div(id = "scoringDisclaimer", scoringDisclaimer))
-      )
-    ),
-    fluidRow(
-      column(11,
-        offset = 1,
-        textOutput("renderLocationText"),
-        textOutput("renderAggregateText"),
-        textOutput("renderLocations"),
-        tags$br()
-      )
-    )
-  )
+  create_output_panel("Evaluation Plots", ""),
+  create_output_panel("Archive Evaluation Plots", "_archive")
 )
 
 ui <- delphiLayoutUI(

@@ -682,17 +682,17 @@ server <- function(input, output, session) {
           "Hospital Admissions" = "Hospitalizations"
         )
         DASH_SUFFIX <<- ""
-        updateTargetChoices(session, choices)
-        showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
       } else if (input$tabset == "evaluations_archive") {
         choices <- list(
           "Incident Deaths" = "Deaths",
           "Incident Cases" = "Cases"
         )
         DASH_SUFFIX <<- "_archive"
-        updateTargetChoices(session, choices)
-        showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
+      } else {
+        return()
       }
+      updateTargetChoices(session, choices)
+      showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
     },
     ignoreInit = TRUE
   )

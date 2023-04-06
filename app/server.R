@@ -682,12 +682,12 @@ server <- function(input, output, session) {
           "Hospital Admissions" = "Hospitalizations"
         )
         DASH_SUFFIX <<- ""
-      } else if (input$tabset == "evaluations_archive") {
+      } else if (input$tabset == paste0("evaluations", ARCHIVE_TAB_SUFFIX)) {
         choices <- list(
           "Incident Deaths" = "Deaths",
           "Incident Cases" = "Cases"
         )
-        DASH_SUFFIX <<- "_archive"
+        DASH_SUFFIX <<- ARCHIVE_TAB_SUFFIX
       } else {
         return()
       }

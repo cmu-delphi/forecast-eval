@@ -29,6 +29,8 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
   HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21
 )
 
+ARCHIVE_TAB_SUFFIX <- "_archive"
+
 # Sets the "previous" target to be the same as the first one
 PREV_TARGET <- "Hospitalizations"
 

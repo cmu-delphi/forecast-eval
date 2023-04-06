@@ -95,6 +95,33 @@ updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, a
   )
 }
 
+showScoreExplanation <- function(session, scoreType, dash_suffix) {
+  if (scoreType == "wis") {
+    showElement(paste0("wisExplanation", dash_suffix))
+    hideElement(paste0("sharpnessExplanation", dash_suffix))
+    hideElement(paste0("aeExplanation", dash_suffix))
+    hideElement(paste0("coverageExplanation", dash_suffix))
+  }
+  if (scoreType == "sharpness") {
+    showElement(paste0("sharpnessExplanation", dash_suffix))
+    hideElement(paste0("wisExplanation", dash_suffix))
+    hideElement(paste0("aeExplanation", dash_suffix))
+    hideElement(paste0("coverageExplanation", dash_suffix))
+  }
+  if (scoreType == "ae") {
+    hideElement(paste0("wisExplanation", dash_suffix))
+    hideElement(paste0("sharpnessExplanation", dash_suffix))
+    showElement(paste0("aeExplanation", dash_suffix))
+    hideElement(paste0("coverageExplanation", dash_suffix))
+  }
+  if (scoreType == "coverage") {
+    hideElement(paste0("wisExplanation", dash_suffix))
+    hideElement(paste0("sharpnessExplanation", dash_suffix))
+    hideElement(paste0("aeExplanation", dash_suffix))
+    showElement(paste0("coverageExplanation", dash_suffix))
+  }
+}
+
 # All data is fully loaded from AWS
 DATA_LOADED <- FALSE
 loadData <- createDataLoader()
@@ -655,15 +682,17 @@ server <- function(input, output, session) {
           "Hospital Admissions" = "Hospitalizations"
         )
         DASH_SUFFIX <<- ""
-        updateTargetChoices(session, choices)
-      } else if (input$tabset == "evaluations_archive") {
+      } else if (input$tabset == paste0("evaluations", ARCHIVE_TAB_SUFFIX)) {
         choices <- list(
           "Incident Deaths" = "Deaths",
           "Incident Cases" = "Cases"
         )
-        DASH_SUFFIX <<- "_archive"
-        updateTargetChoices(session, choices)
+        DASH_SUFFIX <<- ARCHIVE_TAB_SUFFIX
+      } else {
+        return()
       }
+      updateTargetChoices(session, choices)
+      showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
     },
     ignoreInit = TRUE
   )
@@ -746,30 +775,7 @@ server <- function(input, output, session) {
       updateAsOfData()
     }
 
-    if (input$scoreType == "wis") {
-      showElement(paste0("wisExplanation", DASH_SUFFIX))
-      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
-      hideElement(paste0("aeExplanation", DASH_SUFFIX))
-      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
-    }
-    if (input$scoreType == "sharpness") {
-      showElement(paste0("sharpnessExplanation", DASH_SUFFIX))
-      hideElement(paste0("wisExplanation", DASH_SUFFIX))
-      hideElement(paste0("aeExplanation", DASH_SUFFIX))
-      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
-    }
-    if (input$scoreType == "ae") {
-      hideElement(paste0("wisExplanation", DASH_SUFFIX))
-      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
-      showElement(paste0("aeExplanation", DASH_SUFFIX))
-      hideElement(paste0("coverageExplanation", DASH_SUFFIX))
-    }
-    if (input$scoreType == "coverage") {
-      hideElement(paste0("wisExplanation", DASH_SUFFIX))
-      hideElement(paste0("sharpnessExplanation", DASH_SUFFIX))
-      hideElement(paste0("aeExplanation", DASH_SUFFIX))
-      showElement(paste0("coverageExplanation", DASH_SUFFIX))
-    }
+    showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
     USE_CURR_TRUTH <<- TRUE
   })
 

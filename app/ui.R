@@ -56,7 +56,8 @@ create_output_panel <- function(title, suffix) {
 
 sidebar <- tags$div(
   conditionalPanel(
-    condition = "input.tabset == 'evaluations' | input.tabset == 'evaluations_archive'",
+    # NB conditions are written in JavaScript!!
+    condition = "input.tabset.startsWith('evaluations')",
     radioButtons("targetVariable", "Target Variable",
       choices = list(
         "Hospital Admissions" = "Hospitalizations"

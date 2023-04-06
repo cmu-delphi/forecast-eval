@@ -82,7 +82,7 @@ getAllData <- function(loadFile) {
     dfNationCases,
     dfNationDeaths
   )
-  
+
   # The names of the `covCols` elements become the new names of those columns
   # when we use this vector in the `select` below.
   covCols <- setNames(paste0("cov_", COVERAGE_INTERVALS), COVERAGE_INTERVALS)

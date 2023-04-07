@@ -9,7 +9,7 @@ library(viridis)
 library(tsibble)
 library(covidcast)
 
-appVersion <- "6.0.0"
+appVersion <- "6.1.0"
 
 COVERAGE_INTERVALS <- c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 CASES_DEATHS_TARGET_DAY <- "Saturday"
@@ -29,6 +29,8 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
   HOSPITALIZATIONS_OFFSET, HOSPITALIZATIONS_OFFSET + 7,
   HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21
 )
+
+ARCHIVE_TAB_SUFFIX <- "_archive"
 
 # Set the "previous" target to be the same as the starting target variable
 PREV_TARGET <- INIT_TARGET

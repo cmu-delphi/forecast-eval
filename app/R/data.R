@@ -101,7 +101,12 @@ getAllData <- function(loadFile, targetVariable) {
 }
 
 createS3DataLoader <- function() {
+  # Cached connection info
   s3bucket <- getS3Bucket()
+  s3DataFetcher <- createS3DataFactory(s3bucket)
+  s3Contents <- s3bucket[attr(s3bucket, "names", exact = TRUE)]
+
+  # Cached data
   df_list <- list()
   dataCreationDate <- as.Date(NA)
 
@@ -109,23 +114,27 @@ createS3DataLoader <- function() {
     targetVariable <- match.arg(targetVariable)
 
     newS3bucket <- getS3Bucket()
-
-    s3Contents <- s3bucket[attr(s3bucket, "names", exact = TRUE)]
     newS3Contents <- newS3bucket[attr(newS3bucket, "names", exact = TRUE)]
+    s3BucketHasChanged <- !identical(s3Contents, newS3Contents)
 
-    # Fetch new score data if contents of S3 bucket has changed (including file
+    # Fetch new data if contents of S3 bucket has changed (including file
     # names, sizes, and last modified timestamps). Ignores characteristics of
-    # bucket and request, including bucket region, name, content type, request
-    # date, request ID, etc.
-    if (!(targetVariable %in% names(df_list)) ||
-      nrow(df_list[[targetVariable]]) == 0 ||
-      !identical(s3Contents, newS3Contents)) {
-      # Save new data and new bucket connection info to vars in env of
-      # `createS3DataLoader`. They persist between calls to `getRecentData` a
-      # la https://stackoverflow.com/questions/1088639/static-variables-in-r
+    # bucket and request, including bucket region, name, content type,
+    # request date, request ID, etc.
+    #
+    # Save new score data and new bucket connection info to vars in env of
+    # `createS3DataLoader`. They persist between calls to `getRecentData` a
+    # la https://stackoverflow.com/questions/1088639/static-variables-in-r
+    if (s3BucketHasChanged) {
       s3bucket <<- newS3bucket
-      df_list[[targetVariable]] <<- getAllData(createS3DataFactory(s3bucket), targetVariable)
-      dataCreationDate <<- getCreationDate(createS3DataFactory(s3bucket))
+      s3DataFetcher <<- createS3DataFactory(newS3bucket)
+      s3Contents <<- newS3Contents
+    }
+    if (s3BucketHasChanged ||
+      !(targetVariable %in% names(df_list)) ||
+      nrow(df_list[[targetVariable]]) == 0) {
+      df_list[[targetVariable]] <<- getAllData(s3DataFetcher, targetVariable)
+      dataCreationDate <<- getCreationDate(s3DataFetcher)
     }
 
     return(list(df_list = df_list, dataCreationDate = dataCreationDate))

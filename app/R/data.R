@@ -67,20 +67,20 @@ getCreationDate <- function(loadFile) {
 }
 
 
-getAllData <- function(loadFile) {
-  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
-  dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
-  dfStateCases <- loadFile("score_cards_state_cases.rds")
-  dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
-  dfNationCases <- loadFile("score_cards_nation_cases.rds")
-  dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
-  df <- bind_rows(
-    dfStateHospitalizations,
-    dfNationHospitalizations,
-    dfStateCases,
-    dfStateDeaths,
-    dfNationCases,
-    dfNationDeaths
+getAllData <- function(loadFile, targetVariable) {
+  df <- switch(targetVariable,
+    "Deaths" = bind_rows(
+      loadFile("score_cards_state_deaths.rds"),
+      loadFile("score_cards_nation_deaths.rds")
+    ),
+    "Cases" = bind_rows(
+      loadFile("score_cards_state_cases.rds"),
+      loadFile("score_cards_nation_cases.rds")
+    ),
+    "Hospitalizations" = bind_rows(
+      loadFile("score_cards_state_hospitalizations.rds"),
+      loadFile("score_cards_nation_hospitalizations.rds")
+    )
   )
 
   # The names of the `covCols` elements become the new names of those columns
@@ -98,30 +98,43 @@ getAllData <- function(loadFile) {
 }
 
 createS3DataLoader <- function() {
+  # Cached connection info
   s3bucket <- getS3Bucket()
-  df <- data.frame()
+  s3DataFetcher <- createS3DataFactory(s3bucket)
+  s3Contents <- s3bucket[attr(s3bucket, "names", exact = TRUE)]
+
+  # Cached data
+  df_list <- list()
   dataCreationDate <- as.Date(NA)
 
-  getRecentData <- function() {
+  getRecentData <- function(targetVariable = TARGET_OPTIONS) {
+    targetVariable <- match.arg(targetVariable)
+
     newS3bucket <- getS3Bucket()
-
-    s3Contents <- s3bucket[attr(s3bucket, "names", exact = TRUE)]
     newS3Contents <- newS3bucket[attr(newS3bucket, "names", exact = TRUE)]
+    s3BucketHasChanged <- !identical(s3Contents, newS3Contents)
 
-    # Fetch new score data if contents of S3 bucket has changed (including file
+    # Fetch new data if contents of S3 bucket has changed (including file
     # names, sizes, and last modified timestamps). Ignores characteristics of
-    # bucket and request, including bucket region, name, content type, request
-    # date, request ID, etc.
-    if (nrow(df) == 0 || !identical(s3Contents, newS3Contents)) {
-      # Save new data and new bucket connection info to vars in env of
-      # `getRecentDataHelper`. They persist between calls to `getRecentData` a
-      # la https://stackoverflow.com/questions/1088639/static-variables-in-r
+    # bucket and request, including bucket region, name, content type,
+    # request date, request ID, etc.
+    #
+    # Save new score data and new bucket connection info to vars in env of
+    # `createS3DataLoader`. They persist between calls to `getRecentData` a
+    # la https://stackoverflow.com/questions/1088639/static-variables-in-r
+    if (s3BucketHasChanged) {
       s3bucket <<- newS3bucket
-      df <<- getAllData(createS3DataFactory(s3bucket))
-      dataCreationDate <<- getCreationDate(createS3DataFactory(s3bucket))
+      s3DataFetcher <<- createS3DataFactory(newS3bucket)
+      s3Contents <<- newS3Contents
+    }
+    if (s3BucketHasChanged ||
+      !(targetVariable %in% names(df_list)) ||
+      nrow(df_list[[targetVariable]]) == 0) {
+      df_list[[targetVariable]] <<- getAllData(s3DataFetcher, targetVariable)
+      dataCreationDate <<- getCreationDate(s3DataFetcher)
     }
 
-    return(list(df = df, dataCreationDate = dataCreationDate))
+    return(list(df_list = df_list, dataCreationDate = dataCreationDate))
   }
 
   return(getRecentData)
@@ -130,12 +143,17 @@ createS3DataLoader <- function() {
 
 #' create a data loader with fallback data only
 createFallbackDataLoader <- function() {
-  df <- getAllData(getFallbackData)
+  df_list <- list()
+  for (targetVariable in TARGET_OPTIONS) {
+    df_list[[targetVariable]] <- getAllData(getFallbackData, targetVariable)
+  }
+  dataCreationDate <- getCreationDate(getFallbackData)
 
   dataLoader <- function() {
-    df
+    return(list(df_list = df_list, dataCreationDate = dataCreationDate))
   }
-  dataLoader
+
+  return(dataLoader)
 }
 
 

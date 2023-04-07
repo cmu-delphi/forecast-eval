@@ -78,7 +78,7 @@ updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, a
   }
   aheadChoices <- Filter(function(x) any(unique(df$ahead) %in% x), aheadOptions)
   # Ensure previsouly selected options are still allowed
-  if (!is.null(aheads) && aheads %in% aheadChoices) {
+  if (!is.null(aheads) && all(aheads %in% aheadChoices)) {
     selectedAheads <- aheads
   } else {
     selectedAheads <- aheadOptions[1]
@@ -140,16 +140,10 @@ server <- function(input, output, session) {
   CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
 
   # Get scores
-  loaded <- loadData()
-  df <- loaded$df
+  loaded <- loadData(INIT_TARGET)
+  df_list <- loaded$df_list
   dataCreationDate <- loaded$dataCreationDate
   DATA_LOADED <- TRUE
-
-  # Prepare input choices
-  forecasterChoices <- distinct(df, forecaster) %>%
-    pull() %>%
-    sort()
-  updateForecasterChoices(session, df, forecasterChoices, "wis")
 
   ##################
   # CREATE MAIN PLOT
@@ -274,15 +268,15 @@ server <- function(input, output, session) {
       Week_End_Date = target_end_date
     )
 
-    ## Setting color for each forecaster
+    ## Create color palette
     set.seed(COLOR_SEED())
     forecasterRand <- input$forecasters
-    ## If we have less then 5 forecaster selected
-    ## In order to get more different colors when recoloring
-    ## Lets input more forecasters on forecasterRand
-    if (length(forecasterRand) < 8) {
-      nForecast <- 8 - length(forecasterRand)
-      forecasterRand <- c(forecasterRand, forecasterChoices[!forecasterChoices %in% forecasterRand][1:5])
+    # Pad selected forecasters up to 8 items to get more-different colors for a
+    # small number of requested forecasters
+    minForecasters <- 8
+    if (length(forecasterRand) < minForecasters) {
+      nForecasters <- minForecasters - length(forecasterRand)
+      forecasterRand <- c(forecasterRand, paste0("blank_names", 1:nForecasters))
     }
 
     colorPalette <- setNames(
@@ -513,18 +507,12 @@ server <- function(input, output, session) {
 
   # Filter scoring df by inputs chosen (targetVariable, forecasters, aheads)
   filterScoreDf <- function() {
-    signalFilter <- CASE_FILTER
-    if (input$targetVariable == "Deaths") {
-      signalFilter <- DEATH_FILTER
-    }
-    if (input$targetVariable == "Hospitalizations") {
-      signalFilter <- HOSPITALIZATIONS_FILTER
-    }
-    filteredScoreDf <- df %>%
-      filter(signal == signalFilter) %>%
-      filter(forecaster %in% input$forecasters)
+    filteredScoreDf <- filter(
+      df_list[[input$targetVariable]],
+      forecaster %in% input$forecasters
+    )
 
-    if (signalFilter == HOSPITALIZATIONS_FILTER) {
+    if (input$targetVariable == "Hospitalizations") {
       filteredScoreDf <- filterHospitalizationsAheads(filteredScoreDf)
     }
     if (input$scoreType == "wis" || input$scoreType == "sharpness") {
@@ -707,20 +695,17 @@ server <- function(input, output, session) {
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
   observeEvent(input$targetVariable, {
+    DATA_LOADED <<- FALSE
+
     ## summaryPlot will try to use PREV_AS_OF_DATA()
     ## since it has wrong data information, it needs to be removed
     PREV_AS_OF_DATA(NULL)
-    if (input$targetVariable == "Deaths") {
-      ## Defining Filter
-      FILTER <- DEATH_FILTER
-    } else if (input$targetVariable == "Cases") {
-      FILTER <- CASE_FILTER
-    } else {
-      FILTER <- HOSPITALIZATIONS_FILTER
-    }
 
-    ## Filtering DF
-    df <- df %>% filter(signal == FILTER)
+    loaded <<- loadData(input$targetVariable)
+    df_list <<- loaded$df_list
+    dataCreationDate <<- loaded$dataCreationDate
+    DATA_LOADED <<- TRUE
+    df <- df_list[[input$targetVariable]]
 
     ## Update available options
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
@@ -759,13 +744,8 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$scoreType, {
-    if (input$targetVariable == "Deaths") {
-      df <- df %>% filter(signal == DEATH_FILTER)
-    } else if (input$targetVariable == "Cases") {
-      df <- df %>% filter(signal == CASE_FILTER)
-    } else {
-      df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
-    }
+    df <- df_list[[input$targetVariable]]
+
     # Only show forecasters that have data for the score chosen
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
 
@@ -781,14 +761,10 @@ server <- function(input, output, session) {
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from
   observeEvent(input$forecasters, {
-    if (input$targetVariable == "Deaths") {
-      df <- df %>% filter(signal == DEATH_FILTER)
-    } else if (input$targetVariable == "Cases") {
-      df <- df %>% filter(signal == CASE_FILTER)
-    } else {
-      df <- df %>% filter(signal == HOSPITALIZATIONS_FILTER)
-    }
-    df <- df %>% filter(forecaster %in% input$forecasters)
+    df <- filter(
+      df_list[[input$targetVariable]],
+      forecaster %in% input$forecasters
+    )
 
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, FALSE)
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
@@ -949,7 +925,7 @@ server <- function(input, output, session) {
   exportScoresServer(
     "exportScores", shiny::reactive(generateExportFilename(input)),
     shiny::reactive(createExportScoresDataFrame(
-      df, input$targetVariable, input$scoreType, input$forecasters,
+      df_list, input$targetVariable, input$scoreType, input$forecasters,
       input$location, input$coverageInterval
     ))
   )

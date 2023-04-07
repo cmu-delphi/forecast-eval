@@ -6,18 +6,14 @@ exportScoresUI <- function(id = "exportScores") {
 }
 
 createExportScoresDataFrame <- function(scoreDf, targetVariable, scoreType, forecasters, loc, coverageInterval) {
-  signalFilter <- CASE_FILTER
-  if (targetVariable == "Deaths") {
-    signalFilter <- DEATH_FILTER
-  } else if (targetVariable == "Hospitalizations") {
-    signalFilter <- HOSPITALIZATIONS_FILTER
-  }
+  scoreDf <- filter(
+    scoreDf[[targetVariable]],
+    forecaster %in% forecasters
+  )
   scoreDf <- renameScoreCol(scoreDf, scoreType, coverageInterval)
-  scoreDf <- scoreDf %>%
-    filter(signal == signalFilter) %>%
-    filter(forecaster %in% forecasters)
+
   if (loc == TOTAL_LOCATIONS || scoreType == "coverage") {
-    if (signalFilter == HOSPITALIZATIONS_FILTER) {
+    if (targetVariable == "Hospitalizations") {
       scoreDf <- filterHospitalizationsAheads(scoreDf)
     }
     scoreDf <- filterOverAllLocations(scoreDf, scoreType)

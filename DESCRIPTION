@@ -24,7 +24,8 @@ Imports:
  covidcast,
  stringr,
  markdown,
- memoise
+ memoise,
+ purrr
 Suggests:
  styler,
  lintr,

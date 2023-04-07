@@ -98,9 +98,24 @@ sidebar <- tags$div(
     ),
     checkboxGroupInput(
       "aheads",
-      "Forecast Horizon (Weeks)",
-      choices = AHEAD_OPTIONS,
-      selected = AHEAD_OPTIONS[1],
+      switch(
+        INIT_TARGET,
+        "Hospitalizations" = "Forecast Horizon (Days)",
+        "Deaths" = "Forecast Horizon (Weeks)",
+        "Cases" = "Forecast Horizon (Weeks)"
+      ),
+      choices = switch(
+        INIT_TARGET,
+        "Hospitalizations" = HOSPITALIZATIONS_AHEAD_OPTIONS,
+        "Deaths" = AHEAD_OPTIONS,
+        "Cases" = AHEAD_OPTIONS
+      ),
+      selected = switch(
+        INIT_TARGET,
+        "Hospitalizations" = HOSPITALIZATIONS_AHEAD_OPTIONS[1L],
+        "Deaths" = AHEAD_OPTIONS[1L],
+        "Cases" = AHEAD_OPTIONS[1L]
+      ),
       inline = TRUE
     ),
     hidden(tags$p(

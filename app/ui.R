@@ -99,9 +99,9 @@ sidebar <- tags$div(
     ),
     checkboxGroupInput(
       "aheads",
-      "Forecast Horizon (Weeks)",
-      choices = AHEAD_OPTIONS,
-      selected = AHEAD_OPTIONS[1],
+      "Forecast Horizon (Days)",
+      choices = HOSPITALIZATIONS_AHEAD_OPTIONS,
+      selected = HOSPITALIZATIONS_AHEAD_OPTIONS[1L],
       inline = TRUE
     ),
     hidden(tags$p(

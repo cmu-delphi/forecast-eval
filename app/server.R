@@ -137,7 +137,9 @@ server <- function(input, output, session) {
   DASH_SUFFIX <- ""
   COLOR_SEED <- reactiveVal(171)
 
-  CURRENT_WEEK_END_DATE <- reactiveVal(CASES_DEATHS_CURRENT)
+  CURRENT_WEEK_END_DATE <- reactiveVal(
+    ifelse(INIT_TARGET == "Hospitalizations", HOSP_CURRENT, CASES_DEATHS_CURRENT)
+  )
 
   # Get scores
   loaded <- loadData(INIT_TARGET)
@@ -896,8 +898,10 @@ server <- function(input, output, session) {
 
   updateAsOfChoices <- function(session, truthDf) {
     asOfChoices <- truthDf %>%
-      select(Week_End_Date) %>%
-      filter(Week_End_Date <= CURRENT_WEEK_END_DATE()) %>%
+      # To prevent grouping columns from being added back on.
+      ungroup() %>%
+      distinct(Week_End_Date) %>%
+      filter(Week_End_Date <= CURRENT_WEEK_END_DATE(), !is.na(Week_End_Date)) %>%
       pull()
     selectedAsOf <- isolate(input$asOf)
     if (input$targetVariable == "Hospitalizations") {
@@ -914,9 +918,9 @@ server <- function(input, output, session) {
     # Make sure we have a valid as of selection
     nonValidAsOf <- selectedAsOf == "" || !(as.Date(selectedAsOf) %in% asOfChoices)
     if (length(asOfChoices) != 0 && nonValidAsOf) {
-      selectedAsOf <- max(asOfChoices, na.rm = TRUE)
+      selectedAsOf <- max(asOfChoices)
     }
-    AS_OF_CHOICES(sort(unique(asOfChoices)))
+    AS_OF_CHOICES(sort(asOfChoices))
     updateSelectInput(session, "asOf",
       choices = sort(asOfChoices),
       selected = selectedAsOf

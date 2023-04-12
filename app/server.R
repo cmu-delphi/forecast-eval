@@ -694,56 +694,57 @@ server <- function(input, output, session) {
   )
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
-  observeEvent(input$targetVariable, {
-    DATA_LOADED <<- FALSE
+  observeEvent(input$targetVariable,
+    {
+      DATA_LOADED <<- FALSE
 
-    ## summaryPlot will try to use PREV_AS_OF_DATA()
-    ## since it has wrong data information, it needs to be removed
-    PREV_AS_OF_DATA(NULL)
+      ## summaryPlot will try to use PREV_AS_OF_DATA()
+      ## since it has wrong data information, it needs to be removed
+      PREV_AS_OF_DATA(NULL)
 
-    loaded <<- loadData(input$targetVariable)
-    df_list <<- loaded$df_list
-    dataCreationDate <<- loaded$dataCreationDate
-    DATA_LOADED <<- TRUE
-    df <- df_list[[input$targetVariable]]
+      loaded <<- loadData(input$targetVariable)
+      df_list <<- loaded$df_list
+      dataCreationDate <<- loaded$dataCreationDate
+      DATA_LOADED <<- TRUE
+      df <- df_list[[input$targetVariable]]
 
-    ## Update available options
-    updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
-    updateForecasterChoices(session, df, input$forecasters, input$scoreType)
-    updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
-    updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
+      ## Update available options
+      updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
+      updateForecasterChoices(session, df, input$forecasters, input$scoreType)
+      updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
+      updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
 
-    ## updateAsOf sets if we need to call updateAsOfData
-    ## the only necessary case is when going from
-    ## cases, deaths -> cases,deaths
-    updateAsOf <- FALSE
+      ## updateAsOf sets if we need to call updateAsOfData
+      ## the only necessary case is when going from
+      ## cases, deaths -> cases,deaths
+      updateAsOf <- FALSE
 
-    ## Resolving dates
-    ### If going from Deaths|Cases to Deaths|Cases we will call updateAsOfData
-    ### only when
-    if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable %in% c("Deaths", "Cases")) {
-      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
-      currentFetch <- input$asOf
-      if (input$asOf != "" &&
-        CURRENT_WEEK_END_DATE() != currentFetch) {
-        updateAsOf <- TRUE
+      ## Resolving dates
+      ### If going from Deaths|Cases to Deaths|Cases we will call updateAsOfData
+      ### only when
+      if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable %in% c("Deaths", "Cases")) {
+        CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
+        currentFetch <- input$asOf
+        if (input$asOf != "" &&
+          CURRENT_WEEK_END_DATE() != currentFetch) {
+          updateAsOf <- TRUE
+        }
+      } else if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable == "Hospitalizations") {
+        CURRENT_WEEK_END_DATE(HOSP_CURRENT)
+      } else if (PREV_TARGET == "Hospitalizations" && input$targetVariable %in% c("Deaths", "Cases")) {
+        CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
       }
-    } else if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable == "Hospitalizations") {
-      CURRENT_WEEK_END_DATE(HOSP_CURRENT)
-    } else if (PREV_TARGET == "Hospitalizations" && input$targetVariable %in% c("Deaths", "Cases")) {
-      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
-    }
 
-    ## Storing current target
-    PREV_TARGET <<- input$targetVariable
+      ## Storing current target
+      PREV_TARGET <<- input$targetVariable
 
-    ## Call the API only if we need as of data
-    if (updateAsOf) {
-      updateAsOfData(fetchDate = currentFetch)
-    }
-  },
-  # Make higher priority than other `observe`s since we need to have data loaded first.
-  priority = 1
+      ## Call the API only if we need as of data
+      if (updateAsOf) {
+        updateAsOfData(fetchDate = currentFetch)
+      }
+    },
+    # Make higher priority than other `observe`s since we need to have data loaded first.
+    priority = 1
   )
 
   observeEvent(input$scoreType, {

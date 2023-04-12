@@ -741,7 +741,10 @@ server <- function(input, output, session) {
     if (updateAsOf) {
       updateAsOfData(fetchDate = currentFetch)
     }
-  })
+  },
+  # Make higher priority than other `observe`s since we need to have data loaded first.
+  priority = 1
+  )
 
   observeEvent(input$scoreType, {
     df <- df_list[[input$targetVariable]]

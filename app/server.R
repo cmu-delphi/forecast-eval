@@ -921,7 +921,7 @@ server <- function(input, output, session) {
     }
     asOfChoices <- c(asOfChoices, CURRENT_WEEK_END_DATE())
     # Make sure we have a valid as of selection
-    nonValidAsOf <- selectedAsOf == "" || !any(as.Date(selectedAsOf) == asOfChoices)
+    nonValidAsOf <- selectedAsOf == "" || !any(selectedAsOf == asOfChoices)
     if (length(asOfChoices) != 0 && nonValidAsOf) {
       selectedAsOf <- max(asOfChoices)
     }

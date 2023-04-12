@@ -59,9 +59,7 @@ sidebar <- tags$div(
     # NB conditions are written in JavaScript!!
     condition = "input.tabset.startsWith('evaluations')",
     radioButtons("targetVariable", "Target Variable",
-      choices = list(
-        "Hospital Admissions" = "Hospitalizations"
-      )
+      choices = TARGET_VARS_BY_TAB[[paste0("evaluations", CURRENT_TAB_SUFFIX)]]
     ),
     radioButtons("scoreType", "Scoring Metric",
       choices = list(

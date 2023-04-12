@@ -154,6 +154,9 @@ server <- function(input, output, session) {
     if (input$location == "") {
       return()
     }
+    if (!(input$targetVariable %in% TARGET_VARS_BY_TAB[[isolate(input$tabset)]])) {
+      return()
+    }
 
     ## Setting target signal to be compared with asOfData
     if (input$targetVariable == "Cases") {
@@ -667,20 +670,15 @@ server <- function(input, output, session) {
 
   observeEvent(input$tabset,
     {
-      if (input$tabset == "evaluations") {
-        choices <- list(
-          "Hospital Admissions" = "Hospitalizations"
-        )
-        DASH_SUFFIX <<- ""
+      if (input$tabset == paste0("evaluations", CURRENT_TAB_SUFFIX)) {
+        suffix <- CURRENT_TAB_SUFFIX
       } else if (input$tabset == paste0("evaluations", ARCHIVE_TAB_SUFFIX)) {
-        choices <- list(
-          "Incident Deaths" = "Deaths",
-          "Incident Cases" = "Cases"
-        )
-        DASH_SUFFIX <<- ARCHIVE_TAB_SUFFIX
+        suffix <- ARCHIVE_TAB_SUFFIX
       } else {
         return()
       }
+      choices <- TARGET_VARS_BY_TAB[[paste0("evaluations", suffix)]]
+      DASH_SUFFIX <<- suffix
       updateTargetChoices(session, choices)
       showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
     },

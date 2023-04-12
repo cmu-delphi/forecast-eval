@@ -922,7 +922,7 @@ server <- function(input, output, session) {
     }
     AS_OF_CHOICES(sort(asOfChoices))
     updateSelectInput(session, "asOf",
-      choices = sort(asOfChoices),
+      choices = AS_OF_CHOICES(),
       selected = selectedAsOf
     )
   }

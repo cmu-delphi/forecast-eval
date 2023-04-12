@@ -138,7 +138,7 @@ server <- function(input, output, session) {
   COLOR_SEED <- reactiveVal(171)
 
   CURRENT_WEEK_END_DATE <- reactiveVal(
-    ifelse(INIT_TARGET == "Hospitalizations", HOSP_CURRENT, CASES_DEATHS_CURRENT)
+    if_else(INIT_TARGET == "Hospitalizations", HOSP_CURRENT, CASES_DEATHS_CURRENT)
   )
 
   # Get scores

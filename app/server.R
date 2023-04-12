@@ -131,7 +131,7 @@ server <- function(input, output, session) {
   HOSP_CURRENT <- resolveCurrentHospDay()
 
   PREV_AS_OF_DATA <- reactiveVal(NULL)
-  AS_OF_CHOICES <- reactiveVal(NULL)
+  AS_OF_CHOICES <- reactiveVal(resolveCurrentHospDay())
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
 
   DASH_SUFFIX <- ""
@@ -294,7 +294,7 @@ server <- function(input, output, session) {
     # Render truth plot with observed values
     truthDf <- filteredScoreDf
     ## this first condition is necessary when loading the dash
-    if (input$asOf == "") {
+    if (input$asOf == "" || !exists("TRUTH_PLOT")) {
       TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
       output[[paste0("truthPlot", DASH_SUFFIX)]] <- renderPlotly({
         TRUTH_PLOT

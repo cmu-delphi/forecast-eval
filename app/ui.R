@@ -129,9 +129,9 @@ sidebar <- tags$div(
     selectInput(
       "asOf",
       "As Of",
-      choices = resolveCurrentHospDay(),
+      choices = "",
       multiple = FALSE,
-      selected = resolveCurrentHospDay()
+      selected = ""
     ),
     tags$p(id = "missing-data-disclaimer", "Some locations may not have 'as of' data for the chosen 'as of' date"),
     div(

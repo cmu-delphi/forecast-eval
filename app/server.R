@@ -131,8 +131,24 @@ server <- function(input, output, session) {
   HOSP_CURRENT <- resolveCurrentHospDay()
 
   PREV_AS_OF_DATA <- reactiveVal(NULL)
-  AS_OF_CHOICES <- reactiveVal(resolveCurrentHospDay())
+  AS_OF_CHOICES <- reactiveVal(HOSP_CURRENT)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
+
+  # Set asof selection on startup to avoid creating initial plot multiple
+  # times. If asof selection is empty, the initial plot is created twice,
+  # once on startup and once when the as-of date is set later.
+  observeEvent(input$asOf,
+    {
+      if (input$asOf == "")
+      {
+        updateSelectInput(session, "asOf",
+          choices = AS_OF_CHOICES(),
+          selected = HOSP_CURRENT
+        )
+      }
+    },
+    once = TRUE
+  )
 
   DASH_SUFFIX <- ""
   COLOR_SEED <- reactiveVal(171)

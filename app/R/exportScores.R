@@ -8,7 +8,7 @@ exportScoresUI <- function(id = "exportScores") {
 createExportScoresDataFrame <- function(scoreDf, targetVariable, scoreType, forecasters, loc, coverageInterval) {
   scoreDf <- filter(
     scoreDf[[targetVariable]],
-    forecaster %in% forecasters
+    forecaster %chin% forecasters
   )
   scoreDf <- renameScoreCol(scoreDf, scoreType, coverageInterval)
 

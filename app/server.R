@@ -139,8 +139,7 @@ server <- function(input, output, session) {
   # once on startup and once when the as-of date is set later.
   observeEvent(input$asOf,
     {
-      if (input$asOf == "")
-      {
+      if (input$asOf == "") {
         updateSelectInput(session, "asOf",
           choices = AS_OF_CHOICES(),
           selected = HOSP_CURRENT

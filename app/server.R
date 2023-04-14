@@ -687,14 +687,13 @@ server <- function(input, output, session) {
   observeEvent(input$tabset,
     {
       if (input$tabset == paste0("evaluations", CURRENT_TAB_SUFFIX)) {
-        suffix <- CURRENT_TAB_SUFFIX
+        DASH_SUFFIX <<- CURRENT_TAB_SUFFIX
       } else if (input$tabset == paste0("evaluations", ARCHIVE_TAB_SUFFIX)) {
-        suffix <- ARCHIVE_TAB_SUFFIX
+        DASH_SUFFIX <<- ARCHIVE_TAB_SUFFIX
       } else {
         return()
       }
-      choices <- TARGET_VARS_BY_TAB[[paste0("evaluations", suffix)]]
-      DASH_SUFFIX <<- suffix
+      choices <- TARGET_VARS_BY_TAB[[paste0("evaluations", DASH_SUFFIX)]]
       updateTargetChoices(session, choices)
       showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
     },

@@ -8,8 +8,7 @@ updateTargetChoices <- function(session, targetChoices) {
 updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
   if (scoreType == "wis") {
     df <- filter(df, !is.na(wis))
-  }
-  if (scoreType == "ae") {
+  } else if (scoreType == "ae") {
     df <- filter(df, !is.na(ae))
   }
   forecasterChoices <- distinct(df, forecaster) %>% pull()
@@ -344,20 +343,28 @@ server <- function(input, output, session) {
     updateAsOfChoices(session, truthDf)
 
     # Format and transform data for plot
-    filteredScoreDf <- filter(filteredScoreDf, !is.na(Week_End_Date))
-    filteredScoreDf <- mutate(
+    filteredScoreDf <- filter(
       filteredScoreDf[, c("Forecaster", "Forecast_Date", "Week_End_Date", "Score", "ahead")],
-      across(where(is.numeric), ~ round(., 2))
+      !is.na(Week_End_Date)
     )
+    filteredScoreDf$Score <- round(filteredScoreDf$Score, 2)
+
     if (input$scoreType != "coverage") {
       if (input$scaleByBaseline) {
-        baselineDf <- filter(filteredScoreDf, Forecaster == "COVIDhub-baseline")
-        filteredScoreDf <- merge(filteredScoreDf, baselineDf, by = c("Week_End_Date", "ahead"))
+        baselineDf <- filter(
+          filteredScoreDf,
+          Forecaster == "COVIDhub-baseline"
+        )[, c("Week_End_Date", "ahead", "Score")]
+        baselineDf$Score_baseline <- baselineDf$Score
+        baselineDf$Score <- NULL
 
+        # Add on reference scores from baseline forecaster
+        filteredScoreDf <- merge(
+          filteredScoreDf, baselineDf,
+          by = c("Week_End_Date", "ahead"), suffixes=c(), sort=FALSE
+        )
         # Scale score by baseline forecaster
-        filteredScoreDf$Score <- filteredScoreDf$Score.x / filteredScoreDf$Score.y
-        filteredScoreDf$Forecaster <- filteredScoreDf$Forecaster.x
-        filteredScoreDf$Forecast_Date <- filteredScoreDf$Forecast_Date.x
+        filteredScoreDf$Score <- filteredScoreDf$Score / filteredScoreDf$Score_baseline
         filteredScoreDf <- filteredScoreDf[, c("Forecaster", "Forecast_Date", "Week_End_Date", "ahead", "Score")]
       }
       if (input$logScale) {
@@ -630,7 +637,7 @@ server <- function(input, output, session) {
 
     if (hasAsOfData) {
       # We want the forecasts to be later than latest as of date with data
-      lastEndDate <- tail(filter(filteredDf, !is.na(Reported_As_Of_Incidence)), n = 1)$Week_End_Date[1]
+      lastEndDate <- tail(filter(filteredDf, !is.na(Reported_As_Of_Incidence))[["Week_End_Date"]], n = 1)
       dfWithForecasts <- dfWithForecasts %>%
         filter(forecast_date >= lastEndDate) %>%
         group_by(Week_End_Date) %>%
@@ -674,11 +681,13 @@ server <- function(input, output, session) {
     if (hasAsOfData) {
       keepCols <- c(keepCols, "Reported_As_Of_Incidence")
     }
-    filteredDf <- merge(filteredDf, dfWithForecasts, by = c("Week_End_Date", "Forecaster"), all = TRUE) %>%
-      group_by(Week_End_Date)
-    # Remove rows of NAs
-    filteredDf <- filter(filteredDf[, keepCols], !is.null(Forecaster))
-    filteredDf <- filteredDf %>%
+    filteredDf <- merge(
+        filteredDf, dfWithForecasts,
+        by = c("Week_End_Date", "Forecaster"), all = TRUE, sort = FALSE
+      )[, keepCols] %>%
+      group_by(Week_End_Date) %>%
+      # Remove rows of NAs
+      filter(!is.null(Forecaster)) %>%
       arrange(Week_End_Date) %>%
       fill(Reported_Incidence, .direction = "downup")
     return(filteredDf)

@@ -25,7 +25,7 @@ filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FAL
   locationList <- lapply(locationList, function(x) x[x != "us"])
   # Get the intersection of all the locations in these lists
   locationsIntersect <- unique(Reduce(intersect, locationList))
-  filteredScoreDf <- filter(filteredScoreDf, geo_value %in% locationsIntersect)
+  filteredScoreDf <- filter(filteredScoreDf, geo_value %chin% locationsIntersect)
   if (scoreType == "coverage") {
     if (hasAsOfData) {
       filteredScoreDf <- filteredScoreDf %>%

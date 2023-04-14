@@ -19,7 +19,7 @@ updateForecasterChoices <- function(session, df, forecasterInput, scoreType) {
 }
 
 updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices, coverageInput, output) {
-  df <- filter(df, forecaster %in% forecasterChoices)
+  df <- filter(df, forecaster %chin% forecasterChoices)
   df <- Filter(function(x) !all(is.na(x)), df)
   coverageChoices <- intersect(colnames(df), COVERAGE_INTERVALS)
   # Ensure previously selected options are still allowed
@@ -37,7 +37,7 @@ updateCoverageChoices <- function(session, df, targetVariable, forecasterChoices
 }
 
 updateLocationChoices <- function(session, df, targetVariable, forecasterChoices, locationInput) {
-  df <- filter(df, forecaster %in% forecasterChoices)
+  df <- filter(df, forecaster %chin% forecasterChoices)
   locationChoices <- distinct(df, geo_value) %>%
     pull() %>%
     toupper()
@@ -65,7 +65,7 @@ updateLocationChoices <- function(session, df, targetVariable, forecasterChoices
 }
 
 updateAheadChoices <- function(session, df, targetVariable, forecasterChoices, aheads, targetVariableChange) {
-  df <- filter(df, forecaster %in% forecasterChoices)
+  df <- filter(df, forecaster %chin% forecasterChoices)
   if (targetVariable == "Hospitalizations") {
     aheadOptions <- HOSPITALIZATIONS_AHEAD_OPTIONS
     title <- "Forecast Horizon (Days)"
@@ -168,7 +168,7 @@ server <- function(input, output, session) {
     if (input$location == "") {
       return()
     }
-    if (!(input$targetVariable %in% TARGET_VARS_BY_TAB[[isolate(input$tabset)]])) {
+    if (!(input$targetVariable %chin% TARGET_VARS_BY_TAB[[isolate(input$tabset)]])) {
       return()
     }
 
@@ -231,7 +231,7 @@ server <- function(input, output, session) {
       filteredScoreDf <- filteredScoreDfAndIntersections[[1]]
       locationsIntersect <- filteredScoreDfAndIntersections[[2]]
       if (input$showForecasts) {
-        dfWithForecasts <- filter(dfWithForecasts, geo_value %in% locationsIntersect)
+        dfWithForecasts <- filter(dfWithForecasts, geo_value %chin% locationsIntersect)
       }
       aggregateText <- "*For fair comparison, all displayed forecasters on all displayed dates are compared across a common set of states and territories."
       if (input$scoreType == "coverage") {
@@ -539,7 +539,7 @@ server <- function(input, output, session) {
   filterScoreDf <- function() {
     filteredScoreDf <- filter(
       df_list[[input$targetVariable]],
-      forecaster %in% input$forecasters
+      forecaster %chin% input$forecasters
     )
 
     if (input$targetVariable == "Hospitalizations") {
@@ -795,7 +795,7 @@ server <- function(input, output, session) {
   observeEvent(input$forecasters, {
     df <- filter(
       df_list[[input$targetVariable]],
-      forecaster %in% input$forecasters
+      forecaster %chin% input$forecasters
     )
 
     updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, FALSE)

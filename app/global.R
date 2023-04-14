@@ -30,7 +30,18 @@ HOSPITALIZATIONS_AHEAD_OPTIONS <- c(
   HOSPITALIZATIONS_OFFSET + 14, HOSPITALIZATIONS_OFFSET + 21
 )
 
+CURRENT_TAB_SUFFIX <- ""
 ARCHIVE_TAB_SUFFIX <- "_archive"
+
+
+TARGET_VARS_BY_TAB <- list()
+TARGET_VARS_BY_TAB[[paste0("evaluations", CURRENT_TAB_SUFFIX)]] <- list(
+  "Hospital Admissions" = "Hospitalizations"
+)
+TARGET_VARS_BY_TAB[[paste0("evaluations", ARCHIVE_TAB_SUFFIX)]] <- list(
+  "Incident Deaths" = "Deaths",
+  "Incident Cases" = "Cases"
+)
 
 # Set the "previous" target to be the same as the starting target variable
 PREV_TARGET <- INIT_TARGET

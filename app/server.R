@@ -131,14 +131,29 @@ server <- function(input, output, session) {
   HOSP_CURRENT <- resolveCurrentHospDay()
 
   PREV_AS_OF_DATA <- reactiveVal(NULL)
-  AS_OF_CHOICES <- reactiveVal(NULL)
+  AS_OF_CHOICES <- reactiveVal(HOSP_CURRENT)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)
+
+  # Set asof selection on startup to avoid creating initial plot multiple
+  # times. If asof selection is empty, the initial plot is created twice,
+  # once on startup and once when the as-of date is set later.
+  observeEvent(input$asOf,
+    {
+      if (input$asOf == "") {
+        updateSelectInput(session, "asOf",
+          choices = AS_OF_CHOICES(),
+          selected = HOSP_CURRENT
+        )
+      }
+    },
+    once = TRUE
+  )
 
   DASH_SUFFIX <- ""
   COLOR_SEED <- reactiveVal(171)
 
   CURRENT_WEEK_END_DATE <- reactiveVal(
-    ifelse(INIT_TARGET == "Hospitalizations", HOSP_CURRENT, CASES_DEATHS_CURRENT)
+    if_else(INIT_TARGET == "Hospitalizations", HOSP_CURRENT, CASES_DEATHS_CURRENT)
   )
 
   # Get scores
@@ -152,6 +167,9 @@ server <- function(input, output, session) {
   ##################
   summaryPlot <- function() {
     if (input$location == "") {
+      return()
+    }
+    if (!(input$targetVariable %in% TARGET_VARS_BY_TAB[[isolate(input$tabset)]])) {
       return()
     }
 
@@ -294,7 +312,7 @@ server <- function(input, output, session) {
     # Render truth plot with observed values
     truthDf <- filteredScoreDf
     ## this first condition is necessary when loading the dash
-    if (input$asOf == "") {
+    if (input$asOf == "" || !exists("TRUTH_PLOT")) {
       TRUTH_PLOT <<- truthPlot(truthDf, locationsIntersect, !is.null(asOfData), dfWithForecasts, colorPalette)
       output[[paste0("truthPlot", DASH_SUFFIX)]] <- renderPlotly({
         TRUTH_PLOT
@@ -667,20 +685,14 @@ server <- function(input, output, session) {
 
   observeEvent(input$tabset,
     {
-      if (input$tabset == "evaluations") {
-        choices <- list(
-          "Hospital Admissions" = "Hospitalizations"
-        )
-        DASH_SUFFIX <<- ""
+      if (input$tabset == paste0("evaluations", CURRENT_TAB_SUFFIX)) {
+        DASH_SUFFIX <<- CURRENT_TAB_SUFFIX
       } else if (input$tabset == paste0("evaluations", ARCHIVE_TAB_SUFFIX)) {
-        choices <- list(
-          "Incident Deaths" = "Deaths",
-          "Incident Cases" = "Cases"
-        )
         DASH_SUFFIX <<- ARCHIVE_TAB_SUFFIX
       } else {
         return()
       }
+      choices <- TARGET_VARS_BY_TAB[[paste0("evaluations", DASH_SUFFIX)]]
       updateTargetChoices(session, choices)
       showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
     },
@@ -696,54 +708,58 @@ server <- function(input, output, session) {
   )
 
   # When the target variable changes, update available forecasters, locations, and CIs to choose from
-  observeEvent(input$targetVariable, {
-    DATA_LOADED <<- FALSE
+  observeEvent(input$targetVariable,
+    {
+      DATA_LOADED <<- FALSE
 
-    ## summaryPlot will try to use PREV_AS_OF_DATA()
-    ## since it has wrong data information, it needs to be removed
-    PREV_AS_OF_DATA(NULL)
+      ## summaryPlot will try to use PREV_AS_OF_DATA()
+      ## since it has wrong data information, it needs to be removed
+      PREV_AS_OF_DATA(NULL)
 
-    loaded <<- loadData(input$targetVariable)
-    df_list <<- loaded$df_list
-    dataCreationDate <<- loaded$dataCreationDate
-    DATA_LOADED <<- TRUE
-    df <- df_list[[input$targetVariable]]
+      loaded <<- loadData(input$targetVariable)
+      df_list <<- loaded$df_list
+      dataCreationDate <<- loaded$dataCreationDate
+      DATA_LOADED <<- TRUE
+      df <- df_list[[input$targetVariable]]
 
-    ## Update available options
-    updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
-    updateForecasterChoices(session, df, input$forecasters, input$scoreType)
-    updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
-    updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
+      ## Update available options
+      updateAheadChoices(session, df, input$targetVariable, input$forecasters, input$aheads, TRUE)
+      updateForecasterChoices(session, df, input$forecasters, input$scoreType)
+      updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
+      updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
 
-    ## updateAsOf sets if we need to call updateAsOfData
-    ## the only necessary case is when going from
-    ## cases, deaths -> cases,deaths
-    updateAsOf <- FALSE
+      ## updateAsOf sets if we need to call updateAsOfData
+      ## the only necessary case is when going from
+      ## cases, deaths -> cases,deaths
+      updateAsOf <- FALSE
 
-    ## Resolving dates
-    ### If going from Deaths|Cases to Deaths|Cases we will call updateAsOfData
-    ### only when
-    if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable %in% c("Deaths", "Cases")) {
-      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
-      currentFetch <- input$asOf
-      if (input$asOf != "" &&
-        CURRENT_WEEK_END_DATE() != currentFetch) {
-        updateAsOf <- TRUE
+      ## Resolving dates
+      ### If going from Deaths|Cases to Deaths|Cases we will call updateAsOfData
+      ### only when
+      if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable %in% c("Deaths", "Cases")) {
+        CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
+        currentFetch <- input$asOf
+        if (input$asOf != "" &&
+          CURRENT_WEEK_END_DATE() != currentFetch) {
+          updateAsOf <- TRUE
+        }
+      } else if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable == "Hospitalizations") {
+        CURRENT_WEEK_END_DATE(HOSP_CURRENT)
+      } else if (PREV_TARGET == "Hospitalizations" && input$targetVariable %in% c("Deaths", "Cases")) {
+        CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
       }
-    } else if (PREV_TARGET %in% c("Deaths", "Cases") && input$targetVariable == "Hospitalizations") {
-      CURRENT_WEEK_END_DATE(HOSP_CURRENT)
-    } else if (PREV_TARGET == "Hospitalizations" && input$targetVariable %in% c("Deaths", "Cases")) {
-      CURRENT_WEEK_END_DATE(CASES_DEATHS_CURRENT)
-    }
 
-    ## Storing current target
-    PREV_TARGET <<- input$targetVariable
+      ## Storing current target
+      PREV_TARGET <<- input$targetVariable
 
-    ## Call the API only if we need as of data
-    if (updateAsOf) {
-      updateAsOfData(fetchDate = currentFetch)
-    }
-  })
+      ## Call the API only if we need as of data
+      if (updateAsOf) {
+        updateAsOfData(fetchDate = currentFetch)
+      }
+    },
+    # Make higher priority than other `observe`s since we need to have data loaded first.
+    priority = 1
+  )
 
   observeEvent(input$scoreType, {
     df <- df_list[[input$targetVariable]]
@@ -922,7 +938,7 @@ server <- function(input, output, session) {
     }
     AS_OF_CHOICES(sort(asOfChoices))
     updateSelectInput(session, "asOf",
-      choices = sort(asOfChoices),
+      choices = AS_OF_CHOICES(),
       selected = selectedAsOf
     )
   }

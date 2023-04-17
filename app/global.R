@@ -43,9 +43,6 @@ TARGET_VARS_BY_TAB[[paste0("evaluations", ARCHIVE_TAB_SUFFIX)]] <- list(
   "Incident Cases" = "Cases"
 )
 
-# Set the "previous" target to be the same as the starting target variable
-PREV_TARGET <- INIT_TARGET
-
 # When RE_RENDER_TRUTH = TRUE
 # summaryPlot will be called only to update TruthPlot
 RE_RENDER_TRUTH <- FALSE

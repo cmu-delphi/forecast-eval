@@ -56,7 +56,7 @@ filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FAL
 # Only use weekly aheads for hospitalizations
 # May change in the future
 filterHospitalizationsAheads <- function(scoreDf) {
-  scoreDf["weekday"] <- format(as.Date(scoreDf$target_end_date, '%Y-%m-%d'), "%A")
+  scoreDf["weekday"] <- format(as.Date(scoreDf$target_end_date, "%Y-%m-%d"), "%A")
   scoreDf <- filter(scoreDf, weekday == HOSPITALIZATIONS_TARGET_DAY)
   scoreDf$ahead_group <- case_when(
     scoreDf$ahead >= HOSPITALIZATIONS_OFFSET & scoreDf$ahead < 7 + HOSPITALIZATIONS_OFFSET ~ 1L,

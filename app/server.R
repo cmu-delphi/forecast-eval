@@ -361,7 +361,7 @@ server <- function(input, output, session) {
         # Add on reference scores from baseline forecaster
         filteredScoreDf <- merge(
           filteredScoreDf, baselineDf,
-          by = c("Week_End_Date", "ahead"), suffixes=c(), sort=FALSE
+          by = c("Week_End_Date", "ahead"), suffixes = c(), sort = FALSE
         )
         # Scale score by baseline forecaster
         filteredScoreDf$Score <- filteredScoreDf$Score / filteredScoreDf$Score_baseline
@@ -682,9 +682,9 @@ server <- function(input, output, session) {
       keepCols <- c(keepCols, "Reported_As_Of_Incidence")
     }
     filteredDf <- merge(
-        filteredDf, dfWithForecasts,
-        by = c("Week_End_Date", "Forecaster"), all = TRUE, sort = FALSE
-      )[, keepCols] %>%
+      filteredDf, dfWithForecasts,
+      by = c("Week_End_Date", "Forecaster"), all = TRUE, sort = FALSE
+    )[, keepCols] %>%
       group_by(Week_End_Date) %>%
       # Remove rows of NAs
       filter(!is.null(Forecaster)) %>%

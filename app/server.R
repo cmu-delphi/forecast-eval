@@ -130,6 +130,9 @@ server <- function(input, output, session) {
   CASES_DEATHS_CURRENT <- resolveCurrentCasesDeathDay()
   HOSP_CURRENT <- resolveCurrentHospDay()
 
+  # Set the "previous" target to be the same as the starting target variable
+  PREV_TARGET <- INIT_TARGET
+
   PREV_AS_OF_DATA <- reactiveVal(NULL)
   AS_OF_CHOICES <- reactiveVal(HOSP_CURRENT)
   SUMMARIZING_OVER_ALL_LOCATIONS <- reactive(input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS)

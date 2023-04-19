@@ -57,6 +57,7 @@ filterOverAllLocations <- function(filteredScoreDf, scoreType, hasAsOfData = FAL
 # May change in the future
 filterHospitalizationsAheads <- function(scoreDf) {
   days_list <- c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+  # Make sure to use `data.table`'s `wday`; `lubridate` has a function of the same name.
   scoreDf["weekday"] <- days_list[data.table::wday(as.Date(scoreDf$target_end_date, "%Y-%m-%d"))]
   scoreDf <- filter(scoreDf, weekday == HOSPITALIZATIONS_TARGET_DAY)
   scoreDf$ahead_group <- case_when(

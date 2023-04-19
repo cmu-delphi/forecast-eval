@@ -202,6 +202,10 @@ server <- function(input, output, session) {
       input$asOf != "" &&
       nrow(PREV_AS_OF_DATA()) != 0 &&
       input$asOf < CURRENT_WEEK_END_DATE()) {
+      # Equivalent to but faster than the `dplyr`:
+      #  asOfData <- PREV_AS_OF_DATA() %>%
+      #    rename(target_end_date = time_value, as_of_actual = value) %>%
+      #    select(target_end_date, geo_value, as_of_actual)
       asOfData <- PREV_AS_OF_DATA()
       asOfData$target_end_date <- asOfData$time_value
       asOfData$as_of_actual <- asOfData$value

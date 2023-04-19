@@ -931,8 +931,8 @@ server <- function(input, output, session) {
       # To prevent grouping columns from being added back on.
       ungroup() %>%
       distinct(Week_End_Date) %>%
-      filter(Week_End_Date <= CURRENT_WEEK_END_DATE(), !is.na(Week_End_Date)) %>%
-      pull()
+      filter(Week_End_Date < CURRENT_WEEK_END_DATE(), !is.na(Week_End_Date)) %>%
+      pull(Week_End_Date)
     selectedAsOf <- isolate(input$asOf)
     if (input$targetVariable == "Hospitalizations") {
       minChoice <- MIN_AVAIL_HOSP_AS_OF_DATE
@@ -946,7 +946,7 @@ server <- function(input, output, session) {
     }
     asOfChoices <- c(asOfChoices, CURRENT_WEEK_END_DATE())
     # Make sure we have a valid as of selection
-    nonValidAsOf <- selectedAsOf == "" || !(selectedAsOf %in% asOfChoices)
+    nonValidAsOf <- selectedAsOf == "" || !(as.Date(selectedAsOf) %in% asOfChoices)
     if (length(asOfChoices) != 0 && nonValidAsOf) {
       selectedAsOf <- max(asOfChoices)
     }

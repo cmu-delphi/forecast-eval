@@ -8,7 +8,7 @@ exportScoresUI <- function(id = "exportScores") {
 createExportScoresDataFrame <- function(scoreDf, targetVariable, scoreType, forecasters, loc, coverageInterval) {
   scoreDf <- filter(
     scoreDf[[targetVariable]],
-    forecaster %in% forecasters
+    forecaster %chin% forecasters
   )
   scoreDf <- renameScoreCol(scoreDf, scoreType, coverageInterval)
 
@@ -19,7 +19,7 @@ createExportScoresDataFrame <- function(scoreDf, targetVariable, scoreType, fore
     scoreDf <- filterOverAllLocations(scoreDf, scoreType)
     return(scoreDf[[1]])
   } else {
-    scoreDf <- scoreDf %>% filter(geo_value == tolower(loc))
+    scoreDf <- filter(scoreDf, geo_value == tolower(loc))
     scoreDf <- scoreDf[c(
       "ahead", "geo_value", "forecaster", "forecast_date",
       "data_source", "target_end_date", "Score", "actual"

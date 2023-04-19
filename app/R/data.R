@@ -128,7 +128,7 @@ createS3DataLoader <- function() {
       s3Contents <<- newS3Contents
     }
     if (s3BucketHasChanged ||
-      !(targetVariable %in% names(df_list)) ||
+      !(targetVariable %chin% names(df_list)) ||
       nrow(df_list[[targetVariable]]) == 0) {
       df_list[[targetVariable]] <<- getAllData(s3DataFetcher, targetVariable)
       dataCreationDate <<- getCreationDate(s3DataFetcher)

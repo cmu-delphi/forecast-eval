@@ -25,7 +25,8 @@ Imports:
  stringr,
  markdown,
  memoise,
- purrr
+ purrr,
+ data.table
 Suggests:
  styler,
  lintr,

@@ -8,6 +8,7 @@ library(lubridate)
 library(viridis)
 library(tsibble)
 library(covidcast)
+library(data.table)
 
 appVersion <- "6.1.0"
 
@@ -35,10 +36,10 @@ ARCHIVE_TAB_SUFFIX <- "_archive"
 
 
 TARGET_VARS_BY_TAB <- list()
-TARGET_VARS_BY_TAB[[paste0("evaluations", CURRENT_TAB_SUFFIX)]] <- list(
+TARGET_VARS_BY_TAB[[paste0("evaluations", CURRENT_TAB_SUFFIX)]] <- c(
   "Hospital Admissions" = "Hospitalizations"
 )
-TARGET_VARS_BY_TAB[[paste0("evaluations", ARCHIVE_TAB_SUFFIX)]] <- list(
+TARGET_VARS_BY_TAB[[paste0("evaluations", ARCHIVE_TAB_SUFFIX)]] <- c(
   "Incident Deaths" = "Deaths",
   "Incident Cases" = "Cases"
 )

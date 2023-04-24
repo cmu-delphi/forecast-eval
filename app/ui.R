@@ -67,7 +67,8 @@ sidebar <- tags$div(
         "Spread" = "sharpness",
         "Absolute Error" = "ae",
         "Coverage" = "coverage"
-      )
+      ),
+      selected = INIT_SCORE_TYPE
     ),
     conditionalPanel(
       condition = "input.scoreType != 'coverage'",

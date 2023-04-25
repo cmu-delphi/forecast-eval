@@ -814,7 +814,7 @@ server <- function(input, output, session) {
     # selected or when the "Total over states" location option is selected),
     # we need to regenerate the truth plot when any new forecaster is added
     # in case it changes the common location set.
-    if (input$scoreType == "coverage" || input$location == TOTAL_LOCATIONS) {
+    if (SUMMARIZING_OVER_ALL_LOCATIONS()) {
       # Need to create new truth plot.
       USE_CURR_TRUTH <<- FALSE
     }

@@ -809,6 +809,15 @@ server <- function(input, output, session) {
     updateLocationChoices(session, df, input$targetVariable, input$forecasters, input$location)
     updateCoverageChoices(session, df, input$targetVariable, input$forecasters, input$coverageInterval, output)
     USE_CURR_TRUTH <<- TRUE
+
+    # When aggregating over shared locations (i.e. either when coverage is
+    # selected or when the "Total over states" location option is selected),
+    # we need to regenerate the truth plot when any new forecaster is added
+    # in case it changes the common location set.
+    if (SUMMARIZING_OVER_ALL_LOCATIONS()) {
+      # Need to create new truth plot.
+      USE_CURR_TRUTH <<- FALSE
+    }
   })
 
   observeEvent(input$scaleByBaseline, {

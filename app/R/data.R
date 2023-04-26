@@ -5,7 +5,7 @@ library(aws.s3)
 shinyOptions(cache = cachem::cache_mem(max_size = 1000 * 1024^2, evict = "lru"))
 cache <- getShinyOption("cache")
 
-# Since covidcast data updates about once a day. Add date arg to
+# Since covidcast data updates about once a day, add date arg to
 # covidcast_signal so caches aren't used after that.
 covidcast_signal_mem <- function(..., date = Sys.Date()) {
   return(covidcast_signal(...))
@@ -67,65 +67,74 @@ getCreationDate <- function(loadFile) {
 }
 
 
-getAllData <- function(loadFile) {
-  dfStateCases <- loadFile("score_cards_state_cases.rds")
-  dfStateDeaths <- loadFile("score_cards_state_deaths.rds")
-  dfStateHospitalizations <- loadFile("score_cards_state_hospitalizations.rds")
-  dfNationCases <- loadFile("score_cards_nation_cases.rds")
-  dfNationDeaths <- loadFile("score_cards_nation_deaths.rds")
-  dfNationHospitalizations <- loadFile("score_cards_nation_hospitalizations.rds")
+getAllData <- function(loadFile, targetVariable) {
+  df <- switch(targetVariable,
+    "Deaths" = bind_rows(
+      loadFile("score_cards_state_deaths.rds"),
+      loadFile("score_cards_nation_deaths.rds")
+    ),
+    "Cases" = bind_rows(
+      loadFile("score_cards_state_cases.rds"),
+      loadFile("score_cards_nation_cases.rds")
+    ),
+    "Hospitalizations" = bind_rows(
+      loadFile("score_cards_state_hospitalizations.rds"),
+      loadFile("score_cards_nation_hospitalizations.rds")
+    )
+  )
 
-  # Pick out expected columns only
-  covCols <- paste0("cov_", COVERAGE_INTERVALS)
-  expectedCols <- c(
+  # The names of the `covCols` elements become the new names of those columns
+  # when we use this vector in the `select` below.
+  covCols <- setNames(paste0("cov_", COVERAGE_INTERVALS), COVERAGE_INTERVALS)
+  keepCols <- c(
     "ahead", "geo_value", "forecaster", "forecast_date",
     "data_source", "signal", "target_end_date", "incidence_period",
     "actual", "wis", "sharpness", "ae", "value_50",
     covCols
   )
-
-  df <- bind_rows(
-    dfStateCases %>% select(all_of(expectedCols)),
-    dfStateDeaths %>% select(all_of(expectedCols)),
-    dfStateHospitalizations %>% select(all_of(expectedCols)),
-    dfNationCases %>% select(all_of(expectedCols)),
-    dfNationDeaths %>% select(all_of(expectedCols)),
-    dfNationHospitalizations %>% select(all_of(expectedCols))
-  )
-  df <- df %>% rename(
-    "10" = cov_10, "20" = cov_20, "30" = cov_30,
-    "40" = cov_40, "50" = cov_50, "60" = cov_60, "70" = cov_70,
-    "80" = cov_80, "90" = cov_90, "95" = cov_95, "98" = cov_98
-  )
+  df <- select(df, all_of(keepCols))
 
   return(df)
 }
 
 createS3DataLoader <- function() {
+  # Cached connection info
   s3bucket <- getS3Bucket()
-  df <- data.frame()
+  s3DataFetcher <- createS3DataFactory(s3bucket)
+  s3Contents <- s3bucket[attr(s3bucket, "names", exact = TRUE)]
+
+  # Cached data
+  df_list <- list()
   dataCreationDate <- as.Date(NA)
 
-  getRecentData <- function() {
+  getRecentData <- function(targetVariable = TARGET_OPTIONS) {
+    targetVariable <- match.arg(targetVariable)
+
     newS3bucket <- getS3Bucket()
-
-    s3Contents <- s3bucket[attr(s3bucket, "names", exact = TRUE)]
     newS3Contents <- newS3bucket[attr(newS3bucket, "names", exact = TRUE)]
+    s3BucketHasChanged <- !identical(s3Contents, newS3Contents)
 
-    # Fetch new score data if contents of S3 bucket has changed (including file
+    # Fetch new data if contents of S3 bucket has changed (including file
     # names, sizes, and last modified timestamps). Ignores characteristics of
-    # bucket and request, including bucket region, name, content type, request
-    # date, request ID, etc.
-    if (nrow(df) == 0 || !identical(s3Contents, newS3Contents)) {
-      # Save new data and new bucket connection info to vars in env of
-      # `getRecentDataHelper`. They persist between calls to `getRecentData` a
-      # la https://stackoverflow.com/questions/1088639/static-variables-in-r
+    # bucket and request, including bucket region, name, content type,
+    # request date, request ID, etc.
+    #
+    # Save new score data and new bucket connection info to vars in env of
+    # `createS3DataLoader`. They persist between calls to `getRecentData` a
+    # la https://stackoverflow.com/questions/1088639/static-variables-in-r
+    if (s3BucketHasChanged) {
       s3bucket <<- newS3bucket
-      df <<- getAllData(createS3DataFactory(s3bucket))
-      dataCreationDate <<- getCreationDate(createS3DataFactory(s3bucket))
+      s3DataFetcher <<- createS3DataFactory(newS3bucket)
+      s3Contents <<- newS3Contents
+    }
+    if (s3BucketHasChanged ||
+      !(targetVariable %chin% names(df_list)) ||
+      nrow(df_list[[targetVariable]]) == 0) {
+      df_list[[targetVariable]] <<- getAllData(s3DataFetcher, targetVariable)
+      dataCreationDate <<- getCreationDate(s3DataFetcher)
     }
 
-    return(list(df = df, dataCreationDate = dataCreationDate))
+    return(list(df_list = df_list, dataCreationDate = dataCreationDate))
   }
 
   return(getRecentData)
@@ -134,12 +143,17 @@ createS3DataLoader <- function() {
 
 #' create a data loader with fallback data only
 createFallbackDataLoader <- function() {
-  df <- getAllData(getFallbackData)
+  df_list <- list()
+  for (targetVariable in TARGET_OPTIONS) {
+    df_list[[targetVariable]] <- getAllData(getFallbackData, targetVariable)
+  }
+  dataCreationDate <- getCreationDate(getFallbackData)
 
   dataLoader <- function() {
-    df
+    return(list(df_list = df_list, dataCreationDate = dataCreationDate))
   }
-  dataLoader
+
+  return(dataLoader)
 }
 
 

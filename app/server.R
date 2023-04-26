@@ -129,8 +129,9 @@ server <- function(input, output, session) {
   CASES_DEATHS_CURRENT <- resolveCurrentCasesDeathDay()
   HOSP_CURRENT <- resolveCurrentHospDay()
 
-  # Set the "previous" target to be the same as the starting target variable
+  # Set the "previous" target and score type to be the same as the starting values
   PREV_TARGET <- INIT_TARGET
+  PREV_SCORE_TYPE <- INIT_SCORE_TYPE
 
   PREV_AS_OF_DATA <- reactiveVal(NULL)
   AS_OF_CHOICES <- reactiveVal(HOSP_CURRENT)
@@ -264,7 +265,7 @@ server <- function(input, output, session) {
         output[[paste0("renderWarningText", DASH_SUFFIX)]] <- renderText("")
         showElement(paste0("truthPlot", DASH_SUFFIX))
       }
-      # Not totaling over all locations
+      # Not totaling over all locations (single states and "US")
     } else {
       if (!is.null(asOfData)) {
         filteredScoreDf <- filteredScoreDf %>%
@@ -788,14 +789,28 @@ server <- function(input, output, session) {
     # Only show forecasters that have data for the score chosen
     updateForecasterChoices(session, df, input$forecasters, input$scoreType)
 
-    # If we are switching between coverage and other score types we need to
-    # update the as of data we have so it matches the correct locations shown
-    if (input$location == "US") {
-      updateAsOfData()
-    }
-
     showScoreExplanation(session, input$scoreType, DASH_SUFFIX)
     USE_CURR_TRUTH <<- TRUE
+
+    # Normally when score type selection changes, we reuse the existing truth
+    # plot (behavior is toggled by `USE_CURR_TRUTH`). This is valid as long
+    # as the locations reported by each score type are the same.
+    #
+    # However, regardless of which location is selected, coverage aggregates
+    # scores over states that have forecasts reported by all selected
+    # forecasters. This means that when changing to or from "coverage" and
+    # any single state or "US" is selected as the location (that is, we are
+    # not aggregating over shared locations), we need to regenerate the truth
+    # plot with updated truth data.
+    if ((input$scoreType == "coverage" || PREV_SCORE_TYPE == "coverage") && input$location != TOTAL_LOCATIONS) {
+      updateAsOfData()
+      # Don't ONLY create a new truth plot, make a new main plot, too.
+      RE_RENDER_TRUTH <<- FALSE
+      # Need to create new truth plot.
+      USE_CURR_TRUTH <<- FALSE
+    }
+
+    PREV_SCORE_TYPE <<- input$scoreType
   })
 
   # When forecaster selections change, update available aheads, locations, and CIs to choose from

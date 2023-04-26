@@ -18,6 +18,7 @@ HOSPITALIZATIONS_TARGET_DAY <- "Wednesday"
 TOTAL_LOCATIONS <- "Totaled Over States*"
 AHEAD_OPTIONS <- c(1, 2, 3, 4)
 
+INIT_SCORE_TYPE <- "wis"
 INIT_TARGET <- "Hospitalizations"
 TARGET_OPTIONS <- c("Deaths", "Cases", "Hospitalizations")
 

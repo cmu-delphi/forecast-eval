@@ -10,7 +10,7 @@ library(tsibble)
 library(covidcast)
 library(data.table)
 
-appVersion <- "6.1.0"
+appVersion <- "7.0.0"
 
 COVERAGE_INTERVALS <- c("10", "20", "30", "40", "50", "60", "70", "80", "90", "95", "98")
 CASES_DEATHS_TARGET_DAY <- "Saturday"

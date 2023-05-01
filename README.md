@@ -18,13 +18,10 @@ The dashboard is backed by the forecast evaluation pipeline. The pipeline runs t
 
 See the ["About" writeup](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/app/assets/about.md) for more information about the data and processing steps.
 
-## Steps to contribute
+# Contributing
+
 1. Create a new branch off of `dev`
 2. Create a pull request into `dev`
-
-Branch `main` is the production branch. Branch `dev` will be merged into main when a release is ready. See below for instructions on how to create a release.
-
-
 
 **Note:** the easiest way to view and develop this project locally is to use RStudio and run the RShiny app from inside the IDE
 
@@ -35,7 +32,7 @@ Alternatively, ...
 
 ## Building
 
-This project requires a recent version of gnu/make and docker.
+This project requires a recent version of GNU make and docker.
 
 Builds use a containerized R environment. See the `docker_build` directory for more details.
 
@@ -45,7 +42,7 @@ To build:
 > make build
 ```
 
-To start `bash` shell in the docker container, which would let you start a R session:
+To start `bash` shell in the docker container, which would let you start an R session:
 
 ```bash
 > make start_repl
@@ -60,21 +57,35 @@ To start a docker image of the shiny server locally:
 ```
 
 # Releasing
-```
+
+`main` is the production branch and contains the code that the public dashboard uses. Code changes will accumulate on the `dev` branch and when we want to make a release, `dev` will be merged into `main` via the ["Create Release" workflow](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/.github/workflows/create_release.yml). Version bump type (major, minor, etc) is specified manually when running the action.
+
+If there's some issue with the workflow-based release process, a release can be done manually with:
+```bash
 git checkout dev
 git pull origin dev
-git checkout -b release_v1.0 origin/dev
+git checkout -b release_v<major>.<minor>.<patch> origin/dev
 ```
-Update version number in DESCRIPTION FILE
-```
+Update version number in the [DESCRIPTION file](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/DESCRIPTION) and in the [dashboard](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/app/global.R#L13).
+```bash
 git add .
-git commit -m "Version 1.0 updates"
-git tag -a v1.0 -m "Version 1.0"
-git push origin release_v1.0
-git push origin v1.0
+git commit -m "Version <major>.<minor>.<patch> updates"
+git tag -a v<major>.<minor>.<patch> -m "Version <major>.<minor>.<patch>"
+git push origin release_v<major>.<minor>.patch><
+git push origin v<major>.<minor>.patch><
 ```
-Create a PR into `main`.  
-After code is merged to `main`, perform cleanup by merging `main` into `dev` so that `dev` stays up to date.
+Create a PR into `main`. After the branch is merged to `main`, perform cleanup by merging `main` into `dev` so that `dev` stays up to date.
+
+## Dependencies
+
+When updates are made in the evalcast package that affect the scoring script, the covidcast docker image must be rebuilt by kicking off the workflow here: https://github.com/cmu-delphi/covidcast-docker/actions/workflows/main.yml. Ensure that the changes in evalcast will be compatible with the dashboard and will not cause errors - when the scoring script is run on these changes the results show up automatically in prod.
+
+## Perform Manual Rollback
+This should only be performed if absolutely necessary.
+
+1. Change [this forecasteval line](https://github.com/cmu-delphi/delphi-ansible-web/blob/main/vars.yml#L63) to point to the desired sha256 hash rather than `latest` tag. The hash tags can be found [here](https://github.com/orgs/cmu-delphi/packages/container/package/forecast-eval).
+2. Create PR into `main` (tag Brian as reviewer and let him know). Changes will automatically propagate to prod.
+3. When creating the next normal release, the hash tag will no longer automatically update to the `latest` tag. The change back to `latest` must be performed manually during the next release.
 
 # Code Structure
  - `workflows` contains the weekly data pipeline workflow action (`s3_upload_ec2.yml`) and the `main.yml` that runs on branch merge
@@ -90,14 +101,3 @@ After code is merged to `main`, perform cleanup by merging `main` into `dev` so 
    - ***Note: when adding a new package dependency to the app, it must be specified in this Dockerfile***
  - `DESCRIPTION` is where the version number is updated for each release
  - `Makefile` contains all commands to build and run the dashboard and score and upload the data
-
-## Note on Scoring Script
-
-When updates are made in the evalcast package that affect the scoring script, the covidcast docker image must be rebuilt by kicking off the workflow here: https://github.com/cmu-delphi/covidcast-docker/actions/workflows/main.yml. Ensure that the changes in evalcast will be compatible with the dashboard and will not cause errors - when the scoring script is run on these changes the results show up automatically in prod.
-
-## Perform Manual Rollback
-This should only be performed if absolutely necessary.
-
-1. Change [this forecasteval line](https://github.com/cmu-delphi/delphi-ansible-web/blob/main/vars.yml#L63) to point to the desired sha256 hash rather than `latest` tag. The hash tags can be found [here](https://github.com/orgs/cmu-delphi/packages/container/package/forecast-eval).
-2. Create PR into `main` (tag Brian as reviewer and let him know). Changes will automatically propagate to prod.
-3. When creating the next normal release, the hash tag will no longer automatically update to the `latest` tag. The change back to `latest` must be performed manually during the next release. 

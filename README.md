@@ -84,15 +84,23 @@ When updates are made in the `evalcast` package the behavior of the scoring scri
 
 Currently, the scoring pipeline [uses the `evalcast` branch](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/docker/dependencies.R#L18) of the [`evalcast` package](https://github.com/cmu-delphi/covidcast/tree/evalcast/R-packages/evalcast). However, if we need to make forecast eval-specific changes to the `evalcast` package that would conflict with other use cases, we have in the past created a dedicated branch of `evalcast`.
 
-## Perform Manual Rollback
+## Performing a manual rollback
+
+### For the dashboard
 This should only be performed if absolutely necessary.
 
-1. Change [this forecasteval line](https://github.com/cmu-delphi/delphi-ansible-web/blob/main/vars.yml#L63) to point to the desired sha256 hash rather than `latest` tag. The hash tags can be found [here](https://github.com/orgs/cmu-delphi/packages/container/package/forecast-eval).
-2. Create PR into `main` (tag Brian as reviewer and let him know). Changes will automatically propagate to prod.
-3. When creating the next normal release, the hash tag will no longer automatically update to the `latest` tag. The change back to `latest` must be performed manually during the next release.
+1. Change [this `forecasteval` line](https://github.com/cmu-delphi/delphi-ansible-web/blob/05d42535187a736ea997f42cb4c23706a762d9bc/vars.yml#L77) to point to the desired (most recently working) sha256 hash rather than the `latest` tag. The hashes can be found in [the Delphi ghcr.io image repository](https://github.com/orgs/cmu-delphi/packages/container/package/forecast-eval) -- these require special permissions to view. Ask Brian for permissions, ask Nat for hash info.
+2. Create a PR into `main`. Tag Brian as reviewer and let him know over Slack. Changes will automatically propagate to production once merged.
+3. When creating the next normal release, code changes will no longer automatically propagate via the `latest` image to the public dashboard; the tag in the `ansible` settings file must be manually changed back to `latest`.
+
+### For the pipeline
+
+1. Change the `FROM` line in the `docker_build` Dockerfile to point to the most recently working sha256 hash rather than the `latest` tag. The hashes can be found in [the Delphi ghcr.io image repository](https://github.com/orgs/cmu-delphi/packages/container/package/covidcast) -- these require special permissions to view. Ask Brian for permissions, ask Nat for hash info.
+2. Create a PR into `dev`. Tag Katie or Nat as reviewer and let them know over Slack. Changes will automatically propagate to production once merged.
+3. When building the next `covidcast` docker image, changes will no longer automatically propagate via the `latest` `covidcast` image to the local pipeline image; the tag in `docker_build/Dockerfile` must be manually changed back to `latest`.
 
 # Code Structure
- - `workflows` contains the weekly data pipeline workflow action (`s3_upload_ec2.yml`) and the `main.yml` that runs on branch merge
+ - `.github/workflows` contains the weekly data pipeline workflow action (`s3_upload_ec2.yml`) and the `main.yml` that runs on branch merge
  - `Report` contains the scoring and data upload scripts that run weekly
  - `dashboard` contains all the code for the RShiny dashboard
    - `www` contains the styling and the assets

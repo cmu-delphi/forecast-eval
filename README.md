@@ -1,10 +1,22 @@
 # Forecast Eval
 
-Epiforecast scoring and interactive evaluation tools.
-https://delphi.cmu.edu/forecast-eval/
+The forecast evaluation dashboard provides a robust set of tools and methods for evaluating the performance of epidemic forecasts. The project's goal is to help epidemiological researchers gain insights into the performance of their forecasts and lead to more accurate epidemic forecasting.
 
-Code on the `dev` branch appears in staging: https://staging.delphi.cmu.edu/forecast-eval/  
-Username and password are included in the [meeting notes doc](https://docs.google.com/document/d/1q8sKrbjzymEDsWQ9mUomOZ255-_5W6RPGgTdFlHmpmE/edit)
+## Background
+
+This app collects and scores COVID-19 forecasts submitted to the CDC. The dashboard was developed by [CMU Delphi](https://delphi.cmu.edu) in collaboration with the [Reich Lab](https://reichlab.io) and US [COVID-19 Forecast Hub](https://covid19forecasthub.org/) from UMass-Amherst, as part of the Forecast Evaluation Research Collaborative.
+
+The Reich Lab created and maintains the [COVID-19 Forecast Hub](https://covid19forecasthub.org/), a collaborative effort with over 80 groups submitting forecasts to be part of the official [CDC COVID-19 ensemble forecast](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/mathematical-modeling.html). All Forecase Hub forecasters that are designated "primary" or "secondary" are scored and included in the dashboard.
+
+The Delphi Group created and maintains COVIDcast, a platform for [epidemiological surveillance data](https://delphi.cmu.edu/covidcast/). COVIDcast provides the ground truth data used to score forecasts against.
+
+The [public version of the dashboard](https://delphi.cmu.edu/forecast-eval/) runs off of the `main` branch.
+
+The version on the `dev` branch appears on the [staging website](https://staging.delphi.cmu.edu/forecast-eval/). The username and password are included in the [meeting notes doc](https://docs.google.com/document/d/1q8sKrbjzymEDsWQ9mUomOZ255-_5W6RPGgTdFlHmpmE/edit#bookmark=id.xqskfsdd2w4q) and [on Slack](https://delphi-org.slack.com/archives/C01H63T0QE7/p1682012756484679).
+
+The dashboard is backed by the forecast evaluation pipeline. The pipeline runs three times a week, on Sunday, Monday, and Tuesday, using the code on the `dev` branch. It collects and scores forecasts from the Forecast Hub, and posts the resulting files to a publicly-accessible [AWS S3 bucket](https://forecast-eval.s3.us-east-2.amazonaws.com/).
+
+See the ["About" writeup](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/app/assets/about.md) for more information about the data and processing steps.
 
 ## Steps to contribute
 1. Create a new branch off of `dev`

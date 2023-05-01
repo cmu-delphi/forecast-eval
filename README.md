@@ -78,7 +78,11 @@ Create a PR into `main`. After the branch is merged to `main`, perform cleanup b
 
 ## Dependencies
 
-When updates are made in the evalcast package that affect the scoring script, the covidcast docker image must be rebuilt by kicking off the workflow here: https://github.com/cmu-delphi/covidcast-docker/actions/workflows/main.yml. Ensure that the changes in evalcast will be compatible with the dashboard and will not cause errors - when the scoring script is run on these changes the results show up automatically in prod.
+The scoring pipeline runs in a docker container built from https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/docker_build/Dockerfile, which is a straight copy of https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/docker/Dockerfile. The dashboard runs in a docker container built from https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/devops/Dockerfile.
+
+When updates are made in the `evalcast` package the behavior of the scoring script can be affected and the `covidcast` docker image must be rebuilt. The [workflow in the `covidcast-docker` repository](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/.github/workflows/main.yml) that does this needs to be triggered manually. Before building the new image, ensure that the changes in `evalcast` will be compatible with the scoring pipeline.
+
+Currently, the scoring pipeline [uses the `evalcast` branch](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/docker/dependencies.R#L18) of the [`evalcast` package](https://github.com/cmu-delphi/covidcast/tree/evalcast/R-packages/evalcast). However, if we need to make forecast eval-specific changes to the `evalcast` package that would conflict with other use cases, we have in the past created a dedicated branch of `evalcast`.
 
 ## Perform Manual Rollback
 This should only be performed if absolutely necessary.

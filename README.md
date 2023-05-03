@@ -20,41 +20,47 @@ See the ["About" writeup](https://github.com/cmu-delphi/forecast-eval/blob/f12ab
 
 # Contributing
 
-1. Create a new branch off of `dev`
-2. Create a pull request into `dev`
+`main` is the production branch and shouldn't be directly modified. Pull requests should be based on and merged into `dev`. When enough changes have accumulated on `dev`, a release will be made to sync `main` with it.
 
-**Note:** the easiest way to view and develop this project locally is to use RStudio and run the RShiny app from inside the IDE
+This project requires a recent version of GNU `make` and docker.
+
+The easiest way to view and develop this project locally is to run the Shiny app from RStudio:
 
 <img width="1111" alt="Screen Shot 2021-08-30 at 10 56 59 AM" src="https://user-images.githubusercontent.com/14190352/131359925-3b460d21-b9aa-4a40-a691-cd705ab98431.png">
 
-Alternatively, ...
+This is the same as running
 
-
-## Building
-
-This project requires a recent version of GNU make and docker.
-
-Builds use a containerized R environment. See the `docker_build` directory for more details.
-
-To build: 
-
-```bash
-> make build
+```R
+shiny::runApp("<directory>")
 ```
 
-To start `bash` shell in the docker container, which would let you start an R session:
+in R. However, dashboard behavior can differ running locally versus running in a container (due to package versioning, packages that haven't been properly added to the container environment, etc), so the dashboard should be also tested in a container.
+
+The dashboard can be run in a Docker container using `make`. See notes in the Makefile for workarounds if you don't have image repository access.
+
+The pipeline can be run locally with the `Report/create_reports.R` script and in a container. See notes in the Makefile for workarounds if you don't have image repository access.
+
+## Running the scoring pipeline
+
+The scoring pipline use a containerized R environment. See the `docker_build` directory for more details.
+
+The pipeline can be run locally with the `Report/create_reports.R` script and in a container via
 
 ```bash
-> make start_repl
+> make score_forecast
 ```
 
-## Starting a local shiny server
+See notes in the Makefile for workarounds if you don't have image repository access.
 
-To start a docker image of the shiny server locally:
+## Running the Shiny app
+
+The dashboard can be run in a Docker container using
 
 ```bash
 > make start_dashboard
 ```
+
+See notes in the Makefile for workarounds if you don't have image repository access.
 
 # Releasing
 

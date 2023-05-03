@@ -100,16 +100,27 @@ This should only be performed if absolutely necessary.
 3. When building the next `covidcast` docker image, changes will no longer automatically propagate via the `latest` `covidcast` image to the local pipeline image; the tag in `docker_build/Dockerfile` must be manually changed back to `latest`.
 
 # Code Structure
- - `.github/workflows` contains the weekly data pipeline workflow action (`s3_upload_ec2.yml`) and the `main.yml` that runs on branch merge
- - `Report` contains the scoring and data upload scripts that run weekly
- - `dashboard` contains all the code for the RShiny dashboard
-   - `www` contains the styling and the assets
-   - `app.R` is the main RShiny file with the UI and server functions
-   - `common.R` is for code shared between the app and the download feature
-   - `export_scores.R` contains the code for the download feature
-   - `about.md` contains the code for the "About" tab in the dasboard (other .md files contain explanations of the scores and other text info that appears in the app)
- - `docker_buid` contains the `Dockerfile` specifying the version of the `covidcast` docker image to use
- - `docker_dashboard` contains the `Dockerfile` and `shiny_server.conf` for the RShiny app
+ - `.github`
+   - `workflows` contains GitHub Actions workflow files
+     - `ci.yml` runs linting on branch merge. Also builds new Docker images and pushes to the image repo for the `main` and `dev` branches
+     - `create_release.yml` triggered manually to merge `dev` into `main`. Increments app version number, and creates PR into `main` and tags reviewer (currently Katie).
+     - `release_main.yml` runs on merge of release branch. Creates tagged release using `release-drafter.yml` and merges updated `main` back into `dev` to keep them in sync.
+     - `s3_upload_ec2.yml` runs the weekly self-hosted data pipeline workflow action (preceded by `s3_upload.yml` that ran the pipeline on a GitHub-provided VM)
+   - `release-drafter.yml` creates a release
+ - `Report` contains the code for fetching, scoring, and uploading forecasts. Runs 3 times a week
+ - `app` contains all the code for the Shiny dashboard
+   - `R` contains supporting R functions
+     - `data.R` defines data-fetching functions
+     - `data_manipulation.R` defines various filter functions
+     - `delphiLayout.R` defines dashboard main and sub- UIs
+     - `exportScores.R` contains tools to support the score CSV download tool included in the dashboard
+   - `assets` contains supporting Markdown text. `about.md` contains the code for the "About" tab in the dasboard; other .md files contain explanations of the scores and other text info that appears in the app.
+   - `www` contains CSS stylesheets and the logo images
+   - `ui.R` sets up the UI for the dashboard, and defines starting values for selectors
+   - `server.R` defines dashboard behavior. This is where the logic for the dashboard lives.
+   - `global.R` defines constants and helper functions
+ - `docker_buid` contains the Docker build configuration for the scoring pipeline
+ - `devops` contains the Docker build configuration for the Shiny dashboard
    - ***Note: when adding a new package dependency to the app, it must be specified in this Dockerfile***
- - `DESCRIPTION` is where the version number is updated for each release
- - `Makefile` contains all commands to build and run the dashboard and score and upload the data
+ - `DESCRIPTION` summarizes package information, such as contributors, version, and dependencies
+ - `Makefile` contains commands to build and run the dashboard, and score and upload the data

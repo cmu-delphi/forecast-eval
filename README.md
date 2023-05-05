@@ -16,7 +16,7 @@ The version on the `dev` branch appears on the [staging website](https://staging
 
 The dashboard is backed by the forecast evaluation pipeline. The pipeline runs three times a week, on Sunday, Monday, and Tuesday, using the code on the `dev` branch. It collects and scores forecasts from the Forecast Hub, and posts the resulting files to a publicly-accessible [AWS S3 bucket](https://forecast-eval.s3.us-east-2.amazonaws.com/).
 
-See the ["About" writeup](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/app/assets/about.md) for more information about the data and processing steps.
+See the ["About" writeup](https://github.com/cmu-delphi/forecast-eval/blob/dev/app/assets/about.md) for more information about the data and processing steps.
 
 # Contributing
 
@@ -64,7 +64,7 @@ See notes in the Makefile for workarounds if you don't have image repository acc
 
 # Releasing
 
-`main` is the production branch and contains the code that the public dashboard uses. Code changes will accumulate on the `dev` branch and when we want to make a release, `dev` will be merged into `main` via the ["Create Release" workflow](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/.github/workflows/create_release.yml). Version bump type (major, minor, etc) is specified manually when running the action.
+`main` is the production branch and contains the code that the public dashboard uses. Code changes will accumulate on the `dev` branch and when we want to make a release, `dev` will be merged into `main` via the ["Create Release" workflow](https://github.com/cmu-delphi/forecast-eval/blob/dev/.github/workflows/create_release.yml). Version bump type (major, minor, etc) is specified manually when running the action.
 
 If there's some issue with the workflow-based release process, a release can be done manually with:
 ```bash
@@ -72,7 +72,7 @@ git checkout dev
 git pull origin dev
 git checkout -b release_v<major>.<minor>.<patch> origin/dev
 ```
-Update version number in the [DESCRIPTION file](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/DESCRIPTION) and in the [dashboard](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/app/global.R#L13).
+Update version number in the [DESCRIPTION file](https://github.com/cmu-delphi/forecast-eval/blob/dev/DESCRIPTION) and in the [dashboard](https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/app/global.R#L13).
 ```bash
 git add .
 git commit -m "Version <major>.<minor>.<patch> updates"
@@ -84,9 +84,9 @@ Create a PR into `main`. After the branch is merged to `main`, perform cleanup b
 
 ## Dependencies
 
-The scoring pipeline runs in a docker container built from https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/docker_build/Dockerfile, which is a straight copy of https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/docker/Dockerfile. The dashboard runs in a docker container built from https://github.com/cmu-delphi/forecast-eval/blob/f12ab6f303ba81d6cbc32d61720061474496a00f/devops/Dockerfile.
+The scoring pipeline runs in a docker container built from https://github.com/cmu-delphi/forecast-eval/blob/dev/docker_build/Dockerfile, which is a straight copy of https://github.com/cmu-delphi/covidcast-docker/blob/dev/docker/Dockerfile. The dashboard runs in a docker container built from https://github.com/cmu-delphi/forecast-eval/blob/dev/devops/Dockerfile.
 
-When updates are made in the `evalcast` package the behavior of the scoring script can be affected and the `covidcast` docker image must be rebuilt. The [workflow in the `covidcast-docker` repository](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/.github/workflows/main.yml) that does this needs to be triggered manually. Before building the new image, ensure that the changes in `evalcast` will be compatible with the scoring pipeline.
+When updates are made in the `evalcast` package the behavior of the scoring script can be affected and the `covidcast` docker image must be rebuilt. The [workflow in the `covidcast-docker` repository](https://github.com/cmu-delphi/covidcast-docker/blob/dev/.github/workflows/main.yml) that does this needs to be triggered manually. Before building the new image, ensure that the changes in `evalcast` will be compatible with the scoring pipeline.
 
 Currently, the scoring pipeline uses the the [`evalcast` package](https://github.com/cmu-delphi/covidcast/tree/evalcast/R-packages/evalcast) from [the`evalcast` branch](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/docker/dependencies.R#L18) of the `covidcast` repository. However, if we need to make forecast eval-specific changes to the `evalcast` package that would conflict with other use cases, we have in the past created a dedicated forecast-eval branch of `evalcast`.
 

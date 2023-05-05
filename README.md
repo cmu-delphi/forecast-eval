@@ -26,7 +26,7 @@ This project requires a recent version of GNU `make` and docker.
 
 The easiest way to view and develop this project locally is to run the Shiny app from RStudio:
 
-<img width="1111" alt="Screen Shot 2021-08-30 at 10 56 59 AM" src="https://user-images.githubusercontent.com/14190352/131359925-3b460d21-b9aa-4a40-a691-cd705ab98431.png">
+<img width="1111" alt="RStudio Screen Shot with Run App button circled" src="https://user-images.githubusercontent.com/14190352/131359925-3b460d21-b9aa-4a40-a691-cd705ab98431.png">
 
 This is the same as running
 
@@ -38,13 +38,13 @@ in R. However, dashboard behavior can differ running locally versus running in a
 
 The dashboard can be run in a Docker container using `make`. See notes in the Makefile for workarounds if you don't have image repository access.
 
-The pipeline can be run locally with the `Report/create_reports.R` script and in a container. See notes in the Makefile for workarounds if you don't have image repository access.
+The pipeline can be run locally with the `Report/create_reports.R` script or in a container. See notes in the Makefile for workarounds if you don't have image repository access.
 
 ## Running the scoring pipeline
 
 The scoring pipline use a containerized R environment. See the `docker_build` directory for more details.
 
-The pipeline can be run locally with the `Report/create_reports.R` script and in a container via
+The pipeline can be run locally with the `Report/create_reports.R` script or in a container via
 
 ```bash
 > make score_forecast
@@ -77,8 +77,8 @@ Update version number in the [DESCRIPTION file](https://github.com/cmu-delphi/fo
 git add .
 git commit -m "Version <major>.<minor>.<patch> updates"
 git tag -a v<major>.<minor>.<patch> -m "Version <major>.<minor>.<patch>"
-git push origin release_v<major>.<minor>.patch><
-git push origin v<major>.<minor>.patch><
+git push origin release_v<major>.<minor>.<patch>
+git push origin v<major>.<minor>.<patch>
 ```
 Create a PR into `main`. After the branch is merged to `main`, perform cleanup by merging `main` into `dev` so that `dev` stays up to date.
 
@@ -88,7 +88,7 @@ The scoring pipeline runs in a docker container built from https://github.com/cm
 
 When updates are made in the `evalcast` package the behavior of the scoring script can be affected and the `covidcast` docker image must be rebuilt. The [workflow in the `covidcast-docker` repository](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/.github/workflows/main.yml) that does this needs to be triggered manually. Before building the new image, ensure that the changes in `evalcast` will be compatible with the scoring pipeline.
 
-Currently, the scoring pipeline [uses the `evalcast` branch](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/docker/dependencies.R#L18) of the [`evalcast` package](https://github.com/cmu-delphi/covidcast/tree/evalcast/R-packages/evalcast). However, if we need to make forecast eval-specific changes to the `evalcast` package that would conflict with other use cases, we have in the past created a dedicated branch of `evalcast`.
+Currently, the scoring pipeline uses the the [`evalcast` package](https://github.com/cmu-delphi/covidcast/tree/evalcast/R-packages/evalcast) from [the`evalcast` branch](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/docker/dependencies.R#L18) of the `covidcast` repository. However, if we need to make forecast eval-specific changes to the `evalcast` package that would conflict with other use cases, we have in the past created a dedicated forecast-eval branch of `evalcast`.
 
 ## Performing a manual rollback
 

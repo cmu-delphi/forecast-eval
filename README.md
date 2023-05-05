@@ -84,7 +84,7 @@ Create a PR into `main`. After the branch is merged to `main`, perform cleanup b
 
 ## Dependencies
 
-The scoring pipeline runs in a docker container built from https://github.com/cmu-delphi/forecast-eval/blob/dev/docker_build/Dockerfile, which is a straight copy of https://github.com/cmu-delphi/covidcast-docker/blob/dev/docker/Dockerfile. The dashboard runs in a docker container built from https://github.com/cmu-delphi/forecast-eval/blob/dev/devops/Dockerfile.
+The scoring pipeline runs in a docker container built from [`docker_build/Dockerfile`](https://github.com/cmu-delphi/forecast-eval/blob/dev/docker_build/Dockerfile), which is a straight copy of the [`covidcast-docker` image](https://github.com/cmu-delphi/covidcast-docker/blob/dev/docker/Dockerfile). The dashboard runs in a docker container built from [`devops/Dockerfile`](https://github.com/cmu-delphi/forecast-eval/blob/dev/devops/Dockerfile).
 
 When updates are made in the `evalcast` package the behavior of the scoring script can be affected and the `covidcast` docker image must be rebuilt. The [workflow in the `covidcast-docker` repository](https://github.com/cmu-delphi/covidcast-docker/blob/dev/.github/workflows/main.yml) that does this needs to be triggered manually. Before building the new image, ensure that the changes in `evalcast` will be compatible with the scoring pipeline.
 

@@ -18,7 +18,7 @@ The dashboard is backed by the forecast evaluation pipeline. The pipeline runs t
 
 See the ["About" writeup](https://github.com/cmu-delphi/forecast-eval/blob/dev/app/assets/about.md) for more information about the data and processing steps.
 
-# Contributing
+## Contributing
 
 `main` is the production branch and shouldn't be directly modified. Pull requests should be based on and merged into `dev`. When enough changes have accumulated on `dev`, a release will be made to sync `main` with it.
 
@@ -40,7 +40,7 @@ The dashboard can be run in a Docker container using `make`. See notes in the Ma
 
 The pipeline can be run locally with the `Report/create_reports.R` script or in a container. See notes in the Makefile for workarounds if you don't have image repository access.
 
-## Running the scoring pipeline
+### Running the scoring pipeline
 
 The scoring pipline use a containerized R environment. See the `docker_build` directory for more details.
 
@@ -52,7 +52,7 @@ The pipeline can be run locally with the `Report/create_reports.R` script or in 
 
 See notes in the Makefile for workarounds if you don't have image repository access.
 
-## Running the Shiny app
+### Running the Shiny app
 
 The dashboard can be run in a Docker container using
 
@@ -62,7 +62,7 @@ The dashboard can be run in a Docker container using
 
 See notes in the Makefile for workarounds if you don't have image repository access.
 
-# Releasing
+## Releasing
 
 `main` is the production branch and contains the code that the public dashboard uses. Code changes will accumulate on the `dev` branch and when we want to make a release, `dev` will be merged into `main` via the ["Create Release" workflow](https://github.com/cmu-delphi/forecast-eval/blob/dev/.github/workflows/create_release.yml). Version bump type (major, minor, etc) is specified manually when running the action.
 
@@ -82,7 +82,7 @@ git push origin v<major>.<minor>.<patch>
 ```
 Create a PR into `main`. After the branch is merged to `main`, perform cleanup by merging `main` into `dev` so that `dev` stays up to date.
 
-## Dependencies
+### Dependencies
 
 The scoring pipeline runs in a docker container built from [`docker_build/Dockerfile`](https://github.com/cmu-delphi/forecast-eval/blob/dev/docker_build/Dockerfile), which is a straight copy of the [`covidcast-docker` image](https://github.com/cmu-delphi/covidcast-docker/blob/dev/docker/Dockerfile). The dashboard runs in a docker container built from [`devops/Dockerfile`](https://github.com/cmu-delphi/forecast-eval/blob/dev/devops/Dockerfile).
 
@@ -90,22 +90,22 @@ When updates are made in the `evalcast` package the behavior of the scoring scri
 
 Currently, the scoring pipeline uses the the [`evalcast` package](https://github.com/cmu-delphi/covidcast/tree/evalcast/R-packages/evalcast) from [the`evalcast` branch](https://github.com/cmu-delphi/covidcast-docker/blob/c5adf4bd088268398d574fc0658c8ac70953f91d/docker/dependencies.R#L18) of the `covidcast` repository. However, if we need to make forecast eval-specific changes to the `evalcast` package that would conflict with other use cases, we have in the past created a dedicated forecast-eval branch of `evalcast`.
 
-## Performing a manual rollback
+### Performing a manual rollback
 
-### For the dashboard
+#### For the dashboard
 This should only be performed if absolutely necessary.
 
 1. Change [this `forecasteval` line](https://github.com/cmu-delphi/delphi-ansible-web/blob/05d42535187a736ea997f42cb4c23706a762d9bc/vars.yml#L77) to point to the desired (most recently working) sha256 hash rather than the `latest` tag. The hashes can be found in [the Delphi ghcr.io image repository](https://github.com/orgs/cmu-delphi/packages/container/package/forecast-eval) -- these require special permissions to view. Ask Brian for permissions, ask Nat for hash info.
 2. Create a PR into `main`. Tag Brian as reviewer and let him know over Slack. Changes will automatically propagate to production once merged.
 3. When creating the next normal release, code changes will no longer automatically propagate via the `latest` image to the public dashboard; the tag in the `ansible` settings file must be manually changed back to `latest`.
 
-### For the pipeline
+#### For the pipeline
 
 1. Change the `FROM` line in the `docker_build` Dockerfile to point to the most recently working sha256 hash rather than the `latest` tag. The hashes can be found in [the Delphi ghcr.io image repository](https://github.com/orgs/cmu-delphi/packages/container/package/covidcast) -- these require special permissions to view. Ask Brian for permissions, ask Nat for hash info.
 2. Create a PR into `dev`. Tag Katie or Nat as reviewer and let them know over Slack. Changes will automatically propagate to production once merged.
 3. When building the next `covidcast` docker image, changes will no longer automatically propagate via the `latest` `covidcast` image to the local pipeline image; the tag in `docker_build/Dockerfile` must be manually changed back to `latest`.
 
-# Code Structure
+## Code Structure
  - `.github`
    - `workflows` contains GitHub Actions workflow files
      - `ci.yml` runs linting on branch merge. Also builds new Docker images and pushes to the image repo for the `main` and `dev` branches

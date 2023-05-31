@@ -5,7 +5,7 @@ exportScoresUI <- function(id = "exportScores") {
   )
 }
 
-createExportScoresDataFrame <- function(scoreDf, targetVariable, scoreType, forecasters, loc, coverageInterval) {
+createExportScoresDataFrame <- function(scoreDf, targetVariable, scoreType, forecasters, loc, coverageInterval, filterDate) {
   scoreDf <- filter(
     scoreDf[[targetVariable]],
     forecaster %chin% forecasters
@@ -16,7 +16,7 @@ createExportScoresDataFrame <- function(scoreDf, targetVariable, scoreType, fore
     if (targetVariable == "Hospitalizations") {
       scoreDf <- filterHospitalizationsAheads(scoreDf)
     }
-    scoreDf <- filterOverAllLocations(scoreDf, scoreType)
+    scoreDf <- filterOverAllLocations(scoreDf, scoreType, filterDate = filterDate)
     return(scoreDf[[1]])
   } else {
     scoreDf <- filter(scoreDf, geo_value == tolower(loc))

@@ -5,6 +5,15 @@ PWD=$(shell pwd)
 S3_URL=https://forecast-eval.s3.us-east-2.amazonaws.com
 S3_BUCKET=s3://forecast-eval
 
+# Change `imageTag` during `make` call via `make <command> imageTag=<tag name>`
+#
+# `imageTag` specifies the tag to be used for the production dashboard Docker
+# image. If building from `main`, it should be `latest`. If building from
+# `dev`, it should be `dev`. The default value used here is meant to prevent
+# the actual `latest` and `dev` images in the image repository from being
+# accidentally overwritten.
+imageTag=local
+
 build: build_dashboard
 
 # Build a docker image suitable for running the scoring pipeline
@@ -66,10 +75,14 @@ build_dashboard_dev: pull_data
 start_dashboard: build_dashboard_dev
 	docker run --rm -p 3838:80 ghcr.io/cmu-delphi/forecast-eval:latest
 
-# Build a docker image for production use
+# Build a docker image for production use. Currently this isn't used anywhere,
+# but could be useful if we need to manually build a docker image for
+# production.
 build_dashboard: pull_data
 	docker build --no-cache=true --pull -t ghcr.io/cmu-delphi/forecast-eval:$(imageTag) -f devops/Dockerfile .
 
-# Push a production docker image to the image repository
+# Push a production docker image to the image repository. Currently this isn't
+# used anywhere, but could be useful if we need to manually release a docker
+# image for production.
 deploy_dashboard: build_dashboard
 	docker push ghcr.io/cmu-delphi/forecast-eval:$(imageTag)

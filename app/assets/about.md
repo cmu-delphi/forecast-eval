@@ -131,7 +131,7 @@ stateCases = tryCatch(
 ##### Forecasts with actuals
 
 If you are interested in getting the forecasts paired with the corresponding actual values (if you were e.g. testing different evaluation methods), that can be found at [https://www.stat.berkeley.edu/~ryantibs/data/](https://www.stat.berkeley.edu/~ryantibs/data/ "this is a temporary home") in 3 (zipped) zip files.
-These files are static, and the latest forecast date is
+These files are static, generated using [the aggregation script](link TBD), and forecast and actual data available on June 12, 2023. The latest forecast date available for each target signal is
 
 * [cases](https://www.stat.berkeley.edu/~ryantibs/data/cases.zip): 2023-02-13
 * [hospitalizations](https://www.stat.berkeley.edu/~ryantibs/data/hospitalizations.zip):

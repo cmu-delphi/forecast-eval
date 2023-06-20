@@ -128,7 +128,7 @@ stateCases = tryCatch(
   
   
 
-##### Forecast evaluation
+##### Forecasts with actuals
 
 If you are interested in getting the forecasts paired with the corresponding actual values (if you were e.g. testing different evaluation methods), that can be found at [https://www.stat.berkeley.edu/~ryantibs/data/](https://www.stat.berkeley.edu/~ryantibs/data/ "this is a temporary home") in 3 (zipped) zip files.
 These files are static, and the latest forecast date is

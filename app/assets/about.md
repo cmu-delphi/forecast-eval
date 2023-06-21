@@ -139,4 +139,6 @@ These files are static, generated using [the aggregation script](link TBD), and 
   * 2 week: 2023-06-05
   * 3 week: 2023-06-05
   * 4 week: 2023-06-05
-* [deaths](https://www.stat.berkeley.edu/~ryantibs/data/deaths.zip): 2023-03-06
+* [deaths](https://forecast-eval.s3.us-east-2.amazonaws.com/deaths.zip): 2023-03-06
+
+If the S3 bucket is down, these files are also available on [Delphi's file-hosting site](https://www.cmu.edu/delphi-web/forecast-eval-scores).

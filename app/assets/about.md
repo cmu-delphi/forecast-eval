@@ -130,8 +130,8 @@ stateCases = tryCatch(
 
 ##### Forecasts with actuals
 
-If you are interested in getting the forecasts paired with the corresponding actual values (if you were e.g. testing different evaluation methods), that can be found at [https://www.stat.berkeley.edu/~ryantibs/data/](https://www.stat.berkeley.edu/~ryantibs/data/ "this is a temporary home") in 3 (zipped) zip files.
-These files are static, generated using [the aggregation script](https://raw.githubusercontent.com/cmu-delphi/forecast-eval/main/app/assets/forecastsWithActuals.md), and forecast and actual data available on June 12, 2023. The latest forecast date available for each target signal is
+If you are interested in getting the forecasts paired with the corresponding actual values (if you were e.g. testing different evaluation methods), that can be found in [the Amazon S3 bucket](https://forecast-eval.s3.us-east-2.amazonaws.com/) in 3 zip files.
+These files are static, generated using [the aggregation script](https://raw.githubusercontent.com/cmu-delphi/forecast-eval/main/app/assets/forecastsWithActuals.R), and forecast and actual data available on June 12, 2023. The latest forecast date available for each target signal is
 
 * [cases](https://forecast-eval.s3.us-east-2.amazonaws.com/cases.zip): 2023-02-13
 * [hospitalizations](https://forecast-eval.s3.us-east-2.amazonaws.com/hospitalizations.zip):

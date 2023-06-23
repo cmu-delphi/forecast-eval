@@ -46,7 +46,7 @@ The Forecaster Evaluation Dashboard is a collaborative project, which has been m
   
 **Forecaster predictions** are drawn from the [COVID-19 Forecast Hub GitHub repository](https://github.com/reichlab/covid19-forecast-hub/)  
   
-Data for the dashboard is pulled from these sources on Mondays and Tuesdays.  
+Data for the dashboard is pulled from these sources on Sunday, Monday, and Tuesday each week.
 
 #### **Terms**
 

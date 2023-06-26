@@ -127,3 +127,18 @@ stateCases = tryCatch(
 ```
   
   
+
+##### Forecasts with actuals
+
+If you are interested in getting the forecasts paired with the corresponding actual values (if you were e.g. testing different evaluation methods), that can be found in [the Amazon S3 bucket](https://forecast-eval.s3.us-east-2.amazonaws.com/) in 3 zip files.
+These files are static, generated using [the aggregation script](https://raw.githubusercontent.com/cmu-delphi/forecast-eval/main/app/assets/forecastsWithActuals.R), and forecast and actual data available on June 12, 2023. The latest forecast date available for each target signal is
+
+* [cases](https://forecast-eval.s3.us-east-2.amazonaws.com/cases.zip): 2023-02-13
+* [hospitalizations](https://forecast-eval.s3.us-east-2.amazonaws.com/hospitalizations.zip):
+  * 1 week: 2023-06-05
+  * 2 week: 2023-06-05
+  * 3 week: 2023-06-05
+  * 4 week: 2023-06-05
+* [deaths](https://forecast-eval.s3.us-east-2.amazonaws.com/deaths.zip): 2023-03-06
+
+If the S3 bucket is down, these files are also available on [Delphi's file-hosting site](https://www.cmu.edu/delphi-web/forecast-eval-scores).

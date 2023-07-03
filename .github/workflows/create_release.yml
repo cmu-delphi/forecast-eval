@@ -27,8 +27,8 @@ jobs:
         id: version
         run: |
           python -m pip install bump2version
-          echo -n "::set-output name=next_tag::"
-          bump2version --list ${{ github.event.inputs.versionName }} | grep new_version | sed -r s,"^.*=",,
+          newVersion=`bump2version --list ${{ github.event.inputs.versionName }} | grep new_version | sed -r s,"^.*=",,`
+          echo "next_tag=$newVersion" >> "$GITHUB_OUTPUT"
       - name: Create pull request into main
         uses: peter-evans/create-pull-request@v4
         with:

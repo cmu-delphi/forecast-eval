@@ -39,7 +39,7 @@ forecasters <- unique(c(
     # Forecasters that have no data on Forecast Hub
     "CDDEP-ABM", # No longer on Forecast Hub. Causes some warnings when trying to download.
     "ISUandPKU-vSEIdR", # Folder but no forecasts on Forecast Hub
-    
+
     # Forecasters that don't qualify for inclusion in the dashboard (wrong geo
     # level, wrong target variable)
     "Auquan-SEIR", # Only predicts cumulative deaths

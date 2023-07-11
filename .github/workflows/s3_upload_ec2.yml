@@ -45,6 +45,8 @@ jobs:
           password: ${{ secrets.CMU_DELPHI_DEPLOY_MACHINE_PAT }}
           
       - name: Deploy score files to S3 bucket
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
         run: |
           make deploy
 

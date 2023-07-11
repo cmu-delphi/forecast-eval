@@ -30,22 +30,29 @@ prediction_cards_filepath <- case_when(
 
 options(warn = 1)
 
-# Requested forecasters that do not get included in final scores:
-#    Auquan-SEIR: Only predicts cumulative deaths
-#    CDDEP-ABM: No longer on Forecast Hub. Causes some warnings when trying to download.
-#    CDDEP-SEIR_MCMC: County-level predictions only
-#    CUBoulder-COVIDLSTM: County-level predictions only
-#    FAIR-NRAR: County-level predictions only
-#    HKUST-DNN: Only predicts cumulative deaths
-#    ISUandPKU-vSEIdR: Folder but no forecasts on Forecast Hub
-#    PandemicCentral-COVIDForest: County-level predictions only
-#    UT_GISAG-SPDM: County-level predictions only
-#    WalmartLabsML-LogForecasting: Only predicts cumulative deaths
-#    Yu_Group-CLEP: County-level predictions only
 forecasters <- unique(c(
   get_covidhub_forecaster_names(designations = c("primary", "secondary")),
   "COVIDhub-baseline", "COVIDhub-trained_ensemble", "COVIDhub-4_week_ensemble"
-))
+)) %>%
+  # Drop invalid forecasters
+  setdiff(c(
+    # Forecasters that have no data on Forecast Hub
+    "CDDEP-ABM", # No longer on Forecast Hub. Causes some warnings when trying to download.
+    "ISUandPKU-vSEIdR", # Folder but no forecasts on Forecast Hub
+
+    # Forecasters that don't qualify for inclusion in the dashboard (wrong geo
+    # level, wrong target variable)
+    "Auquan-SEIR", # Only predicts cumulative deaths
+    "CDDEP-SEIR_MCMC", # County-level predictions only
+    "CUBoulder-COVIDLSTM", # County-level predictions only
+    "FAIR-NRAR", # County-level predictions only
+    "HKUST-DNN", # Only predicts cumulative deaths
+    "PandemicCentral-COVIDForest", # County-level predictions only
+    "UT_GISAG-SPDM", # County-level predictions only
+    "WalmartLabsML-LogForecasting", # Only predicts cumulative deaths
+    "Yu_Group-CLEP" # County-level predictions only
+  ))
+
 locations <- covidHubUtils::hub_locations
 
 # also includes "us", which is national level data

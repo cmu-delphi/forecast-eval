@@ -6,7 +6,7 @@ jobs:
   build:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
@@ -26,11 +26,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Pull Image Data
         run: make pull_data
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: cmu-delphi-deploy-machine
@@ -48,8 +48,8 @@ jobs:
           if [ "$imageTag" = "main" ] ; then
             imageTag="latest"
           fi
-          echo "::set-output name=tag::$imageTag"
-          echo "::set-output name=repo::ghcr.io/${{ github.repository }}"
+          echo "tag=$imageTag" >> "$GITHUB_OUTPUT"
+          echo "repo=ghcr.io/${{ github.repository }}" >> "$GITHUB_OUTPUT"
       - name: Push Dev Tag
         run: |
           docker tag repo ${{ steps.tagname.outputs.repo }}:${{ steps.tagname.outputs.tag }}
@@ -64,8 +64,8 @@ jobs:
         id: extract_version
         run: |
           python -m pip install bump2version
-          echo -n "::set-output name=version::"
-          bump2version --dry-run --list patch | grep ^current_version | sed -r s,"^.*=",,
+          currentVersion=`bump2version --dry-run --list patch | grep ^current_version | sed -r s,"^.*=",,`
+          echo "version=$currentVersion" >> "$GITHUB_OUTPUT"
       - name: Trigger Webhook
         run: |
           # trigger a webhook update

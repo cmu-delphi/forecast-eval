@@ -4,6 +4,8 @@ PWD=$(shell pwd)
 .DEFAULT_GOAL:=build
 S3_URL=https://forecast-eval.s3.us-east-2.amazonaws.com
 S3_BUCKET=s3://forecast-eval
+# If not already set in calling environment, set PAT to an empty value.
+GITHUB_PAT?=
 
 # Change `imageTag` during `make` call via `make <command> imageTag=<tag name>`
 #
@@ -46,6 +48,7 @@ score_forecast: r_build dist pull_data
 		-v ${PWD}/Report:/var/forecast-eval \
 		-v ${PWD}/dist:/var/dist \
 		-w /var/forecast-eval \
+		-e GITHUB_PAT \
 		forecast-eval-build \
 		Rscript create_reports.R --dir /var/dist
 

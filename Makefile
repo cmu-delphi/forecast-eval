@@ -22,8 +22,9 @@ build: build_dashboard
 #
 # `docker_build/Dockerfile` is based on `ghcr.io/cmu-delphi/covidcast:latest`.
 # Docker will try to fetch it from the image repository, which requires
-# authentication. As a workaround, locally build a docker image with the same
-# name and set `--pull=never`.
+# authentication. As a workaround, locally build a docker image
+# from https://github.com/cmu-delphi/covidcast-docker/ using the `make build`
+# target, and set `--pull=false` below.
 r_build:
 	docker build --no-cache --force-rm --pull -t forecast-eval-build docker_build
 
@@ -60,8 +61,10 @@ deploy: score_forecast
 #
 # If `--pull=always`, docker will try to fetch the
 # `ghcr.io/cmu-delphi/forecast-eval:latest` image from the image repository,
-# which requires authentication. As a workaround, locally build a docker
-# image with the same name and set `--pull=never`.
+# which requires authentication. As a workaround, set `--pull=never`below.
+# The dependency `r-build` will creat the necessary image if you have a local
+# version of `ghcr.io/cmu-delphi/covidcast:latest` available. See the `r-build`
+# notes for details.
 start_dev: r_build
 	docker run --pull=always -ti --rm \
 		-v ${PWD}/Report:/var/forecast-eval \

@@ -206,7 +206,7 @@ for (signal_name in signals) {
   }
 }
 
-rm(state_scores)
+rm(state_scores, state_predictions)
 gc()
 
 print("Evaluating national forecasts")

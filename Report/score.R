@@ -1,4 +1,5 @@
 library("dplyr")
+library("data.table")
 library("assertthat")
 
 type_map <- list(
@@ -13,7 +14,7 @@ generate_score_card_file_path <- function(geo_type, signal_name, output_dir) {
     output_dir,
     paste0(
       "score_cards_", geo_type, "_",
-      sig_suffix, ".rds"
+      sig_suffix, ".csv.gz"
     )
   )
   return(output_file_name)
@@ -44,10 +45,7 @@ save_score_cards <- function(score_card, geo_type = c("state", "nation"),
   }
 
   output_file_name <- generate_score_card_file_path(geo_type, signal_name, output_dir)
-  saveRDS(score_card,
-    file = output_file_name,
-    compress = "xz"
-  )
+  fwrite(score_card, file = output_file_name)
 }
 
 save_score_cards_wrapper <- function(score_card, geo_type, signal_name, output_dir) {

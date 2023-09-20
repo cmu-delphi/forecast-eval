@@ -33,7 +33,11 @@ r_build:
 	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@
 
 # Specify all the data files we want to download
-pull_data: score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds score_cards_state_hospitalizations.rds score_cards_nation_hospitalizations.rds datetime_created_utc.rds predictions_cards.rds
+pull_data: score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds score_cards_state_hospitalizations.rds score_cards_nation_hospitalizations.rds datetime_created_utc.rds
+
+# Download all the predictions cards objects. This is
+# useful for development and debugging
+pull_pred_cards: predictions_cards_confirmed_admissions_covid_1d.rds predictions_cards_confirmed_incidence_num.rds predictions_cards_deaths_incidence_num.rds
 
 # Create the dist directory
 dist:

@@ -3,6 +3,7 @@ library("optparse")
 library("dplyr")
 library("evalcast")
 library("lubridate")
+library("stringr")
 
 # TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
 # Redefines overprediction, underprediction and sharpness
@@ -22,7 +23,7 @@ option_list <- list(
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
 output_dir <- opt$dir
-prediction_cards_filename <- "predictions_cards.rds"
+prediction_cards_filename <- "predictions_cards_${signal}.rds"
 prediction_cards_filepath <- case_when(
   !is.null(output_dir) ~ file.path(output_dir, prediction_cards_filename),
   TRUE ~ prediction_cards_filename
@@ -60,8 +61,6 @@ state_geos <- locations %>%
   filter(nchar(.data$geo_value) == 2) %>%
   pull(.data$geo_value)
 signals <- c(
-  "confirmed_incidence_num",
-  "deaths_incidence_num",
   "confirmed_admissions_covid_1d"
 )
 
@@ -105,10 +104,22 @@ predictions_cards <- predictions_cards %>%
 class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
 
 print("Saving predictions...")
-saveRDS(predictions_cards,
-  file = prediction_cards_filepath,
-  compress = "xz"
-)
+if (length(signals) == 1) {
+  signal <- signals
+  saveRDS(predictions_cards,
+    file = str_interp(prediction_cards_filepath),
+    compress = "xz"
+  )
+} else {
+  # Save each signal separately.
+  for (signal_group in group_split(predictions_cards, signal)) {
+    signal <- signal_group$signal[1]
+    saveRDS(signal_group,
+      file = str_interp(prediction_cards_filepath),
+      compress = "xz"
+    )
+  }
+}
 print("Predictions saved")
 
 ## Create error measure functions
@@ -195,7 +206,7 @@ for (signal_name in signals) {
   }
 }
 
-rm(state_scores)
+rm(state_scores, state_predictions)
 gc()
 
 print("Evaluating national forecasts")

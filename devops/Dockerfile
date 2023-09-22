@@ -10,6 +10,6 @@ COPY devops/shiny_server.conf /etc/shiny-server/shiny-server.conf
 WORKDIR /srv/shinyapp/
 COPY DESCRIPTION ./
 RUN Rscript -e "devtools::install_deps(dependencies = NA)"
-COPY dist/*.rds ./
+COPY dist/*.csv.gz ./
 COPY app/ ./
 RUN chmod -R a+rw .

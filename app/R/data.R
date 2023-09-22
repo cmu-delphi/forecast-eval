@@ -34,16 +34,25 @@ getData <- function(filename, s3bucket) {
   if (!is.null(s3bucket)) {
     tryCatch(
       {
-        s3read_using(fread, data.table = FALSE, object = filename, bucket = s3bucket)
+        result <- s3read_using(fread, data.table = FALSE, object = filename, bucket = s3bucket)
       },
       error = function(e) {
         e
-        getFallbackData(filename)
+        result <- getFallbackData(filename)
       }
     )
   } else {
-    getFallbackData(filename)
+    result <- getFallbackData(filename)
   }
+
+  if (filename != "datetime_created_utc.csv.gz") {
+    # fread uses the `IDate` class for dates. This causes problems downstream,
+    #  so cast to base `Date`.
+    result$target_end_date <- as.Date(result$target_end_date)
+    result$forecast_date <- as.Date(result$forecast_date)
+  }
+
+  return(result)
 }
 
 createS3DataFactory <- function(s3bucket) {

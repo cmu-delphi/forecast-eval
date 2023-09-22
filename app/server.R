@@ -402,7 +402,7 @@ server <- function(input, output, session) {
     # Fill gaps so there are line breaks on weeks without data
     # This is failing for CU-select on US deaths (https://github.com/cmu-delphi/forecast-eval/issues/157)
     filteredScoreDf <- filteredScoreDf %>%
-      mutate(Week_End_Date = as.Date(Week_End_Date)) %>% 
+      mutate(Week_End_Date = as.Date(Week_End_Date)) %>%
       as_tsibble(key = c(Forecaster, ahead), index = Week_End_Date) %>%
       group_by(Forecaster, Forecast_Date, ahead) %>%
       fill_gaps(.full = TRUE)

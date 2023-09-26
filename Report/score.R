@@ -1,5 +1,4 @@
 library("dplyr")
-library("data.table")
 library("assertthat")
 
 type_map <- list(

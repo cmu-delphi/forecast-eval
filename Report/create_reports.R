@@ -4,6 +4,7 @@ library("dplyr")
 library("evalcast")
 library("lubridate")
 library("stringr")
+library("data.table")
 
 # TODO: Contains fixed versions of WIS component metrics, to be ported over to evalcast
 # Redefines overprediction, underprediction and sharpness
@@ -23,7 +24,8 @@ option_list <- list(
 opt_parser <- OptionParser(option_list = option_list)
 opt <- parse_args(opt_parser)
 output_dir <- opt$dir
-prediction_cards_filename <- "predictions_cards_${signal}.rds"
+# Compress since prediction cards obj is big
+prediction_cards_filename <- "predictions_cards_${signal}.csv.gz"
 prediction_cards_filepath <- case_when(
   !is.null(output_dir) ~ file.path(output_dir, prediction_cards_filename),
   TRUE ~ prediction_cards_filename
@@ -106,17 +108,15 @@ class(predictions_cards) <- c("predictions_cards", class(predictions_cards))
 print("Saving predictions...")
 if (length(signals) == 1) {
   signal <- signals
-  saveRDS(predictions_cards,
-    file = str_interp(prediction_cards_filepath),
-    compress = "xz"
+  fwrite(predictions_cards,
+    file = str_interp(prediction_cards_filepath)
   )
 } else {
   # Save each signal separately.
   for (signal_group in group_split(predictions_cards, signal)) {
     signal <- signal_group$signal[1]
-    saveRDS(signal_group,
+    fwrite(signal_group,
       file = str_interp(prediction_cards_filepath),
-      compress = "xz"
     )
   }
 }
@@ -228,5 +228,5 @@ if (length(save_score_errors) > 0) {
   stop(paste(save_score_errors, collapse = "\n"))
 }
 
-saveRDS(data.frame(datetime = c(data_pull_timestamp)), file = file.path(output_dir, "datetime_created_utc.rds"))
+fwrite(data.frame(datetime = c(data_pull_timestamp)), file = file.path(output_dir, "datetime_created_utc.csv.gz"))
 print("Done")

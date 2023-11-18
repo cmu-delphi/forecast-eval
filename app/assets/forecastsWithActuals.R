@@ -1,11 +1,12 @@
 library(dplyr)
 library(tidyr)
 library(aws.s3)
+library(data.table)
 
 Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
 s3bucket <- tryCatch(
   {
-    get_bucket(bucket = "forecast-eval")
+    aws.s3::get_bucket(bucket = "forecast-eval")
   },
   error = function(e) {
     e
@@ -15,7 +16,7 @@ s3bucket <- tryCatch(
 readbucket <- function(name) {
   tryCatch(
     {
-      s3readRDS(object = name, bucket = s3bucket)
+      s3read_using(fread, data.table = FALSE, object = name, bucket = s3bucket)
     },
     error = function(e) {
       e
@@ -25,30 +26,30 @@ readbucket <- function(name) {
 
 # Cases, deaths, hosp scores: needed for "actual"s
 cases <- bind_rows(
-  readbucket("score_cards_nation_cases.rds"),
-  readbucket("score_cards_state_cases.rds")
+  readbucket("score_cards_nation_cases.csv.gz"),
+  readbucket("score_cards_state_cases.csv.gz")
 )
 deaths <- bind_rows(
-  readbucket("score_cards_nation_deaths.rds"),
-  readbucket("score_cards_state_deaths.rds")
+  readbucket("score_cards_nation_deaths.csv.gz"),
+  readbucket("score_cards_state_deaths.csv.gz")
 )
 hosp <- bind_rows(
-  readbucket("score_cards_nation_hospitalizations.rds"),
-  readbucket("score_cards_state_hospitalizations.rds")
+  readbucket("score_cards_nation_hospitalizations.csv.gz"),
+  readbucket("score_cards_state_hospitalizations.csv.gz")
 )
 
-# The big one: predictions from all forecasters
-pred <- readbucket("predictions_cards.rds")
-
 # Cases
+pred <- readbucket("predictions_cards_confirmed_incidence_num.csv.gz")
 pred_cases <- pred %>%
-  filter(signal == "confirmed_incidence_num") %>%
   mutate(signal = NULL, data_source = NULL, incidence_period = NULL) %>%
   pivot_wider(
     names_from = quantile,
     values_from = value,
     names_prefix = "forecast_"
   )
+
+rm(pred)
+gc()
 
 actual_cases <- cases %>%
   select(ahead, geo_value, forecaster, forecast_date, target_end_date, actual)
@@ -58,14 +59,17 @@ sum(is.na(actual_cases$actual)) == sum(is.na(joined_cases$actual))
 write.csv(joined_cases, "cases.csv")
 
 # Deaths
+pred <- readbucket("predictions_cards_deaths_incidence_num.csv.gz")
 pred_deaths <- pred %>%
-  filter(signal == "deaths_incidence_num") %>%
   mutate(signal = NULL, data_source = NULL, incidence_period = NULL) %>%
   pivot_wider(
     names_from = quantile,
     values_from = value,
     names_prefix = "forecast_"
   )
+
+rm(pred)
+gc()
 
 actual_deaths <- deaths %>%
   select(ahead, geo_value, forecaster, forecast_date, target_end_date, actual)
@@ -75,12 +79,13 @@ sum(is.na(actual_deaths$actual)) == sum(is.na(joined_deaths$actual))
 write.csv(joined_deaths, "deaths.csv")
 
 # Hospitalizations: break up by weeks since we run into memory errors o/w!
+pred <- readbucket("predictions_cards_confirmed_admissions_covid_1d.csv.gz")
 pred_hosp <- actual_hosp <- joined_hosp <- vector(mode = "list", length = 4)
 for (k in 1:4) {
   cat(k, "... ")
   days <- (k - 1) * 7 + 1:7
   pred_hosp[[k]] <- pred %>%
-    filter(signal == "confirmed_admissions_covid_1d", ahead %in% days) %>%
+    filter(ahead %in% days) %>%
     mutate(signal = NULL, data_source = NULL, incidence_period = NULL) %>%
     pivot_wider(
       names_from = quantile,

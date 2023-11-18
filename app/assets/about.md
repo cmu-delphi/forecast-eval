@@ -91,21 +91,25 @@ The forecasts and scores are available as RDS files and are uploaded weekly to a
 You can use the url https://forecast-eval.s3.us-east-2.amazonaws.com/ + filename to download
 any of the files from the bucket.
 
-For instance: https://forecast-eval.s3.us-east-2.amazonaws.com/score_cards_nation_cases.rds to download scores for nation level case predictions.
+For instance: https://forecast-eval.s3.us-east-2.amazonaws.com/score_cards_nation_cases.csv.gz to download scores for nation level case predictions.
 
 The available files are:
-* predictions_cards.rds (forecasts)
-* score_cards_nation_cases.rds
-* score_cards_nation_deaths.rds
-* score_cards_state_cases.rds
-* score_cards_state_deaths.rds
-* score_cards_state_hospitalizations.rds
-* score_cards_nation_hospitalizations.rds
+* predictions_cards_confirmed_incidence_num.csv.gz (forecasts for cases)
+* predictions_cards_deaths_incidence_num.csv.gz (forecasts for deaths)
+* predictions_cards_confirmed_admissions_covid_1d.csv.gz (forecasts for hospitalizations)
+* score_cards_nation_cases.csv.gz
+* score_cards_nation_deaths.csv.gz
+* score_cards_state_cases.csv.gz
+* score_cards_state_deaths.csv.gz
+* score_cards_state_hospitalizations.csv.gz
+* score_cards_nation_hospitalizations.csv.gz
 
 You can also connect to AWS and retrieve the data in R. Example of retrieving state cases file:
 
 ```
 library(aws.s3)
+library(data.table)
+
 Sys.setenv("AWS_DEFAULT_REGION" = "us-east-2")
 s3bucket = tryCatch(
   {
@@ -118,14 +122,20 @@ s3bucket = tryCatch(
 
 stateCases = tryCatch(
   {
-    s3readRDS(object = "score_cards_state_cases.rds", bucket = s3bucket)
+    s3read_using(fread, object = "score_cards_state_cases.csv.gz", bucket = s3bucket)
   },
   error = function(e) {
     e
   }
 )
 ```
-  
+
+or using the URL of the file:
+
+```
+library(data.table)
+stateCases <- fread("https://forecast-eval.s3.us-east-2.amazonaws.com/score_cards_state_cases.csv.gz")
+```
   
 
 ##### Forecasts with actuals

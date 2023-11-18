@@ -1,6 +1,6 @@
 check_for_missing_forecasters <- function(predictions_cards, forecasters_list, geo_type, signal_name, output_dir) {
   output_file_name <- generate_score_card_file_path(geo_type, signal_name, output_dir)
-  previous_run_forecasters <- readRDS(output_file_name) %>%
+  previous_run_forecasters <- fread(output_file_name, data.table = FALSE) %>%
     filter(signal == signal_name) %>%
     distinct(forecaster) %>%
     pull()

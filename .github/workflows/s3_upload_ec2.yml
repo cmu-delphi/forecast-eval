@@ -2,6 +2,7 @@ name: Github Actions S3 Deploy (Self-hosted)
 
 env:
   AWS_REGION_NAME : "us-east-2"
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION : true
 
 # Controls when the action will run. 
 on:

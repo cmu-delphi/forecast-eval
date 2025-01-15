@@ -16,7 +16,7 @@ on:
 jobs:
   deploy:
     # The type of runner that the job will run on
-    runs-on: self-hosted
+    runs-on: ubuntu-latest-m
     # Time out after 24 hours.
     timeout-minutes: 1440
 
@@ -57,6 +57,3 @@ jobs:
           docker image prune -a -f
           docker container prune -f
           docker ps -q | xargs -n 1 -P 8 -I {} docker stop {}
-        
-        
-        

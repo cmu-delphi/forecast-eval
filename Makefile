@@ -29,15 +29,15 @@ r_build:
 	docker build --no-cache --force-rm --pull -t forecast-eval-build docker_build
 
 # Download the named file from the AWS S3 bucket
-%.rds: dist
+%.csv.gz: dist
 	test -f dist/$@ || curl -o dist/$@ $(S3_URL)/$@
 
 # Specify all the data files we want to download
-pull_data: score_cards_state_deaths.rds score_cards_state_cases.rds score_cards_nation_cases.rds score_cards_nation_deaths.rds score_cards_state_hospitalizations.rds score_cards_nation_hospitalizations.rds datetime_created_utc.rds
+pull_data: score_cards_state_deaths.csv.gz score_cards_state_cases.csv.gz score_cards_nation_cases.csv.gz score_cards_nation_deaths.csv.gz score_cards_state_hospitalizations.csv.gz score_cards_nation_hospitalizations.csv.gz datetime_created_utc.csv.gz
 
 # Download all the predictions cards objects. This is
 # useful for development and debugging
-pull_pred_cards: predictions_cards_confirmed_admissions_covid_1d.rds predictions_cards_confirmed_incidence_num.rds predictions_cards_deaths_incidence_num.rds
+pull_pred_cards: predictions_cards_confirmed_admissions_covid_1d.csv.gz predictions_cards_confirmed_incidence_num.csv.gz predictions_cards_deaths_incidence_num.csv.gz
 
 # Create the dist directory
 dist:
@@ -59,7 +59,7 @@ score_forecast: r_build dist pull_data
 
 # Post scoring pipeline output files to the AWS S3 bucket
 deploy: score_forecast
-	aws s3 cp dist/ $(S3_BUCKET)/ --recursive --exclude "*" --include "*rds" --acl public-read
+	aws s3 cp dist/ $(S3_BUCKET)/ --recursive --exclude "*" --include "*csv.gz" --acl public-read
 
 # Run bash in a docker container with a full preconfigured R environment
 #

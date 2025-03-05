@@ -1,4 +1,5 @@
 library(aws.s3)
+library(data.table)
 
 # Set application-level caching location. Stores up to 1GB of caches. Removes
 # least recently used objects first.
@@ -33,16 +34,25 @@ getData <- function(filename, s3bucket) {
   if (!is.null(s3bucket)) {
     tryCatch(
       {
-        aws.s3::s3readRDS(object = filename, bucket = s3bucket)
+        result <- s3read_using(fread, data.table = FALSE, object = filename, bucket = s3bucket)
       },
       error = function(e) {
         e
-        getFallbackData(filename)
+        result <- getFallbackData(filename)
       }
     )
   } else {
-    getFallbackData(filename)
+    result <- getFallbackData(filename)
   }
+
+  if (filename != "datetime_created_utc.csv.gz") {
+    # fread uses the `IDate` class for dates. This causes problems downstream,
+    #  so cast to base `Date`.
+    result$target_end_date <- as.Date(result$target_end_date)
+    result$forecast_date <- as.Date(result$forecast_date)
+  }
+
+  return(result)
 }
 
 createS3DataFactory <- function(s3bucket) {
@@ -57,12 +67,12 @@ getFallbackData <- function(filename) {
     filename,
     file.path("../dist/", filename)
   )
-  readRDS(path)
+  fread(path, data.table = FALSE)
 }
 
 
 getCreationDate <- function(loadFile) {
-  dataCreationDate <- loadFile("datetime_created_utc.rds")
+  dataCreationDate <- loadFile("datetime_created_utc.csv.gz")
   return(dataCreationDate %>% pull(datetime) %>% as.Date())
 }
 
@@ -70,16 +80,16 @@ getCreationDate <- function(loadFile) {
 getAllData <- function(loadFile, targetVariable) {
   df <- switch(targetVariable,
     "Deaths" = bind_rows(
-      loadFile("score_cards_state_deaths.rds"),
-      loadFile("score_cards_nation_deaths.rds")
+      loadFile("score_cards_state_deaths.csv.gz"),
+      loadFile("score_cards_nation_deaths.csv.gz")
     ),
     "Cases" = bind_rows(
-      loadFile("score_cards_state_cases.rds"),
-      loadFile("score_cards_nation_cases.rds")
+      loadFile("score_cards_state_cases.csv.gz"),
+      loadFile("score_cards_nation_cases.csv.gz")
     ),
     "Hospitalizations" = bind_rows(
-      loadFile("score_cards_state_hospitalizations.rds"),
-      loadFile("score_cards_nation_hospitalizations.rds")
+      loadFile("score_cards_state_hospitalizations.csv.gz"),
+      loadFile("score_cards_nation_hospitalizations.csv.gz")
     )
   )
 
